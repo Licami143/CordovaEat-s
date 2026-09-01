@@ -11,7 +11,11 @@ import { ApiClientError } from '@/lib/api';
 import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
 
-const GOOGLE_CLIENT_ID = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
+const rawClientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || '';
+const GOOGLE_CLIENT_ID =
+  rawClientId && !rawClientId.includes('YOUR_CLIENT_ID') && !rawClientId.includes('your_')
+    ? rawClientId
+    : null;
 
 type PasswordStrength = 'weak' | 'fair' | 'strong' | 'very-strong';
 
