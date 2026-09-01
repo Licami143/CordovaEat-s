@@ -9,6 +9,7 @@ import { useToast } from '@/lib/toast-context';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { Badge } from '@/components/ui/Badge';
 import { Pagination } from '@/components/ui/Pagination';
+import { ProtectedRoute } from '@/components/ProtectedRoute';
 import type { PageMeta } from '@/lib/types';
 
 interface HistoryEntry {
@@ -34,7 +35,15 @@ interface HistoryEntry {
 }
 
 export default function HistoryPage() {
-  const { user, loading: authLoading } = useAuth();
+  return (
+    <ProtectedRoute>
+      <HistoryContent />
+    </ProtectedRoute>
+  );
+}
+
+function HistoryContent() {
+  const { user } = useAuth();
   const { toast } = useToast();
   const [entries, setEntries] = useState<HistoryEntry[]>([]);
   const [meta, setMeta] = useState<PageMeta | null>(null);
@@ -60,16 +69,6 @@ export default function HistoryPage() {
     load();
   }, [user, load]);
 
-  if (authLoading) return <Skeleton className="h-64 w-full" />;
-
-  if (!user) {
-    return (
-      <div className="text-center py-20 text-[var(--text-muted)]">
-        <p className="text-4xl mb-3">🔒</p>
-        <p>Log in to view your recommendation search history.</p>
-      </div>
-    );
-  }
 
   return (
     <div>

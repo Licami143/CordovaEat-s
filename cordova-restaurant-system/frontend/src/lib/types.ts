@@ -9,12 +9,17 @@ export interface User {
   full_name: string;
   phone?: string;
   role: UserRole;
-  avatar_url?: string;
+  avatar_url?: string | null;
   is_active: boolean;
+  accepts_marketing?: boolean;
   email_verified?: boolean;
-  google_id?: string;
-  facebook_id?: string;
+  email_verified_at?: string | null;
+  google_id?: string | null;
+  facebook_id?: string | null;
+  has_password?: boolean;
+  last_login_at?: string | null;
   created_at: string;
+  // password_hash is stripped on the backend — never sent to client
 }
 
 export interface UserPreferences {

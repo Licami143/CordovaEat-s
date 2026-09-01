@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { AnimatePresence, motion } from 'framer-motion';
-import { ChevronDown, Heart, PlusCircle, LayoutDashboard, Shield, History, Sliders } from 'lucide-react';
+import { ChevronDown, Heart, PlusCircle, LayoutDashboard, Shield, History, UserCircle, AlertCircle } from 'lucide-react';
 import { useAuth } from '@/lib/auth-context';
 
 export function ProfileDropdown() {
@@ -34,7 +34,9 @@ export function ProfileDropdown() {
 
   const initial = user.full_name?.trim()?.[0]?.toUpperCase() || '?';
 
-  const menuItems: { href: string; label: string; icon: any }[] = [];
+  const menuItems: { href: string; label: string; icon: any }[] = [
+    { href: '/profile', label: 'My Profile', icon: UserCircle },
+  ];
 
   if (user.role === 'admin') {
     menuItems.push(
@@ -91,7 +93,16 @@ export function ProfileDropdown() {
             {/* User Info Header */}
             <div className="px-4 py-2.5 border-b border-stone-100 dark:border-stone-800/80 mb-1">
               <p className="text-sm font-semibold text-stone-900 dark:text-white truncate">{user.full_name}</p>
-              <p className="text-xs text-stone-500 capitalize">{user.role} Account</p>
+              <p className="text-xs text-stone-500 truncate">{user.email}</p>
+              <div className="flex items-center gap-1.5 mt-1">
+                <span className="text-xs text-stone-400 capitalize">{user.role}</span>
+                {!user.email_verified && (
+                  <span className="flex items-center gap-0.5 text-[10px] font-semibold text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/30 px-1.5 py-0.5 rounded-full">
+                    <AlertCircle size={9} />
+                    Unverified
+                  </span>
+                )}
+              </div>
             </div>
 
             {menuItems.map((item) => {

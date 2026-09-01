@@ -6,10 +6,19 @@ import { useAuth } from '@/lib/auth-context';
 import { RestaurantCard } from '@/components/RestaurantCard';
 import { RestaurantGridSkeleton } from '@/components/ui/Skeleton';
 import { Pagination } from '@/components/ui/Pagination';
+import { ProtectedRoute } from '@/components/ProtectedRoute';
 import type { Restaurant, PageMeta } from '@/lib/types';
 
 export default function FavoritesPage() {
-  const { user, loading: authLoading } = useAuth();
+  return (
+    <ProtectedRoute>
+      <FavoritesContent />
+    </ProtectedRoute>
+  );
+}
+
+function FavoritesContent() {
+  const { user } = useAuth();
   const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
   const [meta, setMeta] = useState<PageMeta | null>(null);
   const [page, setPage] = useState(1);
@@ -27,17 +36,6 @@ export default function FavoritesPage() {
       .catch(() => setRestaurants([]))
       .finally(() => setLoading(false));
   }, [user, page]);
-
-  if (authLoading) return <RestaurantGridSkeleton count={6} />;
-
-  if (!user) {
-    return (
-      <div className="text-center py-20 text-[var(--text-muted)]">
-        <p className="text-4xl mb-3">🔒</p>
-        <p>Log in to view your saved favorites.</p>
-      </div>
-    );
-  }
 
   return (
     <div>

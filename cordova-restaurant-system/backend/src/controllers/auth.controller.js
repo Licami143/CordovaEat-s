@@ -93,7 +93,22 @@ const changePassword = asyncHandler(async (req, res) => {
 });
 
 const me = asyncHandler(async (req, res) => {
-  res.json({ success: true, data: { user: req.user } });
+  const userModel = require('../models/user.model');
+  const fullUser = await userModel.findById(req.user.id);
+  const { password_hash, ...safeUser } = fullUser;
+  res.json({ success: true, data: { user: { ...safeUser, has_password: !!password_hash } } });
+});
+
+const updateProfile = asyncHandler(async (req, res) => {
+  const userModel = require('../models/user.model');
+  const { fullName, phone, avatarUrl } = req.body;
+  const updated = await userModel.updateProfile(req.user.id, {
+    fullName: fullName || undefined,
+    phone: phone || undefined,
+    avatarUrl: avatarUrl || undefined,
+  });
+  const { password_hash, ...safeUser } = updated;
+  res.json({ success: true, message: 'Profile updated successfully', data: { user: { ...safeUser, has_password: !!password_hash } } });
 });
 
 module.exports = {
@@ -109,4 +124,5 @@ module.exports = {
   logout,
   changePassword,
   me,
+  updateProfile,
 };

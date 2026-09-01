@@ -39,11 +39,14 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en" suppressHydrationWarning className={`${inter.variable} ${playfair.variable}`}>
       <head>
+        {/* Theme initialisation — must run synchronously before first paint */}
         <script
           dangerouslySetInnerHTML={{
             __html: `(function(){try{var s=localStorage.getItem('theme');var t=(s==='light'||s==='dark')?s:(window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light');document.documentElement.classList.toggle('dark',t==='dark');}catch(e){}})();`,
           }}
         />
+        {/* Google Identity Services — required for real Google OAuth flow */}
+        <script src="https://accounts.google.com/gsi/client" async defer />
       </head>
       <body className="min-h-screen font-sans antialiased bg-cordova-cream dark:bg-[#121614] text-ink-900 dark:text-gray-100">
         <ThemeProvider>

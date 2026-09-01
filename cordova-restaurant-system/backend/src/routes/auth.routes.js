@@ -21,5 +21,7 @@ router.post('/refresh', authLimiter, controller.refresh);
 router.post('/logout', controller.logout);
 router.get('/me', requireAuth, controller.me);
 router.post('/change-password', requireAuth, validate(changePasswordValidator), controller.changePassword);
+router.patch('/profile', requireAuth, controller.updateProfile);
+
 
 module.exports = router;

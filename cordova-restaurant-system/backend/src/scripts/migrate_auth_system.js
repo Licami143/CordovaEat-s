@@ -8,11 +8,14 @@ async function migrateAuthSchema() {
     await pool.query(`
       ALTER TABLE users 
       ADD COLUMN IF NOT EXISTS email_verified BOOLEAN DEFAULT FALSE,
+      ADD COLUMN IF NOT EXISTS email_verified_at TIMESTAMPTZ NULL,
       ADD COLUMN IF NOT EXISTS google_id VARCHAR(255) UNIQUE,
       ADD COLUMN IF NOT EXISTS facebook_id VARCHAR(255) UNIQUE,
       ADD COLUMN IF NOT EXISTS avatar_url TEXT;
+
+      ALTER TABLE users ALTER COLUMN password_hash DROP NOT NULL;
     `);
-    console.log('✅ Updated users table columns (email_verified, google_id, facebook_id, avatar_url)');
+    console.log('✅ Updated users table columns (email_verified, email_verified_at, google_id, facebook_id, avatar_url)');
 
     // 2. Create email_verification_tokens table
     await pool.query(`

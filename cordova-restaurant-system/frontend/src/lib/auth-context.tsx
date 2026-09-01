@@ -4,17 +4,32 @@ import { createContext, useContext, useEffect, useRef, useState, useCallback, Re
 import { api, setAccessToken, ApiClientError } from './api';
 import type { User } from './types';
 
+interface UpdateProfileData {
+  fullName?: string;
+  phone?: string;
+  avatarUrl?: string;
+}
+
 interface AuthContextValue {
   user: User | null;
   loading: boolean;
+  isAuthenticated: boolean;
   login: (email: string, password: string) => Promise<User>;
-  register: (data: { email: string; password: string; fullName: string; role?: 'customer' | 'owner'; phone?: string; acceptsMarketing?: boolean }) => Promise<void>;
+  register: (data: {
+    email: string;
+    password: string;
+    fullName: string;
+    role?: 'customer' | 'owner';
+    phone?: string;
+    acceptsMarketing?: boolean;
+  }) => Promise<void>;
   loginWithGoogle: (credential: string) => Promise<User>;
   loginWithFacebook: (accessToken: string) => Promise<User>;
   verifyEmail: (token: string) => Promise<User>;
   resendVerificationEmail: () => Promise<void>;
   forgotPassword: (email: string) => Promise<string>;
   resetPassword: (token: string, newPassword: string) => Promise<string>;
+  updateProfile: (data: UpdateProfileData) => Promise<User>;
   logout: () => Promise<void>;
   refreshUser: () => Promise<void>;
 }
@@ -58,7 +73,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const register = useCallback(
-    async (data: { email: string; password: string; fullName: string; role?: 'customer' | 'owner'; phone?: string; acceptsMarketing?: boolean }) => {
+    async (data: {
+      email: string;
+      password: string;
+      fullName: string;
+      role?: 'customer' | 'owner';
+      phone?: string;
+      acceptsMarketing?: boolean;
+    }) => {
       await api.post('/api/auth/register', data, { auth: false });
     },
     []
@@ -100,6 +122,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return res.message || 'Password reset successfully.';
   }, []);
 
+  const updateProfile = useCallback(async (data: UpdateProfileData) => {
+    const payload: Record<string, any> = {};
+    if (data.fullName !== undefined) payload.fullName = data.fullName;
+    if (data.phone !== undefined) payload.phone = data.phone;
+    if (data.avatarUrl !== undefined) payload.avatarUrl = data.avatarUrl;
+
+    const res = await api.patch('/api/auth/profile', payload);
+    if (res.data?.user) {
+      setUser(res.data.user);
+    }
+    return res.data?.user as User;
+  }, []);
+
   const logout = useCallback(async () => {
     try {
       await api.post('/api/auth/logout');
@@ -123,6 +158,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       value={{
         user,
         loading,
+        isAuthenticated: !!user,
         login,
         register,
         loginWithGoogle,
@@ -131,6 +167,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         resendVerificationEmail,
         forgotPassword,
         resetPassword,
+        updateProfile,
         logout,
         refreshUser,
       }}

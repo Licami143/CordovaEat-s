@@ -58,6 +58,21 @@ const env = {
   },
 
   logLevel: process.env.LOG_LEVEL || 'info',
+
+  google: {
+    clientId: process.env.GOOGLE_CLIENT_ID || null,
+    clientSecret: process.env.GOOGLE_CLIENT_SECRET || null,
+  },
+
+  email: {
+    resendApiKey: process.env.RESEND_API_KEY || null,
+    smtpHost: process.env.SMTP_HOST || null,
+    smtpPort: parseInt(process.env.SMTP_PORT || '587', 10),
+    smtpUser: process.env.SMTP_USER || null,
+    smtpPass: process.env.SMTP_PASS || null,
+    smtpSecure: process.env.SMTP_SECURE === 'true',
+    from: process.env.EMAIL_FROM || 'CordovaEats <noreply@cordovaeats.com>',
+  },
 };
 
 module.exports = env;

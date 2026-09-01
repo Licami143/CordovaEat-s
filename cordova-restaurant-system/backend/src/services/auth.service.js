@@ -73,7 +73,7 @@ async function login({ email, password }, meta = {}) {
   const tokens = await issueTokenPair(user, meta);
 
   const { password_hash, ...safeUser } = user;
-  return { user: safeUser, ...tokens };
+  return { user: { ...safeUser, has_password: !!password_hash }, ...tokens };
 }
 
 async function verifyEmail(rawToken) {
@@ -240,7 +240,7 @@ async function googleOAuth({ idToken, credential, accessToken, token: clientToke
   const tokens = await issueTokenPair(user, meta);
 
   const { password_hash, ...safeUser } = user;
-  return { user: safeUser, ...tokens };
+  return { user: { ...safeUser, has_password: !!password_hash }, ...tokens };
 }
 
 async function facebookOAuth({ accessToken, token: clientToken }, meta = {}) {
@@ -292,7 +292,7 @@ async function facebookOAuth({ accessToken, token: clientToken }, meta = {}) {
   const tokens = await issueTokenPair(user, meta);
 
   const { password_hash, ...safeUser } = user;
-  return { user: safeUser, ...tokens };
+  return { user: { ...safeUser, has_password: !!password_hash }, ...tokens };
 }
 
 async function refresh(rawRefreshToken, meta = {}) {
@@ -319,7 +319,7 @@ async function refresh(rawRefreshToken, meta = {}) {
   const tokens = await issueTokenPair(user, meta);
 
   const { password_hash, ...safeUser } = user;
-  return { user: safeUser, ...tokens };
+  return { user: { ...safeUser, has_password: !!password_hash }, ...tokens };
 }
 
 async function logout(rawRefreshToken) {
