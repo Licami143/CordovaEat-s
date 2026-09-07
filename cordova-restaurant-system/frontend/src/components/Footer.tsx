@@ -28,7 +28,7 @@ const COLUMNS: FooterColumn[] = [
     title: 'Explore',
     links: [
       { label: 'Browse Restaurants', href: '/' },
-      { label: 'Recommended Restaurants', href: '/preferences', authRequired: true },
+      { label: 'Recommended Restaurants', href: '/recommendations', authRequired: true },
       { label: 'Current Promotions', href: '/promotions' },
     ],
   },

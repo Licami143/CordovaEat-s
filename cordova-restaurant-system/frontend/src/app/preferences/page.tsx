@@ -92,11 +92,13 @@ export default function PreferencesPage() {
     );
   };
 
+  const returnTo = searchParams.get('returnTo');
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) {
       toast('Please log in or sign up to save preferences', 'info');
-      router.push('/login');
+      router.push(`/login?returnTo=${encodeURIComponent(returnTo || '/preferences')}`);
       return;
     }
 
@@ -109,7 +111,7 @@ export default function PreferencesPage() {
         budgetRange: selectedBudget,
       });
       toast('Preferences saved successfully!', 'success');
-      router.push('/');
+      router.push(returnTo || '/recommendations');
     } catch (err) {
       toast(err instanceof ApiClientError ? err.message : 'Failed to save preferences', 'error');
     } finally {
@@ -259,10 +261,10 @@ export default function PreferencesPage() {
 
               <button
                 type="button"
-                onClick={() => router.push('/')}
+                onClick={() => router.push(returnTo || (isFirstTime ? '/' : '/recommendations'))}
                 className="w-full bg-stone-200 dark:bg-stone-800 hover:bg-stone-300 dark:hover:bg-stone-700 text-stone-700 dark:text-stone-300 font-semibold py-3 px-6 rounded-2xl text-xs transition-colors"
               >
-                {isFirstTime ? 'Skip for now' : 'Back to Home'}
+                {isFirstTime ? 'Skip for now' : returnTo ? 'Back to Recommendations' : 'Back to Home'}
               </button>
             </div>
           </form>
