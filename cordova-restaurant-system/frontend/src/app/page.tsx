@@ -14,6 +14,8 @@ import {
   Zap,
   ChevronLeft,
   ChevronRight,
+  Sparkles,
+  X,
 } from 'lucide-react';
 import { api } from '@/lib/api';
 import { useAuth } from '@/lib/auth-context';
@@ -27,6 +29,7 @@ export default function HomePage() {
   const router = useRouter();
   const { user } = useAuth();
   const [searchQuery, setSearchQuery] = useState('');
+  const [aiMode, setAiMode] = useState(true);
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
   const [page, setPage] = useState(1);
   const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
@@ -52,18 +55,38 @@ export default function HomePage() {
     setLoading(true);
     try {
       let apiList: Restaurant[] = [];
-      try {
-        const params = new URLSearchParams();
-        if (searchQuery.trim()) params.set('q', searchQuery.trim());
-        if (activeCategory && activeCategory !== 'restaurants') params.set('cuisines', activeCategory);
-        params.set('limit', '100');
 
-        const res = await api.get(`/api/restaurants?${params.toString()}`, { auth: false });
-        if (res.data && Array.isArray(res.data)) {
-          apiList = res.data;
+      // If AI mode is active and there's a search term, query the smart AI ranking endpoint
+      if (aiMode && searchQuery.trim()) {
+        try {
+          const res = await api.post(
+            '/api/search',
+            {
+              keyword: searchQuery.trim(),
+              cuisine: activeCategory && activeCategory !== 'restaurants' ? activeCategory : undefined,
+            },
+            { auth: false }
+          );
+          if (res.data && Array.isArray(res.data)) {
+            apiList = res.data;
+          }
+        } catch {
+          apiList = [];
         }
-      } catch {
-        apiList = [];
+      } else {
+        try {
+          const params = new URLSearchParams();
+          if (searchQuery.trim()) params.set('q', searchQuery.trim());
+          if (activeCategory && activeCategory !== 'restaurants') params.set('cuisines', activeCategory);
+          params.set('limit', '100');
+
+          const res = await api.get(`/api/restaurants?${params.toString()}`, { auth: false });
+          if (res.data && Array.isArray(res.data)) {
+            apiList = res.data;
+          }
+        } catch {
+          apiList = [];
+        }
       }
 
       const staticList = getAllStaticRestaurants();
@@ -78,17 +101,32 @@ export default function HomePage() {
         map.set(key, item);
       }
 
-      let all = Array.from(map.values()).filter(isRestaurantVisible);
+      let all: Restaurant[] = [];
 
-      // Filter by search query
-      if (searchQuery.trim()) {
-        const q = searchQuery.toLowerCase().trim();
-        all = all.filter((r) =>
-          r.name.toLowerCase().includes(q) ||
-          (r.description && r.description.toLowerCase().includes(q)) ||
-          (r.barangay && r.barangay.toLowerCase().includes(q)) ||
-          (r.cuisines && r.cuisines.some((c) => c.toLowerCase().includes(q)))
-        );
+      if (aiMode && searchQuery.trim() && apiList.length > 0) {
+        // Retain the AI ranking order from apiList
+        const seen = new Set<string>();
+        for (const item of apiList) {
+          const key = normalizeKey(item.slug || item.name);
+          const fullItem = map.get(key) || item;
+          if (isRestaurantVisible(fullItem) && !seen.has(key)) {
+            all.push(fullItem);
+            seen.add(key);
+          }
+        }
+      } else {
+        all = Array.from(map.values()).filter(isRestaurantVisible);
+
+        // Filter by search query if standard search
+        if (searchQuery.trim()) {
+          const q = searchQuery.toLowerCase().trim();
+          all = all.filter((r) =>
+            r.name.toLowerCase().includes(q) ||
+            (r.description && r.description.toLowerCase().includes(q)) ||
+            (r.barangay && r.barangay.toLowerCase().includes(q)) ||
+            (r.cuisines && r.cuisines.some((c) => c.toLowerCase().includes(q)))
+          );
+        }
       }
 
       // Filter by active category
@@ -117,7 +155,7 @@ export default function HomePage() {
     } finally {
       setLoading(false);
     }
-  }, [searchQuery, activeCategory, page]);
+  }, [searchQuery, activeCategory, page, aiMode]);
 
   const fetchRecommendations = useCallback(async () => {
     setRecLoading(true);
@@ -259,27 +297,102 @@ export default function HomePage() {
         <div className="absolute bottom-0 left-0 right-0 h-24 bg-gradient-to-t from-cordova-cream dark:from-[#121614] to-transparent pointer-events-none" />
       </section>
 
-      {/* SEARCH BAR SECTION */}
+      {/* SEARCH BAR SECTION WITH INTEGRATED AI MODE */}
       <section className="relative z-20 -mt-10 px-4 max-w-3xl mx-auto">
         <form
           onSubmit={handleSearchSubmit}
-          className="bg-white dark:bg-[#1a211c] rounded border border-stone-200 dark:border-stone-800 shadow-lg p-2 flex items-center gap-2"
+          className={`rounded-2xl transition-all duration-300 shadow-xl p-2 flex items-center gap-2 ${
+            aiMode
+              ? 'bg-[#181524] dark:bg-[#151221] border-2 border-purple-400/80 shadow-purple-950/20 ring-2 ring-purple-500/20'
+              : 'bg-white dark:bg-[#1a211c] border border-stone-200 dark:border-stone-800'
+          }`}
         >
+          <div className="flex items-center pl-3 text-stone-400">
+            {aiMode ? (
+              <Sparkles size={18} className="text-purple-400 animate-pulse" />
+            ) : (
+              <Search size={18} className="text-stone-400" />
+            )}
+          </div>
+
           <input
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search for restaurants, cuisines, or dishes..."
-            className="flex-1 px-4 py-3 bg-transparent text-stone-800 dark:text-stone-100 placeholder:text-stone-400 text-sm outline-none font-sans"
+            placeholder={
+              aiMode
+                ? 'Ask AI: search dishes, atmosphere, seafood (e.g. romantic dinner near CCLEX)...'
+                : 'Search for restaurants, cuisines, or dishes...'
+            }
+            className={`flex-1 px-2.5 py-3 bg-transparent text-sm outline-none font-sans ${
+              aiMode
+                ? 'text-white placeholder:text-purple-300/60'
+                : 'text-stone-800 dark:text-stone-100 placeholder:text-stone-400'
+            }`}
           />
+
+          {searchQuery && (
+            <button
+              type="button"
+              onClick={() => {
+                setSearchQuery('');
+                setPage(1);
+              }}
+              className={`p-1.5 rounded-full transition-colors ${
+                aiMode
+                  ? 'text-purple-300 hover:text-white hover:bg-purple-800/40'
+                  : 'text-stone-400 hover:text-stone-600 dark:hover:text-stone-200'
+              }`}
+              title="Clear search"
+            >
+              <X size={15} />
+            </button>
+          )}
+
+          {/* AI Mode Toggle Pill Button */}
+          <button
+            type="button"
+            onClick={() => setAiMode(!aiMode)}
+            className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold tracking-wide transition-all duration-200 shrink-0 select-none ${
+              aiMode
+                ? 'bg-purple-700 hover:bg-purple-600 text-white shadow-md shadow-purple-900/40 border border-purple-400/50 ring-1 ring-purple-400/40 scale-105'
+                : 'bg-stone-100 dark:bg-stone-800 hover:bg-stone-200 dark:hover:bg-stone-700 text-stone-600 dark:text-stone-300 border border-stone-300 dark:border-stone-700 opacity-80'
+            }`}
+            title="Toggle AI Search Mode"
+          >
+            <Sparkles size={13} className={aiMode ? 'text-purple-200' : 'text-stone-400'} />
+            <span>AI Mode</span>
+          </button>
+
+          {/* Search Action Button */}
           <button
             type="submit"
-            className="bg-cordova-gold hover:bg-cordova-goldHover text-white p-3.5 rounded transition-colors duration-200 shrink-0"
+            className="bg-cordova-gold hover:bg-cordova-goldHover text-white p-3 rounded-xl transition-colors duration-200 shrink-0 shadow-sm"
             aria-label="Search"
           >
-            <Search size={18} />
+            <Search size={17} />
           </button>
         </form>
+
+        {/* Quick Suggestion Chips */}
+        {aiMode && (
+          <div className="flex flex-wrap items-center justify-center gap-2 mt-3 text-xs">
+            <span className="text-stone-500 dark:text-stone-400 font-medium text-[11px]">Popular AI Searches:</span>
+            {['Sunset View', 'Bakasi & Shellfish', 'Resort Dining', 'Budget-Friendly Grill', 'Acoustic / Live Music'].map((chip) => (
+              <button
+                key={chip}
+                type="button"
+                onClick={() => {
+                  setSearchQuery(chip);
+                  setPage(1);
+                }}
+                className="px-2.5 py-1 rounded-full bg-white/80 dark:bg-purple-950/40 hover:bg-purple-50 dark:hover:bg-purple-900/50 border border-purple-200/60 dark:border-purple-800/60 text-purple-700 dark:text-purple-300 font-medium transition-all text-[11px] shadow-2xs hover:scale-105"
+              >
+                ✨ {chip}
+              </button>
+            ))}
+          </div>
+        )}
       </section>
 
       {/* EXPLORE BY CATEGORY SECTION */}

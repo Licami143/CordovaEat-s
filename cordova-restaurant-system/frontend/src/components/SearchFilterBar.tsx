@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Search, MapPin, SlidersHorizontal, X, Compass, DollarSign, Utensils } from 'lucide-react';
+import { Search, MapPin, SlidersHorizontal, X, Compass, DollarSign, Utensils, Sparkles } from 'lucide-react';
 import type { PriceRange } from '@/lib/types';
 
 export interface SearchFilterState {
@@ -146,17 +146,23 @@ export function SearchFilterBar({
             value={filters.keyword}
             onChange={(e) => handleKeywordChange(e.target.value)}
             placeholder="Search restaurants, dishes (e.g. Bangus, Pizza, Baked Scallops)..."
-            className="w-full pl-10 pr-10 py-3 text-sm bg-stone-50 dark:bg-stone-900 border border-stone-200 dark:border-stone-700 rounded-lg text-stone-900 dark:text-white placeholder:text-stone-400 focus:outline-none focus:ring-2 focus:ring-cordova-green"
+            className="w-full pl-10 pr-32 py-3 text-sm bg-stone-50 dark:bg-stone-900 border border-stone-200 dark:border-stone-700 rounded-lg text-stone-900 dark:text-white placeholder:text-stone-400 focus:outline-none focus:ring-2 focus:ring-cordova-green"
           />
-          {filters.keyword && (
-            <button
-              type="button"
-              onClick={() => handleKeywordChange('')}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-stone-400 hover:text-stone-600 dark:hover:text-stone-200"
-            >
-              <X size={16} />
-            </button>
-          )}
+          <div className="absolute right-2.5 top-1/2 -translate-y-1/2 flex items-center gap-1.5">
+            {filters.keyword && (
+              <button
+                type="button"
+                onClick={() => handleKeywordChange('')}
+                className="p-1 text-stone-400 hover:text-stone-600 dark:hover:text-stone-200"
+              >
+                <X size={15} />
+              </button>
+            )}
+            <span className="flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-purple-700/90 text-white shadow-sm border border-purple-400/40 select-none">
+              <Sparkles size={11} className="text-purple-200" />
+              <span>AI Mode</span>
+            </span>
+          </div>
         </div>
 
         {/* Action Buttons */}

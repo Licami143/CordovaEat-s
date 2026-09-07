@@ -24,7 +24,6 @@ export function Navbar() {
 
   const navLinks = [
     { href: '/', label: 'Home' },
-    { href: '/search', label: 'AI Search' },
     { href: '/promotions', label: 'Promotions' },
   ];
 
