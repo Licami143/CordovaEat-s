@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, FormEvent } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
 import { Eye, EyeOff, CheckCircle2, XCircle } from 'lucide-react';
@@ -16,6 +16,8 @@ const GOOGLE_CLIENT_ID =
   rawClientId && !rawClientId.includes('YOUR_CLIENT_ID') && !rawClientId.includes('your_')
     ? rawClientId
     : null;
+
+const REQUIRE_EMAIL_VERIFICATION = process.env.NEXT_PUBLIC_REQUIRE_EMAIL_VERIFICATION === 'true';
 
 type PasswordStrength = 'weak' | 'fair' | 'strong' | 'very-strong';
 
@@ -39,9 +41,12 @@ const strengthConfig: Record<PasswordStrength, { label: string; color: string; w
 };
 
 export default function RegisterPage() {
-  const { register, loginWithGoogle, loginWithFacebook } = useAuth();
+  const { register, login, loginWithGoogle, loginWithFacebook } = useAuth();
   const { showToast } = useToast();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const redirectTo = searchParams.get('redirect');
+  const roleParam = searchParams.get('role');
 
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
@@ -50,7 +55,7 @@ export default function RegisterPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showConfirm, setShowConfirm] = useState(false);
-  const [role, setRole] = useState<'customer' | 'owner'>('customer');
+  const [role, setRole] = useState<'customer' | 'owner'>(roleParam === 'owner' ? 'owner' : 'customer');
   const [acceptsMarketing, setAcceptsMarketing] = useState(true);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(false);
@@ -82,8 +87,26 @@ export default function RegisterPage() {
         role,
         acceptsMarketing,
       });
-      showToast('Account created! Please check your email to verify your account.', 'success');
-      router.push('/verify-email-required');
+
+      if (REQUIRE_EMAIL_VERIFICATION) {
+        showToast('Account created! Please check your email to verify your account.', 'success');
+        router.push('/verify-email-required');
+      } else {
+        try {
+          const user = await login(email, password);
+          showToast('Account created successfully! Welcome to CordovaEats.', 'success');
+          if (redirectTo && redirectTo !== '/' && redirectTo.startsWith('/')) {
+            router.push(redirectTo);
+          } else if (user.role === 'owner') {
+            router.push('/dashboard/new');
+          } else {
+            router.push('/preferences?firstTime=true');
+          }
+        } catch {
+          showToast('Account created successfully! You can now log in.', 'success');
+          router.push('/login');
+        }
+      }
     } catch (err) {
       if (err instanceof ApiClientError) {
         showToast(err.message, 'error');
@@ -92,6 +115,16 @@ export default function RegisterPage() {
       }
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleOAuthSuccess = (user: any) => {
+    if (redirectTo && redirectTo !== '/' && redirectTo.startsWith('/')) {
+      router.push(redirectTo);
+    } else if (user.role === 'owner') {
+      router.push('/dashboard/new');
+    } else {
+      router.push('/preferences?firstTime=true');
     }
   };
 
@@ -110,9 +143,9 @@ export default function RegisterPage() {
             return;
           }
           try {
-            await loginWithGoogle(tokenResponse.access_token);
+            const user = await loginWithGoogle(tokenResponse.access_token);
             showToast('Account created & verified via Google!', 'success');
-            router.push('/preferences?firstTime=true');
+            handleOAuthSuccess(user);
           } catch (err) {
             if (err instanceof ApiClientError) showToast(err.message, 'error');
             else showToast('Google sign-up failed. Please try again.', 'error');
@@ -136,9 +169,9 @@ export default function RegisterPage() {
     try {
       showToast('Dev Mode: Creating account with simulated Google profile…', 'info');
       const devToken = `google_oauth_token_${Date.now()}`;
-      await loginWithGoogle(devToken);
+      const user = await loginWithGoogle(devToken);
       showToast('Account created & verified via Google (Dev Mode)!', 'success');
-      router.push('/preferences?firstTime=true');
+      handleOAuthSuccess(user);
     } catch (err) {
       if (err instanceof ApiClientError) showToast(err.message, 'error');
       else showToast('Google sign-up failed.', 'error');
@@ -151,9 +184,9 @@ export default function RegisterPage() {
     setOauthLoading('facebook');
     try {
       const mockFbToken = `fb_oauth_token_${Date.now()}`;
-      await loginWithFacebook(mockFbToken);
+      const user = await loginWithFacebook(mockFbToken);
       showToast('Account created & verified via Facebook!', 'success');
-      router.push('/preferences?firstTime=true');
+      handleOAuthSuccess(user);
     } catch (err) {
       if (err instanceof ApiClientError) showToast(err.message, 'error');
       else showToast('Facebook sign-up failed.', 'error');

@@ -48,6 +48,17 @@ const resendVerification = asyncHandler(async (req, res) => {
   res.json({ success: true, message: result.message });
 });
 
+const devVerifyEmail = asyncHandler(async (req, res) => {
+  const email = req.body?.email || req.query?.email;
+  const userId = req.user?.id || req.body?.userId;
+  const user = await authService.devVerifyEmail({ email, userId });
+  res.json({
+    success: true,
+    message: 'Dev Mode: Email verified successfully!',
+    data: { user },
+  });
+});
+
 const forgotPassword = asyncHandler(async (req, res) => {
   const result = await authService.forgotPassword(req.body.email);
   res.json({ success: true, message: result.message });
@@ -116,6 +127,7 @@ module.exports = {
   login,
   verifyEmail,
   resendVerification,
+  devVerifyEmail,
   forgotPassword,
   resetPassword,
   googleOAuth,

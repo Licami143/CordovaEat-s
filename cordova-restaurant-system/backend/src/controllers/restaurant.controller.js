@@ -1,5 +1,6 @@
 const slugify = require('../utils/slugify');
 const restaurantModel = require('../models/restaurant.model');
+const userModel = require('../models/user.model');
 const cuisineModel = require('../models/cuisine.model');
 const analyticsModel = require('../models/analytics.model');
 const imageModel = require('../models/restaurantImage.model');
@@ -74,9 +75,26 @@ const create = asyncHandler(async (req, res) => {
     businessPermitUrl = uploadService.publicUrlFor(req.file);
   }
 
+  const toArray = (val) => {
+    if (Array.isArray(val)) return val;
+    if (typeof val === 'string') {
+      try {
+        const parsed = JSON.parse(val);
+        return Array.isArray(parsed) ? parsed : [val];
+      } catch {
+        return val ? [val] : [];
+      }
+    }
+    return [];
+  };
+
+  const cuisineSlugs = toArray(body.cuisineSlugs);
+  const dietaryOptions = toArray(body.dietaryOptions);
+  const servicesOffered = toArray(body.servicesOffered);
+
   let cuisineIds = [];
-  if (body.cuisineSlugs?.length) {
-    const cuisines = await cuisineModel.findBySlugs(body.cuisineSlugs);
+  if (cuisineSlugs.length) {
+    const cuisines = await cuisineModel.findBySlugs(cuisineSlugs);
     cuisineIds = cuisines.map((c) => c.id);
   }
 
@@ -85,20 +103,25 @@ const create = asyncHandler(async (req, res) => {
       ownerId: req.user.id,
       name: body.name,
       slug,
-      description: body.description,
+      description: body.description || null,
       address: body.address,
-      barangay: body.barangay,
-      latitude: body.latitude,
-      longitude: body.longitude,
-      phone: body.phone,
-      email: body.email,
-      priceRange: body.priceRange,
-      servicesOffered: body.servicesOffered,
+      barangay: body.barangay || null,
+      latitude: parseFloat(body.latitude),
+      longitude: parseFloat(body.longitude),
+      phone: body.phone || null,
+      email: body.email || null,
+      priceRange: body.priceRange || 'moderate',
+      servicesOffered: servicesOffered.length ? servicesOffered : ['dine_in'],
       businessPermitUrl,
     },
     cuisineIds,
-    body.dietaryOptions || []
+    dietaryOptions
   );
+
+  // If a customer registers a business, promote them to 'owner' role
+  if (req.user.role === 'customer') {
+    await userModel.updateRole(req.user.id, 'owner');
+  }
 
   res.status(201).json({
     success: true,
@@ -220,7 +243,47 @@ const deleteImage = asyncHandler(async (req, res) => {
   res.json({ success: true, message: 'Photo removed' });
 });
 
+/** PATCH /api/restaurants/:id/subscription — owner or admin updates subscription tier */
+const updateSubscription = asyncHandler(async (req, res) => {
+  const existing = await restaurantModel.findById(req.params.id);
+  if (!existing) throw ApiError.notFound('Restaurant not found');
+  if (existing.owner_id !== req.user.id && req.user.role !== 'admin') {
+    throw ApiError.forbidden('You do not own this restaurant');
+  }
+
+  const { subscription_tier, subscription_expires_at, durationDays = 30 } = req.body;
+  const validTiers = ['none', 'basic', 'premium', 'featured'];
+  const tier = (subscription_tier || 'none').toLowerCase();
+
+  if (!validTiers.includes(tier)) {
+    throw ApiError.badRequest(`Invalid subscription tier. Must be one of: ${validTiers.join(', ')}`);
+  }
+
+  let expiresAt = null;
+  if (tier !== 'none') {
+    if (subscription_expires_at) {
+      expiresAt = new Date(subscription_expires_at).toISOString();
+    } else {
+      const d = new Date();
+      d.setDate(d.getDate() + Number(durationDays || 30));
+      expiresAt = d.toISOString();
+    }
+  }
+
+  const updated = await restaurantModel.updateSubscription(req.params.id, {
+    tier,
+    expiresAt,
+  });
+
+  res.json({
+    success: true,
+    message: `Subscription successfully updated to ${tier.toUpperCase()}`,
+    data: { restaurant: updated },
+  });
+});
+
 module.exports = {
   search, getById, getBySlug, listMine, create, update, uploadCoverImage,
   listCuisines, adminList, verify, suspend, getSimilar, listImages, uploadImage, deleteImage,
+  updateSubscription,
 };

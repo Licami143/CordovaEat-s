@@ -23,7 +23,7 @@ export default function ForRestaurantsPage() {
           <li>Customer ratings &amp; reviews</li>
           <li>Basic analytics: views, and how often you appear in recommendations</li>
         </ul>
-        <Link href="/register">
+        <Link href="/dashboard/new">
           <Button>Register your business</Button>
         </Link>
       </div>

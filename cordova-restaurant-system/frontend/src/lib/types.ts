@@ -2,6 +2,7 @@ export type UserRole = 'customer' | 'owner' | 'admin';
 export type PriceRange = 'budget' | 'moderate' | 'expensive' | 'premium';
 export type ServiceType = 'dine_in' | 'takeout' | 'delivery';
 export type BusinessStatus = 'pending' | 'verified' | 'rejected' | 'suspended';
+export type SubscriptionTier = 'none' | 'basic' | 'premium' | 'featured';
 
 export interface User {
   id: string;
@@ -17,6 +18,7 @@ export interface User {
   google_id?: string | null;
   facebook_id?: string | null;
   has_password?: boolean;
+  preferences?: Record<string, any>;
   last_login_at?: string | null;
   created_at: string;
   // password_hash is stripped on the backend — never sent to client
@@ -54,6 +56,15 @@ export interface Restaurant {
   review_count: number;
   view_count: number;
   is_active: boolean;
+  is_open?: boolean;
+  category?: 'Fast Food' | 'Restaurant' | 'Cafe' | 'Street Food' | 'Resto Bar' | 'Pizza';
+  subscription_tier?: SubscriptionTier;
+  subscription_expires_at?: string;
+  subscription_boost?: number;
+  relevance_score?: number;
+  final_score?: number;
+  isSponsored?: boolean;
+  matched_menu_items?: MenuItem[];
   cuisines: string[];
   dietary_options: string[];
   amenities: string[];

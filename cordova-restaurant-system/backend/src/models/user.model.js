@@ -77,6 +77,14 @@ async function updateEmailVerified(userId, isVerified = true) {
   return rows[0];
 }
 
+async function updateRole(id, role) {
+  const { rows } = await query(
+    `UPDATE users SET role = $2 WHERE id = $1 RETURNING ${PUBLIC_FIELDS}`,
+    [id, role]
+  );
+  return rows[0] || null;
+}
+
 async function updateProfile(id, { fullName, phone, avatarUrl }) {
   const { rows } = await query(
     `UPDATE users SET
@@ -178,6 +186,7 @@ module.exports = {
   linkGoogleAccount,
   linkFacebookAccount,
   updateEmailVerified,
+  updateRole,
   updateProfile,
   updatePassword,
   touchLastLogin,

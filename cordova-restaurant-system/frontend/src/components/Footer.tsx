@@ -21,7 +21,7 @@ const COLUMNS: { title: string; links: { label: string; href: string }[] }[] = [
   {
     title: 'For Restaurant Owners',
     links: [
-      { label: 'List Your Restaurant', href: '/for-restaurants' },
+      { label: 'List Your Restaurant', href: '/dashboard/new' },
       { label: 'Advertise With Us', href: '/for-restaurants#advertise' },
       { label: 'Owner Dashboard', href: '/dashboard' },
     ],

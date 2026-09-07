@@ -26,11 +26,11 @@ router.get('/by-slug/:slug', optionalAuth, restaurantController.getBySlug);
 router.get('/:id/similar', restaurantController.getSimilar);
 router.get('/:id', optionalAuth, restaurantController.getById);
 
-// ---- Owner: create/update business ----
+// ---- Create business listing ----
 router.post(
   '/',
   requireAuth,
-  requireRole('owner'),
+  requireRole('owner', 'admin', 'customer'),
   uploadBusinessPermit.single('businessPermit'),
   validate(createRestaurantValidator),
   restaurantController.create
@@ -41,6 +41,12 @@ router.patch(
   requireRole('owner', 'admin'),
   validate(updateRestaurantValidator),
   restaurantController.update
+);
+router.patch(
+  '/:id/subscription',
+  requireAuth,
+  requireRole('owner', 'admin'),
+  restaurantController.updateSubscription
 );
 router.post(
   '/:id/cover-image',

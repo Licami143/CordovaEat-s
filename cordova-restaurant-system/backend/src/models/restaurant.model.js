@@ -353,6 +353,19 @@ async function findSimilar(restaurantId, { limit = 4 } = {}) {
   return fallback;
 }
 
+async function updateSubscription(id, { tier = 'none', expiresAt = null }) {
+  const { rows } = await query(
+    `UPDATE restaurants
+     SET subscription_tier = $2,
+         subscription_expires_at = $3,
+         updated_at = now()
+     WHERE id = $1
+     RETURNING *`,
+    [id, tier, expiresAt]
+  );
+  return rows[0] || null;
+}
+
 module.exports = {
   search,
   findById,
@@ -362,6 +375,7 @@ module.exports = {
   findSimilar,
   create,
   update,
+  updateSubscription,
   setVerificationStatus,
   incrementViewCount,
   replaceCuisines,

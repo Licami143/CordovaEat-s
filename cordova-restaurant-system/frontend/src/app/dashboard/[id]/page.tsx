@@ -15,7 +15,7 @@ import { AMENITIES } from '@/lib/amenities';
 import type { Restaurant, MenuItem, MenuCategory, Promotion, OperatingHour, RestaurantImage } from '@/lib/types';
 
 const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-const TABS = ['overview', 'menu', 'hours', 'promotions', 'analytics'] as const;
+const TABS = ['overview', 'menu', 'hours', 'promotions', 'subscription', 'analytics'] as const;
 type Tab = (typeof TABS)[number];
 
 export default function ManageBusinessPage() {
@@ -73,10 +73,10 @@ export default function ManageBusinessPage() {
                 key={t}
                 onClick={() => setTab(t)}
                 className={`px-4 py-2.5 text-sm font-medium border-b-2 -mb-px capitalize whitespace-nowrap ${
-                  tab === t ? 'border-brand-500 text-brand-600 dark:text-brand-400' : 'border-transparent text-[var(--text-muted)]'
+                  tab === t ? 'border-brand-500 text-brand-600 dark:text-brand-400 font-bold' : 'border-transparent text-[var(--text-muted)]'
                 }`}
               >
-                {t}
+                {t === 'subscription' ? 'Subscription & Boost' : t}
               </button>
             ))}
           </div>
@@ -85,6 +85,7 @@ export default function ManageBusinessPage() {
           {tab === 'menu' && <MenuTab restaurantId={restaurant.id} />}
           {tab === 'hours' && <HoursTab restaurantId={restaurant.id} />}
           {tab === 'promotions' && <PromotionsTab restaurantId={restaurant.id} />}
+          {tab === 'subscription' && <SubscriptionTab restaurant={restaurant} onUpdated={load} />}
           {tab === 'analytics' && <AnalyticsTab restaurantId={restaurant.id} />}
         </div>
       )}
@@ -252,7 +253,7 @@ function MenuTab({ restaurantId }: { restaurantId: string }) {
     } finally {
       setLoading(false);
     }
-  }, [restaurantId]);
+  }, [restaurantId, toast]);
 
   useEffect(() => {
     load();
@@ -679,6 +680,180 @@ function StatCard({ label, value }: { label: string; value: number }) {
     <div className="card p-4">
       <p className="text-2xl font-bold">{value}</p>
       <p className="text-xs text-[var(--text-muted)] mt-1">{label}</p>
+    </div>
+  );
+}
+
+// ---------------- Subscription & Ranking Boost Tab ----------------
+function SubscriptionTab({ restaurant, onUpdated }: { restaurant: Restaurant; onUpdated: () => void }) {
+  const { toast } = useToast();
+  const [updating, setUpdating] = useState(false);
+  const currentTier = (restaurant.subscription_tier || 'none').toLowerCase();
+
+  const TIERS = [
+    {
+      id: 'none',
+      name: 'Free / Standard',
+      price: '₱0 / month',
+      boost: '1.0x (No Boost)',
+      badge: 'neutral',
+      features: [
+        'Standard search indexing',
+        'Direct menu & info display',
+        'Customer reviews & ratings',
+      ],
+    },
+    {
+      id: 'basic',
+      name: 'Basic Boost',
+      price: '₱499 / month',
+      boost: '1.1x Ranking Boost',
+      badge: 'brand',
+      features: [
+        '1.1x relevance multiplier',
+        'Higher priority in local searches',
+        'Included in dish & cuisine filters',
+      ],
+    },
+    {
+      id: 'premium',
+      name: 'Premium Boost',
+      price: '₱999 / month',
+      boost: '1.3x Ranking Boost',
+      badge: 'success',
+      features: [
+        '1.3x relevance multiplier',
+        'Substantial boost over non-subscribers',
+        'Higher chance of top 5 placements',
+      ],
+    },
+    {
+      id: 'featured',
+      name: 'Featured Partner',
+      price: '₱1,999 / month',
+      boost: '1.5x Maximum Boost + Sponsored Slots',
+      badge: 'warning',
+      features: [
+        '1.5x maximum relevance multiplier',
+        'Reserved Top 2 Sponsored positions',
+        'Distinctive "Sponsored" gold badge',
+      ],
+    },
+  ] as const;
+
+  const handleUpdateTier = async (tier: string) => {
+    setUpdating(true);
+    try {
+      await api.patch(`/api/restaurants/${restaurant.id}/subscription`, {
+        subscription_tier: tier,
+        durationDays: 30,
+      });
+      toast(`Subscription updated to ${tier.toUpperCase()}`, 'success');
+      onUpdated();
+    } catch (err) {
+      toast(err instanceof ApiClientError ? err.message : 'Failed to update subscription', 'error');
+    } finally {
+      setUpdating(false);
+    }
+  };
+
+  return (
+    <div className="space-y-8">
+      {/* Current Status Banner */}
+      <div className="bg-white dark:bg-[#1a211c] border border-stone-200 dark:border-stone-800 rounded-xl p-6 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <span className="text-xs font-bold uppercase tracking-wider text-stone-500 dark:text-stone-400">
+            Active Tier
+          </span>
+          <div className="flex items-center gap-3 mt-1">
+            <h2 className="text-2xl font-bold font-serif capitalize text-stone-900 dark:text-white">
+              {currentTier} Tier
+            </h2>
+            <Badge color={currentTier === 'featured' ? 'warning' : currentTier === 'premium' ? 'success' : currentTier === 'basic' ? 'brand' : 'neutral'}>
+              {currentTier === 'featured' ? '1.5x Boost' : currentTier === 'premium' ? '1.3x Boost' : currentTier === 'basic' ? '1.1x Boost' : '1.0x Base'}
+            </Badge>
+          </div>
+          {restaurant.subscription_expires_at ? (
+            <p className="text-xs text-stone-500 mt-1">
+              Expires on: {new Date(restaurant.subscription_expires_at).toLocaleDateString()}
+            </p>
+          ) : (
+            <p className="text-xs text-stone-500 mt-1">Free tier active indefinitely.</p>
+          )}
+        </div>
+
+        <div className="text-xs text-stone-500 max-w-xs bg-amber-50 dark:bg-amber-950/30 p-3 rounded-lg border border-amber-200 dark:border-amber-900/50">
+          💡 <span className="font-semibold text-stone-800 dark:text-stone-200">How Boost Works:</span> When users search for keywords, cuisines, or dishes, your relevance score is multiplied by your tier rate.
+        </div>
+      </div>
+
+      {/* Plan Selection Cards */}
+      <div>
+        <h3 className="font-serif text-xl font-bold text-stone-900 dark:text-white mb-4">
+          Choose a Subscription & Ranking Tier
+        </h3>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          {TIERS.map((tier) => {
+            const isCurrent = currentTier === tier.id;
+            return (
+              <div
+                key={tier.id}
+                className={`bg-white dark:bg-[#1a211c] rounded-xl border p-5 flex flex-col justify-between transition-all ${
+                  isCurrent
+                    ? 'border-cordova-green ring-2 ring-cordova-green/30 shadow-md'
+                    : 'border-stone-200 dark:border-stone-800 shadow-sm hover:border-cordova-gold'
+                }`}
+              >
+                <div className="space-y-3">
+                  <div className="flex justify-between items-start">
+                    <h4 className="font-serif text-lg font-bold text-stone-900 dark:text-white">
+                      {tier.name}
+                    </h4>
+                    {isCurrent && (
+                      <span className="text-[10px] uppercase tracking-wider font-bold bg-cordova-green text-white px-2 py-0.5 rounded">
+                        Active
+                      </span>
+                    )}
+                  </div>
+
+                  <div>
+                    <p className="text-xl font-bold text-stone-900 dark:text-white">{tier.price}</p>
+                    <p className="text-xs font-semibold text-cordova-green dark:text-emerald-400 mt-0.5">
+                      {tier.boost}
+                    </p>
+                  </div>
+
+                  <ul className="space-y-2 pt-3 border-t border-stone-100 dark:border-stone-800">
+                    {tier.features.map((f, idx) => (
+                      <li key={idx} className="text-xs text-stone-600 dark:text-stone-300 flex items-start gap-1.5">
+                        <span className="text-cordova-green font-bold shrink-0">✓</span>
+                        <span>{f}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+
+                <div className="pt-6 mt-4 border-t border-stone-100 dark:border-stone-800">
+                  <Button
+                    onClick={() => handleUpdateTier(tier.id)}
+                    loading={updating}
+                    variant={isCurrent ? 'secondary' : tier.id === 'featured' ? 'primary' : 'secondary'}
+                    disabled={isCurrent || updating}
+                    className={`w-full text-xs font-bold uppercase tracking-wider ${
+                      tier.id === 'featured' && !isCurrent
+                        ? 'bg-amber-500 hover:bg-amber-600 text-white'
+                        : ''
+                    }`}
+                  >
+                    {isCurrent ? 'Current Plan' : tier.id === 'none' ? 'Downgrade to Free' : 'Upgrade Plan'}
+                  </Button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
     </div>
   );
 }

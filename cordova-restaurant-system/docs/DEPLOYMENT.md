@@ -61,10 +61,34 @@ trailing slash). The refresh-token cookie is `httpOnly`, `sameSite: lax`,
 and `secure` in production — this requires the backend to be served over
 HTTPS, or browsers will silently drop the cookie.
 
-## 5. Production checklist
+## 5. Email verification & transactional emails
+
+In development/localhost, email verification is optional (`REQUIRE_EMAIL_VERIFICATION=false`).
+For production deployment, enable email verification to protect user accounts:
+
+1. **Backend Environment Variables**:
+   - `REQUIRE_EMAIL_VERIFICATION=true`
+   - Set up **Resend API** (recommended):
+     - `RESEND_API_KEY=re_xxxxxxxxxxxxxxxxxxxx`
+     - `EMAIL_FROM=CordovaEats <noreply@yourdomain.com>`
+   - OR set up **SMTP**:
+     - `SMTP_HOST=smtp.sendgrid.net` (or `smtp.gmail.com`)
+     - `SMTP_PORT=587`
+     - `SMTP_SECURE=false`
+     - `SMTP_USER=your_smtp_username`
+     - `SMTP_PASS=your_smtp_password`
+     - `EMAIL_FROM=CordovaEats <noreply@yourdomain.com>`
+
+2. **Frontend Environment Variables**:
+   - `NEXT_PUBLIC_REQUIRE_EMAIL_VERIFICATION=true`
+   - `NEXT_PUBLIC_APP_URL=https://your-frontend-domain.com` (used for verification email links)
+
+## 6. Production checklist
 
 - [ ] All secrets in `.env` are unique, random, and never committed
 - [ ] `NODE_ENV=production` on the backend
+- [ ] `REQUIRE_EMAIL_VERIFICATION=true` on backend and `NEXT_PUBLIC_REQUIRE_EMAIL_VERIFICATION=true` on frontend
+- [ ] `RESEND_API_KEY` or `SMTP_*` configured and tested with real transactional emails
 - [ ] `COOKIE_SECURE=true` and the backend is served over HTTPS
 - [ ] `DB_SSL=true` if your managed Postgres requires SSL (most do)
 - [ ] Database backups configured on your Postgres provider

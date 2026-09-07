@@ -17,6 +17,8 @@ const GOOGLE_CLIENT_ID =
     ? rawClientId
     : null;
 
+const REQUIRE_EMAIL_VERIFICATION = process.env.NEXT_PUBLIC_REQUIRE_EMAIL_VERIFICATION === 'true';
+
 export default function LoginPage() {
   const { login, loginWithGoogle, loginWithFacebook } = useAuth();
   const { showToast } = useToast();
@@ -42,18 +44,24 @@ export default function LoginPage() {
   };
 
   const handleSuccessfulAuth = (user: any) => {
-    if (!user.email_verified) {
+    if (REQUIRE_EMAIL_VERIFICATION && !user.email_verified) {
       showToast('Please verify your email address to unlock all features.', 'warning');
       router.push('/verify-email-required');
       return;
     }
+    // Honour ?redirect= param from protected-route redirects (e.g. /dashboard/new)
+    if (redirectTo && redirectTo !== '/' && redirectTo.startsWith('/')) {
+      router.push(redirectTo);
+      return;
+    }
     if (user.role === 'admin') {
       router.push('/admin');
-    } else if (user.role === 'owner') {
+      return;
+    }
+    if (user.role === 'owner') {
       router.push('/dashboard');
     } else {
-      // Honour ?redirect= param from protected-route redirects
-      router.push(redirectTo.startsWith('/') ? redirectTo : '/');
+      router.push('/');
     }
   };
 

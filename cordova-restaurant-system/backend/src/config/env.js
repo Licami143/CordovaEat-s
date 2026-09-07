@@ -73,6 +73,12 @@ const env = {
     smtpSecure: process.env.SMTP_SECURE === 'true',
     from: process.env.EMAIL_FROM || 'CordovaEats <noreply@cordovaeats.com>',
   },
+
+  auth: {
+    requireEmailVerification: process.env.REQUIRE_EMAIL_VERIFICATION !== undefined
+      ? process.env.REQUIRE_EMAIL_VERIFICATION === 'true'
+      : (process.env.NODE_ENV === 'production' && process.env.REQUIRE_EMAIL_VERIFICATION !== 'false'),
+  },
 };
 
 module.exports = env;

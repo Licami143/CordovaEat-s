@@ -41,7 +41,7 @@ export function ProfileDropdown() {
   if (user.role === 'admin') {
     menuItems.push(
       { href: '/admin', label: 'Admin Panel', icon: Shield },
-      { href: '/for-restaurants', label: 'Add Business', icon: PlusCircle },
+      { href: '/dashboard/new', label: 'Add Business', icon: PlusCircle },
       { href: '/favorites', label: 'My Favorites', icon: Heart },
       { href: '/history', label: 'Search History', icon: History }
     );
@@ -54,7 +54,7 @@ export function ProfileDropdown() {
     );
   } else {
     menuItems.push(
-      { href: '/for-restaurants', label: 'Add Business', icon: PlusCircle },
+      { href: '/dashboard/new', label: 'Add Business', icon: PlusCircle },
       { href: '/favorites', label: 'My Favorites', icon: Heart },
       { href: '/history', label: 'Search History', icon: History }
     );

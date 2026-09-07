@@ -4,6 +4,7 @@ import { useState, FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import { api, ApiClientError } from '@/lib/api';
 import { useToast } from '@/lib/toast-context';
+import { useAuth } from '@/lib/auth-context';
 import { useCuisines } from '@/hooks/useCuisines';
 import { RequireRole } from '@/components/RequireRole';
 import { Input, Textarea } from '@/components/ui/Input';
@@ -21,6 +22,7 @@ const DIETARY_OPTIONS = ['vegetarian', 'vegan', 'halal', 'gluten_free'];
 export default function NewBusinessPage() {
   const router = useRouter();
   const { toast } = useToast();
+  const { refreshUser } = useAuth();
   const cuisines = useCuisines();
 
   const [name, setName] = useState('');
@@ -44,8 +46,8 @@ export default function NewBusinessPage() {
 
   const validate = () => {
     const e: Record<string, string> = {};
-    if (name.trim().length < 2) e.name = 'Business name is required';
-    if (address.trim().length < 5) e.address = 'Address is required';
+    if (name.trim().length < 2) e.name = 'Business name is required (at least 2 characters)';
+    if (address.trim().length < 5) e.address = 'Address is required (at least 5 characters)';
     if (!latitude || !longitude) e.location = 'Map coordinates are required';
     if (services.length === 0) e.services = 'Select at least one service type';
     if (!permitFile) e.permit = 'Business permit document is required for verification';
@@ -59,13 +61,13 @@ export default function NewBusinessPage() {
     setSubmitting(true);
     try {
       const formData = new FormData();
-      formData.append('name', name);
-      formData.append('description', description);
-      formData.append('address', address);
-      formData.append('barangay', barangay);
+      formData.append('name', name.trim());
+      if (description.trim()) formData.append('description', description.trim());
+      formData.append('address', address.trim());
+      if (barangay.trim()) formData.append('barangay', barangay.trim());
       formData.append('latitude', latitude);
       formData.append('longitude', longitude);
-      formData.append('phone', phone);
+      if (phone.trim()) formData.append('phone', phone.trim());
       formData.append('priceRange', priceRange);
       formData.append('servicesOffered', JSON.stringify(services));
       formData.append('cuisineSlugs', JSON.stringify(selectedCuisines));
@@ -73,17 +75,29 @@ export default function NewBusinessPage() {
       if (permitFile) formData.append('businessPermit', permitFile);
 
       await api.post('/api/restaurants', formData, { isFormData: true });
+      await refreshUser();
       toast('Business submitted for verification!', 'success');
       router.push('/dashboard');
     } catch (err) {
-      toast(err instanceof ApiClientError ? err.message : 'Submission failed', 'error');
+      if (err instanceof ApiClientError && err.details?.length) {
+        const fieldErrors: Record<string, string> = {};
+        err.details.forEach((d) => {
+          fieldErrors[d.field] = d.message;
+        });
+        setErrors(fieldErrors);
+        toast(err.details[0].message || err.message, 'error');
+      } else if (err instanceof ApiClientError) {
+        toast(err.message, 'error');
+      } else {
+        toast('Submission failed. Please check the form and try again.', 'error');
+      }
     } finally {
       setSubmitting(false);
     }
   };
 
   return (
-    <RequireRole roles={['owner']}>
+    <RequireRole roles={['owner', 'admin', 'customer']}>
       <div className="max-w-2xl mx-auto">
         <h1 className="text-2xl font-bold mb-1">Register Your Business</h1>
         <p className="text-[var(--text-muted)] mb-6 text-sm">

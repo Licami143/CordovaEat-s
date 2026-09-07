@@ -23,6 +23,7 @@ const cuisineRoutes = require('./routes/cuisines.routes');
 const recommendationRoutes = require('./routes/recommendations.routes');
 const adminRoutes = require('./routes/admin.routes');
 const attractionRoutes = require('./routes/attractions.routes');
+const searchRoutes = require('./routes/search.routes');
 
 const app = express();
 
@@ -62,6 +63,7 @@ app.use('/api/cuisines', cuisineRoutes);
 app.use('/api/recommendations', recommendationRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/attractions', attractionRoutes);
+app.use('/api/search', searchRoutes);
 
 // ---- 404 + centralized error handling (must be last) ----
 app.use(notFoundHandler);

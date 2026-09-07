@@ -26,6 +26,7 @@ interface AuthContextValue {
   loginWithGoogle: (credential: string) => Promise<User>;
   loginWithFacebook: (accessToken: string) => Promise<User>;
   verifyEmail: (token: string) => Promise<User>;
+  devVerifyEmail: (email?: string) => Promise<User>;
   resendVerificationEmail: () => Promise<void>;
   forgotPassword: (email: string) => Promise<string>;
   resetPassword: (token: string, newPassword: string) => Promise<string>;
@@ -108,6 +109,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return res.data?.user as User;
   }, []);
 
+  const devVerifyEmail = useCallback(async (email?: string) => {
+    const res = await api.post('/api/auth/dev-verify', { email });
+    if (res.data?.user) {
+      setUser(res.data.user);
+    }
+    return res.data?.user as User;
+  }, []);
+
   const resendVerificationEmail = useCallback(async () => {
     await api.post('/api/auth/resend-verification');
   }, []);
@@ -164,6 +173,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         loginWithGoogle,
         loginWithFacebook,
         verifyEmail,
+        devVerifyEmail,
         resendVerificationEmail,
         forgotPassword,
         resetPassword,

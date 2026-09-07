@@ -39,6 +39,7 @@ async function register({ email, password, fullName, role = 'customer', phone, a
   }
 
   const passwordHash = await hashPassword(password);
+  const requireVerification = env.auth.requireEmailVerification;
   const user = await userModel.create({
     email,
     passwordHash,
@@ -46,12 +47,16 @@ async function register({ email, password, fullName, role = 'customer', phone, a
     role,
     phone,
     acceptsMarketing,
-    emailVerified: false,
+    emailVerified: !requireVerification,
   });
 
-  // Generate single-use verification token and dispatch real email
-  const rawToken = await tokenModel.createEmailVerificationToken(user.id, 30);
-  await emailService.sendVerificationEmail(user.email, user.full_name, rawToken);
+  // Generate single-use verification token and dispatch real email (or console log in dev)
+  try {
+    const rawToken = await tokenModel.createEmailVerificationToken(user.id, 30);
+    await emailService.sendVerificationEmail(user.email, user.full_name, rawToken);
+  } catch (emailErr) {
+    // Non-fatal if email dispatch fails during dev registration
+  }
 
   return user;
 }
@@ -68,6 +73,12 @@ async function login({ email, password }, meta = {}) {
   if (!valid) throw ApiError.unauthorized('Invalid email or password');
 
   if (!user.is_active) throw ApiError.forbidden('This account has been deactivated');
+
+  // Auto-verify on login when email verification is disabled in dev/localhost
+  if (!env.auth.requireEmailVerification && !user.email_verified) {
+    await userModel.updateEmailVerified(user.id, true);
+    user.email_verified = true;
+  }
 
   await userModel.touchLastLogin(user.id);
   const tokens = await issueTokenPair(user, meta);
@@ -339,11 +350,28 @@ async function changePassword(userId, currentPassword, newPassword) {
   await refreshTokenModel.revokeAllForUser(userId);
 }
 
+async function devVerifyEmail({ email, userId }) {
+  if (env.isProduction && env.auth.requireEmailVerification) {
+    throw ApiError.forbidden('Dev-verify is disabled in production environments');
+  }
+  let user;
+  if (userId) {
+    user = await userModel.findById(userId);
+  } else if (email) {
+    user = await userModel.findByEmail(email);
+  }
+  if (!user) throw ApiError.notFound('User not found');
+  const updated = await userModel.updateEmailVerified(user.id, true);
+  const { password_hash, ...safeUser } = updated;
+  return safeUser;
+}
+
 module.exports = {
   register,
   login,
   verifyEmail,
   resendVerification,
+  devVerifyEmail,
   forgotPassword,
   resetPassword,
   googleOAuth,

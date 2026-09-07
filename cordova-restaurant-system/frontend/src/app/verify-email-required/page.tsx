@@ -8,19 +8,27 @@ import { useAuth } from '@/lib/auth-context';
 import { useToast } from '@/lib/toast-context';
 import { ApiClientError } from '@/lib/api';
 
+const REQUIRE_EMAIL_VERIFICATION = process.env.NEXT_PUBLIC_REQUIRE_EMAIL_VERIFICATION === 'true';
+
 export default function VerifyEmailRequiredPage() {
   const router = useRouter();
-  const { user, resendVerificationEmail, logout } = useAuth();
+  const { user, resendVerificationEmail, devVerifyEmail, logout } = useAuth();
   const { showToast } = useToast();
 
   const [cooldown, setCooldown] = useState(0);
   const [sending, setSending] = useState(false);
+  const [devVerifying, setDevVerifying] = useState(false);
 
   useEffect(() => {
     if (!user) {
       router.push('/login');
-    } else if (user.email_verified) {
-      router.push('/');
+    } else if (user.role === 'admin') {
+      router.push('/admin');
+    } else if (user.email_verified || !REQUIRE_EMAIL_VERIFICATION) {
+      // If already verified or verification is disabled on localhost, allow browsing
+      if (user.email_verified) {
+        router.push('/');
+      }
     }
   }, [user, router]);
 
@@ -33,6 +41,24 @@ export default function VerifyEmailRequiredPage() {
     }
     return () => clearInterval(timer);
   }, [cooldown]);
+
+  const handleDevVerify = async () => {
+    if (devVerifying) return;
+    setDevVerifying(true);
+    try {
+      await devVerifyEmail(user?.email);
+      showToast('Account verified (Dev Mode)! Welcome to CordovaEats.', 'success');
+      router.push('/');
+    } catch (err) {
+      if (err instanceof ApiClientError) {
+        showToast(err.message, 'error');
+      } else {
+        showToast('Dev verification failed.', 'error');
+      }
+    } finally {
+      setDevVerifying(false);
+    }
+  };
 
   const handleResend = async () => {
     if (cooldown > 0 || sending) return;
@@ -95,6 +121,30 @@ export default function VerifyEmailRequiredPage() {
 
         {/* Action Buttons */}
         <div className="space-y-3">
+          {!REQUIRE_EMAIL_VERIFICATION && (
+            <div className="p-3 bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-900/50 rounded-xl mb-3 space-y-2">
+              <p className="text-[11px] font-semibold text-emerald-800 dark:text-emerald-300">
+                🛠️ Localhost Dev Mode Active (Email verification is optional)
+              </p>
+              <button
+                type="button"
+                onClick={handleDevVerify}
+                disabled={devVerifying}
+                className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs py-2.5 px-3 rounded-lg shadow transition-colors flex items-center justify-center gap-1.5 uppercase tracking-wider disabled:opacity-60"
+              >
+                <RefreshCw size={14} className={devVerifying ? 'animate-spin' : ''} />
+                {devVerifying ? 'Verifying...' : '⚡ Quick Verify & Continue'}
+              </button>
+              <button
+                type="button"
+                onClick={() => router.push('/')}
+                className="text-xs text-emerald-700 dark:text-emerald-400 hover:underline font-medium block mx-auto pt-1"
+              >
+                Skip verification &amp; go to home →
+              </button>
+            </div>
+          )}
+
           <button
             onClick={handleResend}
             disabled={cooldown > 0 || sending}

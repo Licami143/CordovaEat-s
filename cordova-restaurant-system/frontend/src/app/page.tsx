@@ -8,10 +8,10 @@ import {
   Search,
   Utensils,
   Coffee,
-  Hotel,
-  Fish,
   Flame,
   Pizza,
+  Wine,
+  Zap,
   ChevronLeft,
   ChevronRight,
 } from 'lucide-react';
@@ -21,6 +21,7 @@ import { RestaurantCard } from '@/components/RestaurantCard';
 import { RestaurantGridSkeleton } from '@/components/ui/Skeleton';
 import { Pagination } from '@/components/ui/Pagination';
 import type { Restaurant, PageMeta } from '@/lib/types';
+import { isRestaurantVisible, getAllStaticRestaurants, normalizeKey, matchesCategory } from '@/data/restaurants';
 
 export default function HomePage() {
   const router = useRouter();
@@ -36,19 +37,80 @@ export default function HomePage() {
   const [recommendations, setRecommendations] = useState<{ restaurant: Restaurant; score: number }[]>([]);
   const [recLoading, setRecLoading] = useState(true);
   const recScrollRef = useRef<HTMLDivElement>(null);
+  const establishmentsRef = useRef<HTMLDivElement>(null);
+
+  const PAGE_SIZE = 6;
+
+  const handlePageChange = (newPage: number) => {
+    setPage(newPage);
+    if (establishmentsRef.current) {
+      establishmentsRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  };
 
   const fetchRestaurants = useCallback(async () => {
     setLoading(true);
     try {
-      const params = new URLSearchParams();
-      if (searchQuery.trim()) params.set('q', searchQuery.trim());
-      if (activeCategory) params.set('cuisines', activeCategory);
-      params.set('page', String(page));
-      params.set('limit', '12');
+      let apiList: Restaurant[] = [];
+      try {
+        const params = new URLSearchParams();
+        if (searchQuery.trim()) params.set('q', searchQuery.trim());
+        if (activeCategory && activeCategory !== 'restaurants') params.set('cuisines', activeCategory);
+        params.set('limit', '100');
 
-      const res = await api.get(`/api/restaurants?${params.toString()}`, { auth: false });
-      setRestaurants(res.data);
-      setMeta(res.meta);
+        const res = await api.get(`/api/restaurants?${params.toString()}`, { auth: false });
+        if (res.data && Array.isArray(res.data)) {
+          apiList = res.data;
+        }
+      } catch {
+        apiList = [];
+      }
+
+      const staticList = getAllStaticRestaurants();
+
+      // Combine static list with API list, keyed by normalized slug/name
+      const map = new Map<string, Restaurant>();
+      for (const item of staticList) {
+        map.set(normalizeKey(item.slug), item);
+      }
+      for (const item of apiList) {
+        const key = normalizeKey(item.slug || item.name);
+        map.set(key, item);
+      }
+
+      let all = Array.from(map.values()).filter(isRestaurantVisible);
+
+      // Filter by search query
+      if (searchQuery.trim()) {
+        const q = searchQuery.toLowerCase().trim();
+        all = all.filter((r) =>
+          r.name.toLowerCase().includes(q) ||
+          (r.description && r.description.toLowerCase().includes(q)) ||
+          (r.barangay && r.barangay.toLowerCase().includes(q)) ||
+          (r.cuisines && r.cuisines.some((c) => c.toLowerCase().includes(q)))
+        );
+      }
+
+      // Filter by active category
+      if (activeCategory) {
+        all = all.filter((r) => matchesCategory(r, activeCategory));
+      }
+
+      const totalCount = all.length;
+      const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
+      const currentPage = Math.min(page, totalPages);
+      const startIndex = (currentPage - 1) * PAGE_SIZE;
+      const pagedList = all.slice(startIndex, startIndex + PAGE_SIZE);
+
+      setRestaurants(pagedList);
+      setMeta({
+        page: currentPage,
+        limit: PAGE_SIZE,
+        totalCount,
+        totalPages,
+        hasNextPage: currentPage < totalPages,
+        hasPrevPage: currentPage > 1,
+      });
     } catch {
       setRestaurants([]);
       setMeta(null);
@@ -60,16 +122,31 @@ export default function HomePage() {
   const fetchRecommendations = useCallback(async () => {
     setRecLoading(true);
     try {
-      // Fetch up to 10 recommended restaurants based on set preferences
-      const res = await api.post('/api/recommendations', { limit: 10 }, { auth: !!user });
-      if (res.data && Array.isArray(res.data)) {
-        setRecommendations(
-          res.data.map((r: any) => ({
-            restaurant: r.restaurant,
-            score: r.score,
-          }))
-        );
+      let recList: { restaurant: Restaurant; score: number }[] = [];
+      try {
+        const res = await api.post('/api/recommendations', { limit: 10 }, { auth: !!user });
+        if (res.data && Array.isArray(res.data)) {
+          recList = res.data
+            .filter((r: any) => isRestaurantVisible(r.restaurant))
+            .map((r: any) => ({
+              restaurant: r.restaurant,
+              score: r.score,
+            }));
+        }
+      } catch {
+        recList = [];
       }
+
+      // If recommendations API is empty or user has no custom recs yet, show high-rated establishments
+      if (recList.length === 0) {
+        const staticList = getAllStaticRestaurants().filter(isRestaurantVisible);
+        recList = staticList.slice(0, 8).map((r, i) => ({
+          restaurant: r,
+          score: 96 - i * 3,
+        }));
+      }
+
+      setRecommendations(recList);
     } catch {
       setRecommendations([]);
     } finally {
@@ -216,12 +293,12 @@ export default function HomePage() {
 
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4 max-w-6xl mx-auto">
           {[
-            { id: 'restaurants', label: 'Restaurants', icon: Utensils, cuisine: 'restaurants' },
-            { id: 'seafood', label: 'Seafood', icon: Fish, cuisine: 'seafood' },
-            { id: 'cafes', label: 'Cafés', icon: Coffee, cuisine: 'cafes' },
-            { id: 'resorts', label: 'Resorts', icon: Hotel, cuisine: 'resorts' },
-            { id: 'grill', label: 'Grill & BBQ', icon: Flame, cuisine: 'grill-bbq' },
-            { id: 'pizza', label: 'Pizza & Pasta', icon: Pizza, cuisine: 'pizza-pasta' },
+            { id: 'fastfood', label: 'Fast Food', icon: Zap, cuisine: 'Fast Food' },
+            { id: 'restaurant', label: 'Restaurant', icon: Utensils, cuisine: 'Restaurant' },
+            { id: 'cafe', label: 'Cafe', icon: Coffee, cuisine: 'Cafe' },
+            { id: 'streetfood', label: 'Street Food', icon: Flame, cuisine: 'Street Food' },
+            { id: 'restobar', label: 'Resto Bar', icon: Wine, cuisine: 'Resto Bar' },
+            { id: 'pizza', label: 'Pizza', icon: Pizza, cuisine: 'Pizza' },
           ].map((cat) => {
             const IconComp = cat.icon;
             const isSelected = activeCategory === cat.cuisine;
@@ -320,12 +397,20 @@ export default function HomePage() {
       )}
 
       {/* ALL ESTABLISHMENTS SECTION */}
-      <section className="max-w-6xl mx-auto px-4 mt-20">
-        <div className="mb-10">
-          <h2 className="font-serif text-3xl sm:text-4xl font-bold text-stone-900 dark:text-white capitalize">
-            {activeCategory ? `${activeCategory} Establishments` : 'All Establishments'}
-          </h2>
-          <div className="h-0.5 w-16 bg-cordova-gold mt-3" />
+      <section ref={establishmentsRef} className="max-w-6xl mx-auto px-4 mt-20 scroll-mt-6">
+        <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-10">
+          <div>
+            <h2 className="font-serif text-3xl sm:text-4xl font-bold text-stone-900 dark:text-white capitalize">
+              {activeCategory ? `${activeCategory} Establishments` : 'All Establishments'}
+            </h2>
+            <div className="h-0.5 w-16 bg-cordova-gold mt-3" />
+          </div>
+
+          {meta && meta.totalCount > 0 && (
+            <p className="text-xs sm:text-sm font-medium text-stone-500 dark:text-stone-400">
+              Showing <span className="text-stone-900 dark:text-white font-semibold">{((meta.page - 1) * meta.limit) + 1}–{Math.min(meta.page * meta.limit, meta.totalCount)}</span> of <span className="text-stone-900 dark:text-white font-semibold">{meta.totalCount}</span> establishments (Page {meta.page} of {meta.totalPages})
+            </p>
+          )}
         </div>
 
         {loading ? (
@@ -369,7 +454,7 @@ export default function HomePage() {
 
             {meta && meta.totalPages > 1 && (
               <div className="mt-12 flex justify-center">
-                <Pagination meta={meta} onPageChange={setPage} />
+                <Pagination meta={meta} onPageChange={handlePageChange} />
               </div>
             )}
           </>

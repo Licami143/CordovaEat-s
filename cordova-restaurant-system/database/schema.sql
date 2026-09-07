@@ -18,6 +18,7 @@ CREATE TYPE price_range AS ENUM ('budget', 'moderate', 'expensive', 'premium');
 CREATE TYPE service_type AS ENUM ('dine_in', 'takeout', 'delivery');
 CREATE TYPE review_status AS ENUM ('visible', 'flagged', 'removed');
 CREATE TYPE promotion_status AS ENUM ('draft', 'active', 'expired', 'archived');
+CREATE TYPE subscription_tier AS ENUM ('none', 'basic', 'premium', 'featured');
 CREATE TYPE notification_type AS ENUM (
   'business_verified', 'business_rejected', 'review_flagged',
   'new_review', 'promotion_expiring', 'system'
@@ -107,6 +108,9 @@ CREATE TABLE restaurants (
   review_count        INTEGER NOT NULL DEFAULT 0,
   view_count          INTEGER NOT NULL DEFAULT 0,
   is_active           BOOLEAN NOT NULL DEFAULT TRUE, -- owner can temporarily deactivate
+  is_open             BOOLEAN NOT NULL DEFAULT TRUE,
+  subscription_tier   subscription_tier NOT NULL DEFAULT 'none',
+  subscription_expires_at TIMESTAMPTZ,
   created_at          TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at          TIMESTAMPTZ NOT NULL DEFAULT now()
 );
@@ -114,6 +118,8 @@ CREATE INDEX idx_restaurants_owner ON restaurants(owner_id);
 CREATE INDEX idx_restaurants_status ON restaurants(status);
 CREATE INDEX idx_restaurants_price_range ON restaurants(price_range);
 CREATE INDEX idx_restaurants_location ON restaurants(latitude, longitude);
+CREATE INDEX idx_restaurants_subscription_tier ON restaurants(subscription_tier);
+CREATE INDEX idx_restaurants_is_open ON restaurants(is_open);
 CREATE INDEX idx_restaurants_name_trgm ON restaurants USING gin (name gin_trgm_ops);
 
 CREATE TABLE restaurant_cuisines (
@@ -297,6 +303,25 @@ CREATE TABLE audit_logs (
 );
 CREATE INDEX idx_audit_logs_actor ON audit_logs(actor_id);
 CREATE INDEX idx_audit_logs_entity ON audit_logs(entity_type, entity_id);
+
+-- ============================================================================
+-- ORDERS
+-- ============================================================================
+CREATE TABLE orders (
+  id             UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  user_id        UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  restaurant_id  UUID NOT NULL REFERENCES restaurants(id) ON DELETE CASCADE,
+  items          JSONB NOT NULL DEFAULT '[]',
+  total_amount   NUMERIC(10,2) NOT NULL DEFAULT 0.00 CHECK (total_amount >= 0),
+  status         VARCHAR(50) NOT NULL DEFAULT 'pending',
+  delivery_address TEXT,
+  notes          TEXT,
+  created_at     TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at     TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX idx_orders_user ON orders(user_id);
+CREATE INDEX idx_orders_restaurant ON orders(restaurant_id);
+CREATE INDEX idx_orders_created_at ON orders(created_at);
 
 -- ============================================================================
 -- TRIGGERS: keep updated_at fresh + keep restaurant avg_rating/review_count in sync
