@@ -47,18 +47,10 @@ export const RestaurantCard = memo(function RestaurantCard({
       ? 'https://images.unsplash.com/photo-1514933651103-005eec06c04b?w=1200&auto=format&fit=crop&q=85'
       : 'https://images.unsplash.com/photo-1540420773420-3366772f4999?w=1200&auto=format&fit=crop&q=85';
 
-  const isLowResThumbnail = (url?: string) => {
-    if (!url) return true;
-    if (url.includes('encrypted-tbn0.gstatic.com')) return true;
-    if (url.includes('=s10') || url.includes('=s294') || url.includes('=s100') || url.includes('localhost:3000/cafe-mafia-cover.png')) return true;
-    return false;
-  };
-
   const imageSrc =
     !imgError &&
     restaurant.cover_image_url &&
-    restaurant.cover_image_url.trim() !== '' &&
-    !isLowResThumbnail(restaurant.cover_image_url)
+    restaurant.cover_image_url.trim() !== ''
       ? restaurant.cover_image_url
       : fallbackImage;
 
