@@ -8,10 +8,16 @@ const nextConfig = {
     ],
   },
   async rewrites() {
+    const rawApi = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+    const backendBase = rawApi.replace(/\/api\/?$/, '');
     return [
       {
         source: '/uploads/:path*',
-        destination: `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'}/uploads/:path*`,
+        destination: `${backendBase}/uploads/:path*`,
+      },
+      {
+        source: '/api/uploads/:path*',
+        destination: `${backendBase}/uploads/:path*`,
       },
     ];
   },

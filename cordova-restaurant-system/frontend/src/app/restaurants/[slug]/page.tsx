@@ -54,6 +54,7 @@ export default function RestaurantDetailPage() {
   const [reviewRating, setReviewRating] = useState(5);
   const [reviewComment, setReviewComment] = useState('');
   const [submittingReview, setSubmittingReview] = useState(false);
+  const [heroImgError, setHeroImgError] = useState(false);
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -246,25 +247,41 @@ export default function RestaurantDetailPage() {
     ...gallery,
   ];
 
+  const categoryKey = restaurant.category || 'Restaurant';
+  const fallbackHeroImage =
+    (restaurant.name.toLowerCase().includes('bbq') || restaurant.name.toLowerCase().includes('grill'))
+      ? 'https://images.unsplash.com/photo-1529193591184-b1d58069ecdd?w=800&auto=format&fit=crop&q=80'
+      : (restaurant.name.toLowerCase().includes('seafood') || restaurant.name.toLowerCase().includes('bakasi'))
+      ? 'https://images.unsplash.com/photo-1534422298391-e4f8c172dddb?w=800&auto=format&fit=crop&q=80'
+      : categoryKey === 'Cafe'
+      ? 'https://images.unsplash.com/photo-1554118811-1e0d58224f24?w=800&auto=format&fit=crop&q=80'
+      : categoryKey === 'Pizza'
+      ? 'https://images.unsplash.com/photo-1513104890138-7c749659a591?w=800&auto=format&fit=crop&q=80'
+      : categoryKey === 'Fast Food'
+      ? 'https://images.unsplash.com/photo-1561758033-d89a9ad46330?w=800&auto=format&fit=crop&q=80'
+      : categoryKey === 'Street Food'
+      ? 'https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=800&auto=format&fit=crop&q=80'
+      : categoryKey === 'Resto Bar'
+      ? 'https://images.unsplash.com/photo-1514933651103-005eec06c04b?w=800&auto=format&fit=crop&q=80'
+      : 'https://images.unsplash.com/photo-1555939594-58d7cb561ad1?w=800&auto=format&fit=crop&q=80';
+
+  const heroImageSrc = (!heroImgError && restaurant.cover_image_url && restaurant.cover_image_url.trim() !== '')
+    ? restaurant.cover_image_url
+    : fallbackHeroImage;
+
   return (
     <div className="min-h-screen bg-cordova-cream dark:bg-[#121614] pb-24">
       {/* HERO COVER SECTION */}
       <section className="relative w-full h-[400px] sm:h-[480px] overflow-hidden bg-stone-900">
-        {restaurant.cover_image_url &&
-        (restaurant.cover_image_url.startsWith('http') || restaurant.cover_image_url.startsWith('/')) ? (
-          <Image
-            src={restaurant.cover_image_url}
-            alt={restaurant.name}
-            fill
-            priority
-            unoptimized
-            className="object-cover object-center opacity-85"
-          />
-        ) : (
-          <div className="h-full w-full flex items-center justify-center text-7xl bg-gradient-to-br from-amber-900 to-stone-900">
-            🍽️
-          </div>
-        )}
+        <Image
+          src={heroImageSrc}
+          alt={restaurant.name}
+          fill
+          priority
+          unoptimized
+          onError={() => setHeroImgError(true)}
+          className="object-cover object-center opacity-85"
+        />
 
         {/* Dark Gradient Overlay */}
         <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/40 to-black/30" />

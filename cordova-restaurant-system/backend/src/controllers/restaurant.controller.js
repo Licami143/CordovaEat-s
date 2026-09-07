@@ -9,7 +9,7 @@ const asyncHandler = require('../utils/asyncHandler');
 const ApiError = require('../utils/apiError');
 const cache = require('../utils/cache');
 const { parsePagination, buildPageMeta } = require('../utils/pagination');
-const { syncToRestaurantTs } = require('../services/restaurantSync.service');
+const { syncToRestaurantTs, getDefaultCoverImage, inferCategory } = require('../services/restaurantSync.service');
 
 /** GET /api/restaurants — public browse/search/filter/sort/paginate */
 const search = asyncHandler(async (req, res) => {
@@ -116,6 +116,11 @@ const create = asyncHandler(async (req, res) => {
     cuisineIds = cuisines.map((c) => c.id);
   }
 
+  if (!coverImageUrl || coverImageUrl.trim() === '') {
+    const cat = inferCategory(body.name, body.description, cuisineSlugs);
+    coverImageUrl = getDefaultCoverImage(body.name, body.description, cat);
+  }
+
   const restaurant = await restaurantModel.create(
     {
       ownerId: req.user.id,
@@ -212,7 +217,7 @@ const adminList = asyncHandler(async (req, res) => {
 /** PATCH /api/admin/restaurants/:id/verify */
 const verify = asyncHandler(async (req, res) => {
   const { status, rejectionReason } = req.body;
-  const restaurant = await restaurantModel.setVerificationStatus(req.params.id, {
+  let restaurant = await restaurantModel.setVerificationStatus(req.params.id, {
     status,
     adminId: req.user.id,
     rejectionReason: status === 'rejected' ? rejectionReason : null,
@@ -220,6 +225,12 @@ const verify = asyncHandler(async (req, res) => {
   if (!restaurant) throw ApiError.notFound('Restaurant not found');
 
   if (status === 'verified') {
+    if (!restaurant.cover_image_url || restaurant.cover_image_url.trim() === '') {
+      const cat = inferCategory(restaurant.name, restaurant.description);
+      const defaultCover = getDefaultCoverImage(restaurant.name, restaurant.description, cat);
+      await restaurantModel.update(restaurant.id, { coverImageUrl: defaultCover });
+      restaurant.cover_image_url = defaultCover;
+    }
     syncToRestaurantTs(restaurant);
   }
 

@@ -45,6 +45,7 @@ app.use('/api', apiLimiter);
 
 // Static file serving for uploaded images/documents
 app.use('/uploads', express.static(path.join(process.cwd(), env.upload.dir)));
+app.use('/api/uploads', express.static(path.join(process.cwd(), env.upload.dir)));
 
 // ---- API docs ----
 app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));

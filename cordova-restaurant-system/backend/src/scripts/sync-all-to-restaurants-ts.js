@@ -1,9 +1,9 @@
 require('dotenv').config();
 const { pool } = require('../config/db');
-const { syncToRestaurantTs } = require('../services/restaurantSync.service');
+const { syncToRestaurantTs, inferCategory, getDefaultCoverImage } = require('../services/restaurantSync.service');
 
 async function syncAll() {
-  console.log('🔄 Syncing all database restaurants into frontend/src/data/restaurants.ts...');
+  console.log('🔄 Syncing all database restaurants into frontend/src/data/restaurants.ts and updating default images...');
   try {
     const { rows } = await pool.query(`
       SELECT 
@@ -20,11 +20,18 @@ async function syncAll() {
 
     let count = 0;
     for (const r of rows) {
+      let cover = r.cover_image_url;
+      if (!cover || cover.trim() === '') {
+        const cat = inferCategory(r.name, r.description, r.cuisines);
+        cover = getDefaultCoverImage(r.name, r.description, cat);
+        await pool.query('UPDATE restaurants SET cover_image_url = $1 WHERE id = $2', [cover, r.id]);
+        r.cover_image_url = cover;
+      }
       const ok = syncToRestaurantTs(r);
       if (ok) count++;
     }
 
-    console.log(`✅ Successfully synchronized ${count} restaurant(s) to restaurants.ts!`);
+    console.log(`✅ Successfully synchronized ${count} restaurant(s) to restaurants.ts and DB!`);
     process.exit(0);
   } catch (err) {
     console.error('❌ Sync failed:', err);

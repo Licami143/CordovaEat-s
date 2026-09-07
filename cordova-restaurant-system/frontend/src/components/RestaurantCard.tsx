@@ -29,12 +29,27 @@ export const RestaurantCard = memo(function RestaurantCard({
       ? Math.round(restaurant.relevance_score * 100)
       : undefined;
 
-  const hasValidImage =
-    Boolean(
-      restaurant.cover_image_url &&
-        (restaurant.cover_image_url.startsWith('http') ||
-          restaurant.cover_image_url.startsWith('/'))
-    ) && !imgError;
+  const categoryKey = restaurant.category || 'Restaurant';
+  const fallbackImage =
+    (restaurant.name.toLowerCase().includes('bbq') || restaurant.name.toLowerCase().includes('grill'))
+      ? 'https://images.unsplash.com/photo-1529193591184-b1d58069ecdd?w=800&auto=format&fit=crop&q=80'
+      : (restaurant.name.toLowerCase().includes('seafood') || restaurant.name.toLowerCase().includes('bakasi'))
+      ? 'https://images.unsplash.com/photo-1534422298391-e4f8c172dddb?w=800&auto=format&fit=crop&q=80'
+      : categoryKey === 'Cafe'
+      ? 'https://images.unsplash.com/photo-1554118811-1e0d58224f24?w=800&auto=format&fit=crop&q=80'
+      : categoryKey === 'Pizza'
+      ? 'https://images.unsplash.com/photo-1513104890138-7c749659a591?w=800&auto=format&fit=crop&q=80'
+      : categoryKey === 'Fast Food'
+      ? 'https://images.unsplash.com/photo-1561758033-d89a9ad46330?w=800&auto=format&fit=crop&q=80'
+      : categoryKey === 'Street Food'
+      ? 'https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=800&auto=format&fit=crop&q=80'
+      : categoryKey === 'Resto Bar'
+      ? 'https://images.unsplash.com/photo-1514933651103-005eec06c04b?w=800&auto=format&fit=crop&q=80'
+      : 'https://images.unsplash.com/photo-1555939594-58d7cb561ad1?w=800&auto=format&fit=crop&q=80';
+
+  const imageSrc = (!imgError && restaurant.cover_image_url && restaurant.cover_image_url.trim() !== '')
+    ? restaurant.cover_image_url
+    : fallbackImage;
 
   return (
     <div className={`bg-white dark:bg-[#1a211c] rounded-lg border transition-all duration-300 flex flex-col h-full group ${
@@ -44,24 +59,15 @@ export const RestaurantCard = memo(function RestaurantCard({
     }`}>
       {/* Cover Image */}
       <div className="relative h-48 sm:h-52 w-full bg-stone-100 dark:bg-stone-800 overflow-hidden">
-        {hasValidImage ? (
-          <Image
-            src={restaurant.cover_image_url!}
-            alt={restaurant.name}
-            fill
-            unoptimized
-            onError={() => setImgError(true)}
-            className="object-cover transition-transform duration-500 group-hover:scale-105"
-            sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-          />
-        ) : (
-          <div className="h-full w-full flex flex-col items-center justify-center text-4xl bg-gradient-to-br from-amber-50 to-stone-100 dark:from-stone-800 dark:to-stone-900 text-stone-400">
-            <span className="text-3xl mb-1">🍽️</span>
-            <span className="text-xs font-serif font-semibold text-stone-500 dark:text-stone-400">
-              CordovaEats
-            </span>
-          </div>
-        )}
+        <Image
+          src={imageSrc}
+          alt={restaurant.name}
+          fill
+          unoptimized
+          onError={() => setImgError(true)}
+          className="object-cover transition-transform duration-500 group-hover:scale-105"
+          sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+        />
 
         {/* Sponsored Badge (Top Left) */}
         {isSponsored && (
