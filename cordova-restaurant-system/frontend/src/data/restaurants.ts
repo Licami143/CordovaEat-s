@@ -38,7 +38,7 @@ export const RESTAURANT_CUSTOMIZATIONS: Record<string, RestaurantCustomConfig> =
   'grillhouse-cordova-bbq': {
     name: 'Grillhouse Cordova BBQ',
     category: 'Restaurant',
-    coverImage: 'https://images.unsplash.com/photo-1529193591184-b1d58069ecdd?w=800&auto=format&fit=crop&q=80',
+    coverImage: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQYx1TyZdXDc_Y1AEZbFrr5Z9bTwmQjoAZCuWUYtHu3ag&s=10',
     barangay: 'Ibabao',
     description: 'Classic Filipino BBQ and grilled favorites, budget-friendly family dining.',
     address: 'San Miguel Road, Ibabao',
@@ -148,7 +148,7 @@ export const RESTAURANT_CUSTOMIZATIONS: Record<string, RestaurantCustomConfig> =
   'mavericks-by-the-baker-street': {
     name: 'MAVERICKS by The Baker Street',
     category: 'Cafe',
-    coverImage: 'https://scontent.fmnl8-3.fna.fbcdn.net/v/t39.30808-1/539516293_122112420230971888_5351222020459115141_n.jpg?stp=c0.15.1009.1009a_dst-jpg_tt6&cstp=mx1009x1009&ctp=s160x160&_nc_cat=105&_nc_map=urlgen_bucketless&ccb=1-7&_nc_sid=2d3e12&_nc_eui2=AeEqtS_ggK-Yzhv7JVd5siW82S7THdpzd57ZLtMd2nN3nk4V7V-_4iIlo5X4HLnoxlfqUoDcaFgtdKiZL9FY5Ncd&_nc_ohc=RVABe0oI_k4Q7kNvwFW4c3S&_nc_oc=Adrctva9p4S5aKBf3m_eW4re9ELW4a5qTvDFIfF5z7WOANAYW3OmXcSvsd7p9A_VQRs&_nc_zt=24&_nc_ht=scontent.fmnl8-3.fna&_nc_gid=N1fM9vkL9rPtZVZ_fVL-fA&_nc_ss=7b2a8&oh=00_AQFvtXW1b4xj2SynF37ifUfCgAzcjuNUb1wIegYAzTHXQQ&oe=6A937899',
+    coverImage: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQu11QAkAvQPNZ0Y4r8_IbqwVvIJxwA2-bk15_VEO_zKcHOiSdH6-5VH4Sw&s=10',
     barangay: 'Gabi',
     description: 'Creative space Collective Stories Local Hangouts After hours refuge Pastry Party Coffee Catch up.',
     address: 'Gabi, Cordova, Cebu',
@@ -159,7 +159,7 @@ export const RESTAURANT_CUSTOMIZATIONS: Record<string, RestaurantCustomConfig> =
   'entoys-bakasihan': {
     name: 'Entoys Bakasihan',
     category: 'Restaurant',
-    coverImage: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTQukvKATrQQW_HUYIbjrG6X6b9KNlzpQz5qlo3DJuung&s=10',
+    coverImage: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQNCj7x2CFrrKVmn4OCdP_c3QLiciyRFdV0CyqWzXXm4-bNfD447vK7R78o&s=10',
     barangay: 'Buagsong',
     description: 'a popular open-air, casual eatery located in Barangay Buagsong, Cordova, Cebu, famous for its signature reef eel dish called nilarang na bakasi.',
     address: 'Buagsong, Cordova, Cebu',
@@ -213,8 +213,8 @@ export const RESTAURANT_CUSTOMIZATIONS: Record<string, RestaurantCustomConfig> =
   // 18. Solea Mactan Resort
   'solea-mactan-resort': {
     name: 'Solea Mactan Resort',
-    category: 'Pizza',
-    coverImage: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQ1chtVc3dJnqcBmKpfhs2m1XZFxefrDaMOMKv39wP64KQgROxl7rAp0zJ2&s=10',
+    category: 'Restaurant',
+    coverImage: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQJs8-gUFPgl9cU83YnTf5__Fp_8BhFL8IlfKPl9fcQzl1rzsB2MdLjWhyc&s=10',
     barangay: 'Alegria',
     description: '[Verified] The in-house restaurant of Solea Mactan Resort, serving pizza, international, and Filipino dishes. Popular with resort guests and open to walk-in diners.',
     address: 'Victor Wahing Street, Alegria',
@@ -225,7 +225,7 @@ export const RESTAURANT_CUSTOMIZATIONS: Record<string, RestaurantCustomConfig> =
   'husbys-grill': {
     name: 'Husby\'s Grill',
     category: 'Restaurant',
-    coverImage: 'https://images.unsplash.com/photo-1529193591184-b1d58069ecdd?w=800&auto=format&fit=crop&q=80',
+    coverImage: 'https://dynamic-media-cdn.tripadvisor.com/media/photo-o/18/2a/96/d7/visit-us-at-manuel-l.jpg?w=600&h=-1&s=1',
     barangay: 'Gabi',
     description: '[Verified] An outdoor grill restaurant in Barangay Gabi known for affordable Filipino grilled dishes — tuna belly, baby back ribs, kinilaw, and panga are frequently mentioned favorites.',
     address: 'Manuel L. Quezon Road, Gabi',
@@ -236,7 +236,7 @@ export const RESTAURANT_CUSTOMIZATIONS: Record<string, RestaurantCustomConfig> =
   'sungka-native-restaurant': {
     name: 'Sungka Native Restaurant',
     category: 'Restaurant',
-    coverImage: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRGBGg6Wa1-ENZF8u9GRdtULjgb5iegQ8LhACawQfBDCnSScyedDKVe0heb&s=10',
+    coverImage: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQYiZGOakQCISH5JLE9XpMaq7c834bHYQ2Pv8nmzfxhdn6ZopUeMouJ5nY&s=10',
     barangay: 'Day-as',
     description: 'Classic Filipino dishes served with warm hospitality near Cordova port.',
     address: 'Cordova, Cebu (exact address unverified)',
@@ -247,7 +247,7 @@ export const RESTAURANT_CUSTOMIZATIONS: Record<string, RestaurantCustomConfig> =
   'lantaw-floating-native-restaurant': {
     name: 'Lantaw Floating Native Restaurant',
     category: 'Restaurant',
-    coverImage: 'https://images.unsplash.com/photo-1534422298391-e4f8c172dddb?w=800&auto=format&fit=crop&q=80',
+    coverImage: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRuOl7HxrmSXr2JW-b5lLt0iRWS7hh_ObrmQKrIpIT3WQe99Zm3s-C1kjw&s=10',
     barangay: 'Day-as',
     description: '[Verified] A floating native restaurant on the Cordova waterfront known for sunset views across the Mactan Channel toward the Cebu City skyline. Filipino and seafood dishes served in open-air, bamboo-accented dining platforms over the water.',
     address: 'Sa Baybayon, Barangay Day-as',
@@ -258,7 +258,7 @@ export const RESTAURANT_CUSTOMIZATIONS: Record<string, RestaurantCustomConfig> =
   'albertos-pizza-cordova': {
     name: 'Alberto\'s Pizza Cordova',
     category: 'Pizza',
-    coverImage: 'https://images.unsplash.com/photo-1513104890138-7c749659a591?w=800&auto=format&fit=crop&q=80',
+    coverImage: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTc1MHHZ0YdgZ6T7yKZsr3ms71ihX6gDgQPOM7_3fWQ6RucKdjph9uKAdY&s=10',
     barangay: 'Buagsong',
     description: '[Name confirmed, location approximate] A local pizzeria in Cordova. Exact address not independently verified — location shown is approximate.',
     address: 'Cordova, Cebu (exact address unverified)',
@@ -280,7 +280,7 @@ export const RESTAURANT_CUSTOMIZATIONS: Record<string, RestaurantCustomConfig> =
   'don-macchiatos-cordova': {
     name: 'Don Macchiatos Cordova',
     category: 'Cafe',
-    coverImage: 'https://images.unsplash.com/photo-1554118811-1e0d58224f24?w=800&auto=format&fit=crop&q=80',
+    coverImage: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQ2kgd78I8cpTbhSrOOc3ZfSq9BO0clYam57_rgDI3UviCc_tuXlsO2VJry&s=10',
     barangay: 'San Miguel',
     description: '[Name confirmed, location approximate] A coffee shop in Cordova. Exact address not independently verified — location shown is approximate.',
     address: 'Cordova, Cebu (exact address unverified)',
@@ -291,7 +291,7 @@ export const RESTAURANT_CUSTOMIZATIONS: Record<string, RestaurantCustomConfig> =
   'parola-seaview-restaurant': {
     name: 'Parola Seaview Restaurant',
     category: 'Restaurant',
-    coverImage: 'https://images.unsplash.com/photo-1534422298391-e4f8c172dddb?w=800&auto=format&fit=crop&q=80',
+    coverImage: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSL7EJmXtZI_6OP_IOn3cdEknylsIq8N-5D7mLaGIpgfPDot9rz1oMJ1vk&s=10',
     barangay: 'Poblacion',
     description: '[Verified] A large open-air restaurant near the Cordova RORO port, built around a decorative lighthouse (parola) with an overwater deck facing Bantayan Bay. Known for Filipino seafood and meat dishes and sunset views.',
     address: 'Roro Port Cordova',
@@ -302,7 +302,7 @@ export const RESTAURANT_CUSTOMIZATIONS: Record<string, RestaurantCustomConfig> =
   '10000-roses-cafe-and-more': {
     name: '10,000 Roses Cafe & More',
     category: 'Cafe',
-    coverImage: 'https://images.unsplash.com/photo-1554118811-1e0d58224f24?w=800&auto=format&fit=crop&q=80',
+    coverImage: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRY-gDUjXc0GWAZGac7KeR3AWR2ZyPLpAqZzWVcplRkWXIajolwprvnDykK&s=10',
     barangay: 'Day-as',
     description: '[Verified] A cafe and garden attraction within the Cordova Tourism Center compound, known for its thousands of LED-lit artificial roses that illuminate at dusk. Serves coffee, pizza, pasta, and light Filipino fare alongside the light installation.',
     address: 'Day-as Barangay Rd, Cordova Tourism Center',
@@ -313,7 +313,7 @@ export const RESTAURANT_CUSTOMIZATIONS: Record<string, RestaurantCustomConfig> =
   'papsys-bbq': {
     name: 'Papsys BBQ',
     category: 'Fast Food',
-    coverImage: 'https://images.unsplash.com/photo-1529193591184-b1d58069ecdd?w=800&auto=format&fit=crop&q=80',
+    coverImage: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcT9N4HYtH1Bcb1QfplVolrNrR0fV2St3wEqU1dXS4sYa80-tR1w4MiEFAo&s=10',
     barangay: 'Bang-bang',
     description: 'a popular Filipino casual dining restaurant chain known for its signature charcoal-grilled specialties and rustic, modern ambiance',
     address: 'Barangay Bang-bang, Cordova, Cebu.',

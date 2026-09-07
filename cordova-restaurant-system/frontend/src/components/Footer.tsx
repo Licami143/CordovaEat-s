@@ -1,7 +1,21 @@
+'use client';
+
 import Link from 'next/link';
 import Image from 'next/image';
+import { useAuth } from '@/lib/auth-context';
 
-const COLUMNS: { title: string; links: { label: string; href: string }[] }[] = [
+interface FooterLink {
+  label: string;
+  href: string;
+  authRequired?: boolean;
+}
+
+interface FooterColumn {
+  title: string;
+  links: FooterLink[];
+}
+
+const COLUMNS: FooterColumn[] = [
   {
     title: 'About Cordova Eats',
     links: [
@@ -14,7 +28,7 @@ const COLUMNS: { title: string; links: { label: string; href: string }[] }[] = [
     title: 'Explore',
     links: [
       { label: 'Browse Restaurants', href: '/' },
-      { label: 'Recommended Restaurants', href: '/preferences' },
+      { label: 'Recommended Restaurants', href: '/preferences', authRequired: true },
       { label: 'Current Promotions', href: '/promotions' },
     ],
   },
@@ -36,6 +50,8 @@ const COLUMNS: { title: string; links: { label: string; href: string }[] }[] = [
 ];
 
 export function Footer() {
+  const { user } = useAuth();
+
   return (
     <footer className="border-t border-stone-200 dark:border-stone-800 mt-16 bg-white dark:bg-[#141815]">
       <div className="max-w-6xl mx-auto px-4 py-12">
@@ -60,25 +76,27 @@ export function Footer() {
             </p>
           </div>
 
-          {COLUMNS.map((col) => (
-            <div key={col.title}>
-              <h3 className="text-sm font-semibold mb-3">{col.title}</h3>
-              <ul className="space-y-2">
-                {col.links.map((link) => (
-                  <li key={link.href}>
-                    <Link href={link.href} className="text-sm text-[var(--text-muted)] hover:text-brand-500 transition-colors">
-                      {link.label}
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ))}
+          {COLUMNS.map((col) => {
+            const visibleLinks = col.links.filter((link) => !link.authRequired || Boolean(user));
+            return (
+              <div key={col.title}>
+                <h3 className="text-sm font-semibold mb-3 text-stone-900 dark:text-stone-100">{col.title}</h3>
+                <ul className="space-y-2">
+                  {visibleLinks.map((link) => (
+                    <li key={link.href}>
+                      <Link href={link.href} className="text-sm text-[var(--text-muted)] hover:text-cordova-green dark:hover:text-emerald-400 transition-colors">
+                        {link.label}
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            );
+          })}
         </div>
 
-        <div className="border-t border-[var(--border)] mt-10 pt-6 flex flex-col sm:flex-row items-center justify-between gap-3 text-sm text-[var(--text-muted)]">
+        <div className="border-t border-[var(--border)] mt-10 pt-6 text-center text-sm text-[var(--text-muted)]">
           <p>© {new Date().getFullYear()} Cordova Eats — Municipality of Cordova, Cebu. All rights reserved.</p>
-          <p>A local government digital initiative supporting Cordova&apos;s food businesses.</p>
         </div>
       </div>
     </footer>
