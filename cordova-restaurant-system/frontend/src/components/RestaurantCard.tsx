@@ -31,25 +31,36 @@ export const RestaurantCard = memo(function RestaurantCard({
 
   const categoryKey = restaurant.category || 'Restaurant';
   const fallbackImage =
-    (restaurant.name.toLowerCase().includes('bbq') || restaurant.name.toLowerCase().includes('grill'))
-      ? 'https://images.unsplash.com/photo-1529193591184-b1d58069ecdd?w=800&auto=format&fit=crop&q=80'
-      : (restaurant.name.toLowerCase().includes('seafood') || restaurant.name.toLowerCase().includes('bakasi'))
-      ? 'https://images.unsplash.com/photo-1534422298391-e4f8c172dddb?w=800&auto=format&fit=crop&q=80'
+    (restaurant.name.toLowerCase().includes('bbq') || restaurant.name.toLowerCase().includes('grill') || restaurant.name.toLowerCase().includes('papsy'))
+      ? 'https://images.unsplash.com/photo-1555939594-58d7cb561ad1?w=1200&auto=format&fit=crop&q=85'
+      : (restaurant.name.toLowerCase().includes('seafood') || restaurant.name.toLowerCase().includes('bakasi') || restaurant.name.toLowerCase().includes('parola') || restaurant.name.toLowerCase().includes('lantaw'))
+      ? 'https://images.unsplash.com/photo-1534422298391-e4f8c172dddb?w=1200&auto=format&fit=crop&q=85'
       : categoryKey === 'Cafe'
-      ? 'https://images.unsplash.com/photo-1554118811-1e0d58224f24?w=800&auto=format&fit=crop&q=80'
+      ? 'https://images.unsplash.com/photo-1501339847302-ac426a4a7cbb?w=1200&auto=format&fit=crop&q=85'
       : categoryKey === 'Pizza'
-      ? 'https://images.unsplash.com/photo-1513104890138-7c749659a591?w=800&auto=format&fit=crop&q=80'
+      ? 'https://images.unsplash.com/photo-1513104890138-7c749659a591?w=1200&auto=format&fit=crop&q=85'
       : categoryKey === 'Fast Food'
-      ? 'https://images.unsplash.com/photo-1561758033-d89a9ad46330?w=800&auto=format&fit=crop&q=80'
+      ? 'https://images.unsplash.com/photo-1561758033-d89a9ad46330?w=1200&auto=format&fit=crop&q=85'
       : categoryKey === 'Street Food'
-      ? 'https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=800&auto=format&fit=crop&q=80'
+      ? 'https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=1200&auto=format&fit=crop&q=85'
       : categoryKey === 'Resto Bar'
-      ? 'https://images.unsplash.com/photo-1514933651103-005eec06c04b?w=800&auto=format&fit=crop&q=80'
-      : 'https://images.unsplash.com/photo-1555939594-58d7cb561ad1?w=800&auto=format&fit=crop&q=80';
+      ? 'https://images.unsplash.com/photo-1514933651103-005eec06c04b?w=1200&auto=format&fit=crop&q=85'
+      : 'https://images.unsplash.com/photo-1540420773420-3366772f4999?w=1200&auto=format&fit=crop&q=85';
 
-  const imageSrc = (!imgError && restaurant.cover_image_url && restaurant.cover_image_url.trim() !== '')
-    ? restaurant.cover_image_url
-    : fallbackImage;
+  const isLowResThumbnail = (url?: string) => {
+    if (!url) return true;
+    if (url.includes('encrypted-tbn0.gstatic.com')) return true;
+    if (url.includes('=s10') || url.includes('=s294') || url.includes('=s100') || url.includes('localhost:3000/cafe-mafia-cover.png')) return true;
+    return false;
+  };
+
+  const imageSrc =
+    !imgError &&
+    restaurant.cover_image_url &&
+    restaurant.cover_image_url.trim() !== '' &&
+    !isLowResThumbnail(restaurant.cover_image_url)
+      ? restaurant.cover_image_url
+      : fallbackImage;
 
   return (
     <div className={`bg-white dark:bg-[#1a211c] rounded-lg border transition-all duration-300 flex flex-col h-full group ${
