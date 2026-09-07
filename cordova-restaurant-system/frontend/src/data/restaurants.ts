@@ -4,16 +4,7 @@ import type { Restaurant } from '@/lib/types';
  * ============================================================================
  * 🍽️ RESTAURANT FRONTEND DIRECTORY & CUSTOMIZATIONS
  * ============================================================================
- * You can easily edit any restaurant's display name, cover image, or details
- * right here in this single file!
- *
- * HOW TO ADD AN IMAGE:
- * 1. Place your image file in `frontend/public/` (e.g. `frontend/public/lapu-lapu-cover.png`)
- * 2. Put the path in `coverImage` below: `'/lapu-lapu-cover.png'`
- *    (or paste any external web image URL starting with http:// or https://)
- *
- * HOW TO RENAME A RESTAURANT:
- * Change the `name` field below to whatever you want.
+ * All 27 verified Cordova restaurants, organized and numbered.
  * ============================================================================
  */
 
@@ -33,12 +24,14 @@ export interface RestaurantCustomConfig {
 export const RESTAURANT_CUSTOMIZATIONS: Record<string, RestaurantCustomConfig> = {
 
   // 1. Horizon Bean Cafe
-  'Horizon Bean Cafe': {
+  'horizon-bean-cafe': {
     name: 'Horizon Bean Cafe',
     category: 'Cafe',
     coverImage: 'https://images.unsplash.com/photo-1554118811-1e0d58224f24?w=800&auto=format&fit=crop&q=80',
     barangay: 'San Miguel',
     description: 'A cozy, small-scale neighborhood coffee shop known for its premium coffee, comfort food, and late-night chill vibe.',
+    address: 'San Miguel, Cordova, Cebu',
+    phone: '+63 917 123 4567',
   },
 
   // 2. Grillhouse Cordova BBQ
@@ -53,84 +46,102 @@ export const RESTAURANT_CUSTOMIZATIONS: Record<string, RestaurantCustomConfig> =
   },
 
   // 3. Street Food Park
-  'Street Food Park': {
+  'street-food-park': {
     name: 'Street Food Park',
     category: 'Street Food',
-    coverImage: 'https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=800&auto=format&fit=crop&q=80',
-    barangay: 'Roro Port',
-    description: 'Affordable local street food and fresh seafood paired with a cool ocean breeze and sunset.',
+    coverImage: 'https://images.unsplash.com/photo-1534422298391-e4f8c172dddb?w=800&auto=format&fit=crop&q=80',
+    barangay: 'Poblacion',
+    description: 'affordable local street food and fresh seafood paired with a cool ocean breeze and sunset.',
+    address: 'Roro Port, Cordova, Cebu',
+    phone: '',
   },
 
   // 4. ABY ROAD Resto Bar
-  'ABY ROAD Resto Bar': {
+  'aby-road-resto-bar': {
     name: 'ABY ROAD Resto Bar',
     category: 'Resto Bar',
-    coverImage: 'https://images.unsplash.com/photo-1514933651103-005eec06c04b?w=800&auto=format&fit=crop&q=80',
+    coverImage: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcR5Kp2YeaylbA53UcCROxnangSIQ2YUsJqB4hx0nIhYoPxKqG-rz4-Z0uo&s=10',
     barangay: 'Bangbang',
-    description: 'Beatles-inspired restobar serving cocktails, local brews, and hot pulutan.',
+    description: 'Beatles-inspired restobar.',
+    address: 'Bangbang, Cordova, Cebu',
+    phone: '',
   },
 
   // 5. Eat n' Repeat
-  'Eat n Repeat': {
-    name: 'Eat n Repeat',
+  'eat-n-repeat': {
+    name: 'Eat n\' Repeat',
     category: 'Cafe',
-    coverImage: 'https://images.unsplash.com/photo-1559925393-8be0ec4767c8?w=800&auto=format&fit=crop&q=80',
+    coverImage: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQfQN23Tk3arzxnvZgYwgrZTOYhPgijf_4p5q3K621FO-181pCjRTDDMTE&s=10',
     barangay: 'Bangbang',
-    description: 'Aesthetic at Instagram-worthy na cafe at tambayan for students and friends.',
+    description: 'aesthetic at Instagram-worthy na cafe at tambayan.',
+    address: 'Bangbang, Cordova, Cebu',
+    phone: '',
   },
 
   // 6. Taytayan Pinoy Restaurant
-  'Taytayan Pinoy Restaurant': {
+  'taytayan-pinoy-restaurant': {
     name: 'Taytayan Pinoy Restaurant',
     category: 'Restaurant',
-    coverImage: 'https://images.unsplash.com/photo-1544025162-d76694265947?w=800&auto=format&fit=crop&q=80',
+    coverImage: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRAYNgM2l1VWAjy1lHThQ1WNwLiI44JDAfo8aQqPS-wKw&s',
     barangay: 'Ibabao',
-    description: 'Isang kilalang open-air at lutong-bahay na kainan serving native Cebuano dishes.',
+    description: 'ay isang kilalang open-air at lutong-bahay na kainan.',
+    address: 'Ibabao, Cordova, Cebu',
+    phone: '',
   },
 
   // 7. STUFFED N' FRIED Cordova Branch 
-  'STUFFED N FRIED Cordova Branch': {
-    name: 'STUFFED N FRIED Cordova Branch',
-    category: 'Fast Food',
-    coverImage: 'https://images.unsplash.com/photo-1561758033-d89a9ad46330?w=800&auto=format&fit=crop&q=80',
+  'stuffed-n-fried-cordova': {
+    name: 'STUFFED N\' FRIED Cordova Branch',
+    category: 'Restaurant',
+    coverImage: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSub4cBCkl0sLPiZn-BhNhb7c4hdfE3MRFGRLD74LABAA&s=10',
     barangay: 'Gabi',
-    description: 'Popular local chicken house in Cebu known for double-fried 15-spice chicken and crispy lechon kawali.',
+    description: 'a popular local chicken house in Cebu known for its signature double-fried, 15-spice Batter-Fried Whole Chicken, crispy lechon kawali, and special ngohiong.',
+    address: 'Gabi, Cordova, Cebu',
+    phone: '',
   },
 
   // 8. McDonald's Cordova 
-  'McDonalds Cordova': {
-    name: 'McDonalds Cordova',
+  'mcdonalds-cordova': {
+    name: 'McDonald\'s Cordova',
     category: 'Fast Food',
-    coverImage: 'https://images.unsplash.com/photo-1550547660-d9450f859349?w=800&auto=format&fit=crop&q=80',
+    coverImage: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRUBuFiPDiQi0bDijKV76uMXADQD2DVL6JlpKeaD0zy17-sGjV6caPB9Z6r&s=10',
     barangay: 'San Miguel',
-    description: 'World-famous fast-food restaurant serving burgers, fries, breakfast meals, and McCafe drinks.',
+    description: 'the world\'s largest chain of hamburger fast-food restaurants.',
+    address: 'San Miguel, Cordova, Cebu',
+    phone: '',
   },
 
   // 9. Barracks Grill and Resto Bar 
-  'Barracks Grill and Resto Bar': {
+  'barracks-grill-and-resto-bar': {
     name: 'Barracks Grill and Resto Bar',
     category: 'Resto Bar',
-    coverImage: 'https://images.unsplash.com/photo-1514933651103-005eec06c04b?w=800&auto=format&fit=crop&q=80',
+    coverImage: 'https://lh3.googleusercontent.com/grass-cs/ACvplmP1_ZIZux8LEYKASSCkThb2Q5Xfp8toCwBgS6gR0yYblz4-nHIdDYzdpQMjKUn7jXu5G9wYNFod4dWcCTSvjT9sCay87OKunPdMMUupTd3j7StpHg43j3LIzG2a_KFUd1xr1AFL=s294-w294-h220-n-k-no',
     barangay: 'Gabi',
-    description: 'Casual nightspot and dining place with chilled drinks and sizzling grilled meals.',
+    description: 'casual nightspot and dining place.',
+    address: 'Gabi, Cordova, Cebu',
+    phone: '',
   },
 
   // 10. BRIC Food Park 
-  'BRIC Food Park': {
+  'bric-food-park': {
     name: 'BRIC Food Park',
     category: 'Street Food',
-    coverImage: 'https://images.unsplash.com/photo-1533777857889-4be7c70b33f7?w=800&auto=format&fit=crop&q=80',
+    coverImage: 'https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=800&auto=format&fit=crop&q=80',
     barangay: 'San Miguel',
-    description: 'A vibrant, open-air al fresco dining destination featuring various food stalls and drinks.',
+    description: 'a vibrant, open-air al fresco dining destination.',
+    address: 'San Miguel, Cordova, Cebu',
+    phone: '',
   },
 
   // 11. RCA Bilao Food Station
-  'RCA Bilao Food Station': {
+  'rca-bilao-food-station': {
     name: 'RCA Bilao Food Station',
-    category: 'Fast Food',
-    coverImage: 'https://images.unsplash.com/photo-1626777552726-4a6b54c97e46?w=800&auto=format&fit=crop&q=80',
+    category: 'Restaurant',
+    coverImage: 'https://images.unsplash.com/photo-1555939594-58d7cb561ad1?w=800&auto=format&fit=crop&q=80',
     barangay: 'Gabi',
-    description: 'Pansit stir-fry, boneless lechon belly, kakanin sa bilao, and savory party food trays.',
+    description: 'Pansit stir-fry, boneless lechon belly, kakanin sa bilao, ug lain-laing food trays.',
+    address: 'Gabi, Cordova, Cebu',
+    phone: '+63 912 345 6780',
   },
 
   // 12. MAVERICKS by The Baker Street 
@@ -167,21 +178,25 @@ export const RESTAURANT_CUSTOMIZATIONS: Record<string, RestaurantCustomConfig> =
   },
 
   // 15. Burandat Seafood Bucket
-  'Burandat Seafood Bucket': {
+  'burandat-seafood-bucket': {
     name: 'Burandat Seafood Bucket',
     category: 'Restaurant',
-    coverImage: 'https://images.unsplash.com/photo-1534422298391-e4f8c172dddb?w=800&auto=format&fit=crop&q=80',
+    coverImage: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRnfjHmw1Us3mlI-tffQq2II3E62OOo-9HD_C5SkWUykDQHElwEa0m7Suar&s=10',
     barangay: 'Gabi',
-    description: 'Fresh catch-of-the-day seafood buckets and grilled specialties, right by the shoreline.',
+    description: 'Fresh catch-of-the-day seafood grilled to order, right by the shoreline.',
+    address: 'Sitio Mactan, Gabi',
+    phone: '+639201112233',
   },
 
-  // 16. Csalt Cafe Cordova (formerly Seaside Cafe)
-  'seaside-cafe-cordova': {
+  // 16. Csalt Cafe Cordova
+  'csalt-cafe-cordova': {
     name: 'Csalt Cafe Cordova',
     category: 'Cafe',
-    coverImage: 'https://images.unsplash.com/photo-1501339847302-ac426a4a7cbb?w=800&auto=format&fit=crop&q=80',
+    coverImage: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQe-86il0KEf6Gh0WJs_q-X3I8tGbhjWomjoBkTJBGbBw&s=10',
     barangay: 'Poblacion',
-    description: 'Cozy cafe with ocean views, specializing in artisan coffee, pastries and light meals.',
+    description: 'Cozy cafe with ocean views, specializing in coffee, pastries and light vegetarian meals.',
+    address: 'Poblacion Cordova, near the wharf',
+    phone: '+639201112234',
   },
 
   // 17. Cafe Mafia
@@ -196,12 +211,14 @@ export const RESTAURANT_CUSTOMIZATIONS: Record<string, RestaurantCustomConfig> =
   },
 
   // 18. Solea Mactan Resort
-  'solea-mactan-restaurant': {
+  'solea-mactan-resort': {
     name: 'Solea Mactan Resort',
-    category: 'Restaurant',
-    coverImage: 'https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?w=800&auto=format&fit=crop&q=80',
+    category: 'Pizza',
+    coverImage: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQ1chtVc3dJnqcBmKpfhs2m1XZFxefrDaMOMKv39wP64KQgROxl7rAp0zJ2&s=10',
     barangay: 'Alegria',
-    description: 'Resort dining featuring international buffets, poolside bar, and local island specialties.',
+    description: '[Verified] The in-house restaurant of Solea Mactan Resort, serving pizza, international, and Filipino dishes. Popular with resort guests and open to walk-in diners.',
+    address: 'Victor Wahing Street, Alegria',
+    phone: '',
   },    
 
   // 19. Husby's Grill
@@ -216,12 +233,14 @@ export const RESTAURANT_CUSTOMIZATIONS: Record<string, RestaurantCustomConfig> =
   },
 
   // 20. Sungka Native Restaurant
-  'Sungka Native Restaurant': {
+  'sungka-native-restaurant': {
     name: 'Sungka Native Restaurant',
     category: 'Restaurant',
-    coverImage: 'https://images.unsplash.com/photo-1555939594-58d7cb561ad1?w=800&auto=format&fit=crop&q=80',
+    coverImage: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRGBGg6Wa1-ENZF8u9GRdtULjgb5iegQ8LhACawQfBDCnSScyedDKVe0heb&s=10',
     barangay: 'Day-as',
     description: 'Classic Filipino dishes served with warm hospitality near Cordova port.',
+    address: 'Cordova, Cebu (exact address unverified)',
+    phone: '',
   },
 
   // 21. Lantaw Floating Native Restaurant
@@ -247,12 +266,14 @@ export const RESTAURANT_CUSTOMIZATIONS: Record<string, RestaurantCustomConfig> =
   },
 
   // 23. Cascaja Cafe 
-  'cascadja-cafe': {
+  'cascaja-cafe': {
     name: 'Cascaja Cafe',
     category: 'Cafe',
-    coverImage: 'https://images.unsplash.com/photo-1554118811-1e0d58224f24?w=800&auto=format&fit=crop&q=80',
+    coverImage: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQaMHiYg94wzeeK6oPQ5FTQczijAWKvc6mCLFWa1_FHW2uxgFuFfns-Gi0&s=10',
     barangay: 'Calan',
-    description: 'Cozy coffee shop in Cordova offering delicious coffee, rice meals, pasta, and budget-friendly drinks.',
+    description: 'sa Cordova, Cebu ay isang cozy na coffee shop na nag-aalok ng masasarap na kape, rice meals, pasta, at budget-friendly na inumin.',
+    address: 'Cordova, Cebu (exact address unverified)',
+    phone: '',
   },
 
   // 24. Don Macchiatos Cordova
@@ -289,194 +310,15 @@ export const RESTAURANT_CUSTOMIZATIONS: Record<string, RestaurantCustomConfig> =
   },
 
   // 27. Papsys BBQ
-  'papsys-bbq-mtquhuqg': {
+  'papsys-bbq': {
     name: 'Papsys BBQ',
     category: 'Fast Food',
     coverImage: 'https://images.unsplash.com/photo-1529193591184-b1d58069ecdd?w=800&auto=format&fit=crop&q=80',
     barangay: 'Bang-bang',
     description: 'a popular Filipino casual dining restaurant chain known for its signature charcoal-grilled specialties and rustic, modern ambiance',
     address: 'Barangay Bang-bang, Cordova, Cebu.',
-    phone: '',
-  },
-
-  // 28. Kuya Dins BBQ
-  'kuya-dins-bbq': {
-    name: 'Kuya Dins BBQ',
-    category: 'Restaurant',
-    coverImage: 'https://images.unsplash.com/photo-1529193591184-b1d58069ecdd?w=800&auto=format&fit=crop&q=80',
-    barangay: 'Ibabao',
-    description: '[Name confirmed, location approximate] A local BBQ/grill eatery in Cordova. Exact address not independently verified — location shown is approximate.',
-    address: 'Cordova, Cebu (exact address unverified)',
-    phone: '',
-  },
-
-  // 29. Crave4 Milktea Roro
-  'crave4-milktea-roro': {
-    name: 'Crave4 Milktea Roro',
-    category: 'Cafe',
-    coverImage: 'https://images.unsplash.com/photo-1554118811-1e0d58224f24?w=800&auto=format&fit=crop&q=80',
-    barangay: 'Poblacion',
-    description: '[Name confirmed, location approximate] A milk tea shop near the Cordova RORO port. Exact address not independently verified — location shown is approximate.',
-    address: 'Near Roro Port, Cordova (exact address unverified)',
-    phone: '',
-  },
-
-
-  // ABY ROAD Resto Bar
-  'aby-road-resto-bar': {
-    name: 'ABY ROAD Resto Bar',
-    category: 'Resto Bar',
-    coverImage: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcR5Kp2YeaylbA53UcCROxnangSIQ2YUsJqB4hx0nIhYoPxKqG-rz4-Z0uo&s=10',
-    barangay: 'Bangbang',
-    description: 'Beatles-inspired restobar.',
-    address: 'Bangbang, Cordova, Cebu',
-    phone: '',
-  },
-
-  // Barracks Grill and Resto Bar
-  'barracks-grill-and-resto-bar': {
-    name: 'Barracks Grill and Resto Bar',
-    category: 'Resto Bar',
-    coverImage: 'https://lh3.googleusercontent.com/grass-cs/ACvplmP1_ZIZux8LEYKASSCkThb2Q5Xfp8toCwBgS6gR0yYblz4-nHIdDYzdpQMjKUn7jXu5G9wYNFod4dWcCTSvjT9sCay87OKunPdMMUupTd3j7StpHg43j3LIzG2a_KFUd1xr1AFL=s294-w294-h220-n-k-no',
-    barangay: 'Gabi',
-    description: 'casual nightspot and dining place.',
-    address: 'Gabi, Cordova, Cebu',
-    phone: '',
-  },
-
-  // BRIC Food Park
-  'bric-food-park': {
-    name: 'BRIC Food Park',
-    category: 'Street Food',
-    coverImage: 'https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=800&auto=format&fit=crop&q=80',
-    barangay: 'San Miguel',
-    description: 'a vibrant, open-air al fresco dining destination.',
-    address: 'San Miguel, Cordova, Cebu',
-    phone: '',
-  },
-
-  // Burandat Seafood Bucket
-  'burandat-seafood-bucket': {
-    name: 'Burandat Seafood Bucket',
-    category: 'Restaurant',
-    coverImage: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRnfjHmw1Us3mlI-tffQq2II3E62OOo-9HD_C5SkWUykDQHElwEa0m7Suar&s=10',
-    barangay: 'Gabi',
-    description: 'Fresh catch-of-the-day seafood grilled to order, right by the shoreline.',
-    address: 'Sitio Mactan, Gabi',
-    phone: '+639201112233',
-  },
-
-  // Cascaja Cafe
-  'cascaja-cafe': {
-    name: 'Cascaja Cafe',
-    category: 'Cafe',
-    coverImage: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQaMHiYg94wzeeK6oPQ5FTQczijAWKvc6mCLFWa1_FHW2uxgFuFfns-Gi0&s=10',
-    barangay: 'Calan',
-    description: 'sa Cordova, Cebu ay isang cozy na coffee shop na nag-aalok ng masasarap na kape, rice meals, pasta, at budget-friendly na inumin.',
-    address: 'Cordova, Cebu (exact address unverified)',
-    phone: '',
-  },
-
-  // Csalt Cafe Cordova
-  'csalt-cafe-cordova': {
-    name: 'Csalt Cafe Cordova',
-    category: 'Cafe',
-    coverImage: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQe-86il0KEf6Gh0WJs_q-X3I8tGbhjWomjoBkTJBGbBw&s=10',
-    barangay: 'Poblacion',
-    description: 'Cozy cafe with ocean views, specializing in coffee, pastries and light vegetarian meals.',
-    address: 'Poblacion Cordova, near the wharf',
-    phone: '+639201112234',
-  },
-
-  // Eat n' Repeat
-  'eat-n-repeat': {
-    name: 'Eat n\' Repeat',
-    category: 'Cafe',
-    coverImage: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQfQN23Tk3arzxnvZgYwgrZTOYhPgijf_4p5q3K621FO-181pCjRTDDMTE&s=10',
-    barangay: 'Bangbang',
-    description: 'aesthetic at Instagram-worthy na cafe at tambayan.',
-    address: 'Bangbang, Cordova, Cebu',
-    phone: '',
-  },
-
-  // McDonald's Cordova
-  'mcdonalds-cordova': {
-    name: 'McDonald\'s Cordova',
-    category: 'Fast Food',
-    coverImage: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRUBuFiPDiQi0bDijKV76uMXADQD2DVL6JlpKeaD0zy17-sGjV6caPB9Z6r&s=10',
-    barangay: 'San Miguel',
-    description: 'the world\'s largest chain of hamburger fast-food restaurants.',
-    address: 'San Miguel, Cordova, Cebu',
-    phone: '',
-  },
-
-  // RCA Bilao Food Station
-  'rca-bilao-food-station': {
-    name: 'RCA Bilao Food Station',
-    category: 'Restaurant',
-    coverImage: 'https://images.unsplash.com/photo-1555939594-58d7cb561ad1?w=800&auto=format&fit=crop&q=80',
-    barangay: 'Gabi',
-    description: 'Pansit stir-fry, boneless lechon belly, kakanin sa bilao, ug lain-laing food trays.',
-    address: 'Gabi, Cordova, Cebu',
-    phone: '+63 912 345 6780',
-  },
-
-  // Solea Mactan Resort
-  'solea-mactan-resort': {
-    name: 'Solea Mactan Resort',
-    category: 'Pizza',
-    coverImage: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQ1chtVc3dJnqcBmKpfhs2m1XZFxefrDaMOMKv39wP64KQgROxl7rAp0zJ2&s=10',
-    barangay: 'Alegria',
-    description: '[Verified] The in-house restaurant of Solea Mactan Resort, serving pizza, international, and Filipino dishes. Popular with resort guests and open to walk-in diners.',
-    address: 'Victor Wahing Street, Alegria',
-    phone: '',
-  },
-
-  // Street Food Park
-  'street-food-park': {
-    name: 'Street Food Park',
-    category: 'Street Food',
-    coverImage: 'https://images.unsplash.com/photo-1534422298391-e4f8c172dddb?w=800&auto=format&fit=crop&q=80',
-    barangay: 'Poblacion',
-    description: 'affordable local street food and fresh seafood paired with a cool ocean breeze and sunset.',
-    address: 'Roro Port, Cordova, Cebu',
-    phone: '',
-  },
-
-  // STUFFED N' FRIED Cordova Branch
-  'stuffed-n-fried-cordova': {
-    name: 'STUFFED N\' FRIED Cordova Branch',
-    category: 'Restaurant',
-    coverImage: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSub4cBCkl0sLPiZn-BhNhb7c4hdfE3MRFGRLD74LABAA&s=10',
-    barangay: 'Gabi',
-    description: 'a popular local chicken house in Cebu known for its signature double-fried, 15-spice Batter-Fried Whole Chicken, crispy lechon kawali, and special ngohiong.',
-    address: 'Gabi, Cordova, Cebu',
-    phone: '',
-  },
-
-  // Sungka Native Restaurant
-  'sungka-native-restaurant': {
-    name: 'Sungka Native Restaurant',
-    category: 'Restaurant',
-    coverImage: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRGBGg6Wa1-ENZF8u9GRdtULjgb5iegQ8LhACawQfBDCnSScyedDKVe0heb&s=10',
-    barangay: 'Day-as',
-    description: 'Classic Filipino dishes served with warm hospitality near Cordova port.',
-    address: 'Cordova, Cebu (exact address unverified)',
-    phone: '',
-  },
-
-  // Taytayan Pinoy Restaurant
-  'taytayan-pinoy-restaurant-ibabao': {
-    name: 'Taytayan Pinoy Restaurant',
-    category: 'Restaurant',
-    coverImage: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRAYNgM2l1VWAjy1lHThQ1WNwLiI44JDAfo8aQqPS-wKw&s',
-    barangay: 'Ibabao',
-    description: 'ay isang kilalang open-air at lutong-bahay na kainan.',
-    address: 'Ibabao, Cordova, Cebu',
-    phone: '',
   },
 };
-
 
 export function normalizeKey(str?: string): string {
   return (str || '').toLowerCase().replace(/[\s\-_]/g, '');

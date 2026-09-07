@@ -36,6 +36,10 @@ function getDefaultCoverImage(name = '', description = '', category = 'Restauran
   return DEFAULT_CATEGORY_IMAGES[category] || DEFAULT_CATEGORY_IMAGES['Restaurant'];
 }
 
+function normalizeKey(str = '') {
+  return (str || '').toLowerCase().replace(/[\s\-_]/g, '');
+}
+
 function syncToRestaurantTs(restaurant) {
   try {
     if (!fs.existsSync(RESTAURANTS_TS_PATH)) {
@@ -44,7 +48,7 @@ function syncToRestaurantTs(restaurant) {
     }
 
     let content = fs.readFileSync(RESTAURANTS_TS_PATH, 'utf8');
-    const slug = restaurant.slug || restaurant.id;
+    const rawSlug = restaurant.slug || restaurant.id;
     const name = restaurant.name || 'Restaurant';
     const category = inferCategory(name, restaurant.description, restaurant.cuisines);
     let coverImage = restaurant.cover_image_url || restaurant.coverImageUrl || '';
@@ -57,32 +61,50 @@ function syncToRestaurantTs(restaurant) {
     const address = (restaurant.address || '').replace(/'/g, "\\'");
     const phone = (restaurant.phone || '').replace(/'/g, "\\'");
 
-    const entrySnippet = `  '${slug}': {\n    name: '${name.replace(/'/g, "\\'")}',\n    category: '${category}',\n    coverImage: '${coverImage}',\n    barangay: '${barangay.replace(/'/g, "\\'")}',\n    description: '${description}',\n    address: '${address}',\n    phone: '${phone}',\n  },\n`;
+    const normSlug = normalizeKey(rawSlug);
+    const normName = normalizeKey(name);
 
-    // If slug already in customizations, update it
-    const keyRegex = new RegExp(`['"]${slug}['"]\\s*:\\s*{[\\s\\S]*?},?`, 'm');
-    if (keyRegex.test(content)) {
-      content = content.replace(keyRegex, entrySnippet.trim());
-      logger.info(`Updated existing entry for ${name} in restaurants.ts`);
+    // Look for existing key in RESTAURANT_CUSTOMIZATIONS
+    const entryBlockRegex = /^\s*['"]([^'"]+)['"]\s*:\s*\{[\s\S]*?^\s*\},?/gm;
+    let match;
+    let foundKey = null;
+    let fullMatchedBlock = null;
+
+    while ((match = entryBlockRegex.exec(content)) !== null) {
+      const key = match[1];
+      const normKey = normalizeKey(key);
+      if (
+        normKey === normSlug ||
+        normKey === normName ||
+        (normSlug && normKey.includes(normSlug)) ||
+        (normKey && normSlug.includes(normKey)) ||
+        (normName && normKey.includes(normName)) ||
+        (normKey && normName.includes(normKey))
+      ) {
+        foundKey = key;
+        fullMatchedBlock = match[0];
+        break;
+      }
+    }
+
+    const useKey = foundKey || rawSlug;
+    const replacementEntry = `  '${useKey}': {\n    name: '${name.replace(/'/g, "\\'")}',\n    category: '${category}',\n    coverImage: '${coverImage}',\n    barangay: '${barangay.replace(/'/g, "\\'")}',\n    description: '${description}',\n    address: '${address}',\n    phone: '${phone}',\n  },`;
+
+    if (foundKey && fullMatchedBlock) {
+      content = content.replace(fullMatchedBlock, replacementEntry);
+      logger.info(`Updated existing entry for ${name} [${foundKey}] in restaurants.ts without duplicating.`);
     } else {
-      // Insert right before the closing of RESTAURANT_CUSTOMIZATIONS
-      const targetAnchor = '};\n\n\nexport function normalizeKey';
-      const fallbackAnchor = '};\n\nexport function normalizeKey';
-      const simpleAnchor = '};\n\nexport function';
-
-      if (content.includes(targetAnchor)) {
-        content = content.replace(targetAnchor, `\n  // ${name}\n${entrySnippet}` + targetAnchor);
-      } else if (content.includes(fallbackAnchor)) {
-        content = content.replace(fallbackAnchor, `\n  // ${name}\n${entrySnippet}` + fallbackAnchor);
-      } else if (content.includes(simpleAnchor)) {
-        content = content.replace(simpleAnchor, `\n  // ${name}\n${entrySnippet}` + simpleAnchor);
+      // Append right before the closing of RESTAURANT_CUSTOMIZATIONS
+      const closeMatch = /\n\};\s*\n\s*export function/m;
+      if (closeMatch.test(content)) {
+        content = content.replace(closeMatch, `\n\n  // ${name}\n${replacementEntry}\n};\n\nexport function`);
       } else {
         const lastIndex = content.lastIndexOf('};');
         if (lastIndex !== -1) {
-          content = content.slice(0, lastIndex) + `\n  // ${name}\n${entrySnippet}` + content.slice(lastIndex);
+          content = content.slice(0, lastIndex) + `\n  // ${name}\n${replacementEntry}\n` + content.slice(lastIndex);
         }
       }
-      logger.info(`Added new entry for ${name} to restaurants.ts`);
+      logger.info(`Added new entry for ${name} [${rawSlug}] to restaurants.ts`);
     }
 
     fs.writeFileSync(RESTAURANTS_TS_PATH, content, 'utf8');

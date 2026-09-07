@@ -3,8 +3,11 @@ const { pool } = require('../config/db');
 const { syncToRestaurantTs, inferCategory, getDefaultCoverImage } = require('../services/restaurantSync.service');
 
 async function syncAll() {
-  console.log('🔄 Syncing all database restaurants into frontend/src/data/restaurants.ts and updating default images...');
+  console.log('🔄 Cleaning up database and synchronizing restaurants.ts...');
   try {
+    // Standardize slug for Papsy's BBQ
+    await pool.query("UPDATE restaurants SET slug = 'papsys-bbq' WHERE name ILIKE '%papsy%'");
+
     const { rows } = await pool.query(`
       SELECT 
         r.*,
@@ -31,7 +34,7 @@ async function syncAll() {
       if (ok) count++;
     }
 
-    console.log(`✅ Successfully synchronized ${count} restaurant(s) to restaurants.ts and DB!`);
+    console.log(`✅ Successfully checked and synchronized ${count} restaurant(s) in restaurants.ts!`);
     process.exit(0);
   } catch (err) {
     console.error('❌ Sync failed:', err);
