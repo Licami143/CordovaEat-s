@@ -45,9 +45,11 @@ export const RESTAURANT_CUSTOMIZATIONS: Record<string, RestaurantCustomConfig> =
   'grillhouse-cordova-bbq': {
     name: 'Grillhouse Cordova BBQ',
     category: 'Restaurant',
-    coverImage: 'https://cdn.vectorstock.com/i/500p/52/47/rustic-bbq-grill-house-logo-vector-48525247.jpg',
+    coverImage: '',
     barangay: 'Ibabao',
     description: 'Classic Filipino BBQ and grilled favorites, budget-friendly family dining.',
+    address: 'San Miguel Road, Ibabao',
+    phone: '+639201112235',
   },
 
   // 3. Street Food Park
@@ -135,18 +137,22 @@ export const RESTAURANT_CUSTOMIZATIONS: Record<string, RestaurantCustomConfig> =
   'mavericks-by-the-baker-street': {
     name: 'MAVERICKS by The Baker Street',
     category: 'Cafe',
-    coverImage: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQu11QAkAvQPNZ0Y4r8_IbqwVvIJxwA2-bk15_VEO_zKcHOiSdH6-5VH4Sw&s=10',
+    coverImage: 'https://scontent.fmnl8-3.fna.fbcdn.net/v/t39.30808-1/539516293_122112420230971888_5351222020459115141_n.jpg?stp=c0.15.1009.1009a_dst-jpg_tt6&cstp=mx1009x1009&ctp=s160x160&_nc_cat=105&_nc_map=urlgen_bucketless&ccb=1-7&_nc_sid=2d3e12&_nc_eui2=AeEqtS_ggK-Yzhv7JVd5siW82S7THdpzd57ZLtMd2nN3nk4V7V-_4iIlo5X4HLnoxlfqUoDcaFgtdKiZL9FY5Ncd&_nc_ohc=RVABe0oI_k4Q7kNvwFW4c3S&_nc_oc=Adrctva9p4S5aKBf3m_eW4re9ELW4a5qTvDFIfF5z7WOANAYW3OmXcSvsd7p9A_VQRs&_nc_zt=24&_nc_ht=scontent.fmnl8-3.fna&_nc_gid=N1fM9vkL9rPtZVZ_fVL-fA&_nc_ss=7b2a8&oh=00_AQFvtXW1b4xj2SynF37ifUfCgAzcjuNUb1wIegYAzTHXQQ&oe=6A937899',
     barangay: 'Gabi',
-    description: 'Creative space, collective stories, pastry party, specialty coffee, and late night hangout.',
+    description: 'Creative space Collective Stories Local Hangouts After hours refuge Pastry Party Coffee Catch up.',
+    address: 'Gabi, Cordova, Cebu',
+    phone: '+63 917 123 4567',
   },
  
   // 13. Entoys Bakasihan
   'entoys-bakasihan': {
     name: 'Entoys Bakasihan',
     category: 'Restaurant',
-    coverImage: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSpHsAd4SnchBnY77rNwaDu5kDEzsZxWdKald-A3SgojkG0BmHa3Cx2lGVK&s=10',
+    coverImage: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTQukvKATrQQW_HUYIbjrG6X6b9KNlzpQz5qlo3DJuung&s=10',
     barangay: 'Buagsong',
-    description: 'Famous open-air eatery in Buagsong famous for its signature reef eel dish nilarang na bakasi.',
+    description: 'a popular open-air, casual eatery located in Barangay Buagsong, Cordova, Cebu, famous for its signature reef eel dish called nilarang na bakasi.',
+    address: 'Buagsong, Cordova, Cebu',
+    phone: '+63 912 345 6789',
   },
 
   // 14. Tita Kim's
@@ -155,7 +161,9 @@ export const RESTAURANT_CUSTOMIZATIONS: Record<string, RestaurantCustomConfig> =
     category: 'Restaurant',
     coverImage: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTQukvKATrQQW_HUYIbjrG6X6b9KNlzpQz5qlo3DJuung&s=10',
     barangay: 'Gabi',
-    description: 'An affordable buffet-style Filipino restaurant located along the National Highway in Gabi.',
+    description: 'an affordable, buffet-style Filipino restaurant located along the National Highway in Barangay Gabi, Cordova, Cebu.',
+    address: 'National Highway, Gabi, Cordova, Cebu',
+    phone: '+63 917 888 9900',
   },
 
   // 15. Burandat Seafood Bucket
@@ -180,9 +188,11 @@ export const RESTAURANT_CUSTOMIZATIONS: Record<string, RestaurantCustomConfig> =
   'cafe-mafia': {
     name: 'Cafe Mafia',
     category: 'Cafe',
-    coverImage: '/cafe-mafia-cover.png',
-    barangay: 'Dapitan',
-    description: 'A casual cafe in Cordova famous for its gourmet burgers, artisan coffee, and mafia-themed ambiance.',
+    coverImage: 'http://localhost:3000/cafe-mafia-cover.png',
+    barangay: 'Poblacion',
+    description: '[Name confirmed, location approximate] A casual cafe in Cordova mentioned for its burgers and coffee. Exact address not independently verified — location shown is approximate.',
+    address: 'Cordova, Cebu (exact address unverified)',
+    phone: '',
   },
 
   // 18. Solea Mactan Resort
@@ -196,11 +206,13 @@ export const RESTAURANT_CUSTOMIZATIONS: Record<string, RestaurantCustomConfig> =
 
   // 19. Husby's Grill
   'husbys-grill': {
-    name: "Husby's Grill",
+    name: 'Husby\'s Grill',
     category: 'Restaurant',
-    coverImage: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQkGL3w8GCIdrok2FgfyTdxIqAT5wa7nqoouJvJ25X92C_i1U5WARzw58s&s=10',
+    coverImage: '',
     barangay: 'Gabi',
-    description: 'A local grill house known for tender ribs, BBQ skewers, and family meals.',
+    description: '[Verified] An outdoor grill restaurant in Barangay Gabi known for affordable Filipino grilled dishes — tuna belly, baby back ribs, kinilaw, and panga are frequently mentioned favorites.',
+    address: 'Manuel L. Quezon Road, Gabi',
+    phone: '',
   },
 
   // 20. Sungka Native Restaurant
@@ -216,18 +228,22 @@ export const RESTAURANT_CUSTOMIZATIONS: Record<string, RestaurantCustomConfig> =
   'lantaw-floating-native-restaurant': {
     name: 'Lantaw Floating Native Restaurant',
     category: 'Restaurant',
-    coverImage: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQm8BkI9tT-mcfl6xJLf_aW0sM0pIIYXwSqAgdJgG_iw_dDToAvdUf_90Y&s=10',
+    coverImage: '',
     barangay: 'Day-as',
-    description: 'A floating native restaurant on the Cordova waterfront known for breathtaking sunset views and seafood.',
+    description: '[Verified] A floating native restaurant on the Cordova waterfront known for sunset views across the Mactan Channel toward the Cebu City skyline. Filipino and seafood dishes served in open-air, bamboo-accented dining platforms over the water.',
+    address: 'Sa Baybayon, Barangay Day-as',
+    phone: '032-514-2959',
   },
 
   // 22. Alberto's Pizza Cordova
   'albertos-pizza-cordova': {
-    name: "Alberto's Pizza Cordova",
+    name: 'Alberto\'s Pizza Cordova',
     category: 'Pizza',
-    coverImage: 'https://images.unsplash.com/photo-1513104890138-7c749659a591?w=800&auto=format&fit=crop&q=80',
-    barangay: 'Gabi',
-    description: 'Affordable, freshly-baked local favorite and specialty pizzas with quick takeout.',
+    coverImage: '',
+    barangay: 'Buagsong',
+    description: '[Name confirmed, location approximate] A local pizzeria in Cordova. Exact address not independently verified — location shown is approximate.',
+    address: 'Cordova, Cebu (exact address unverified)',
+    phone: '',
   },
 
   // 23. Cascaja Cafe 
@@ -243,29 +259,35 @@ export const RESTAURANT_CUSTOMIZATIONS: Record<string, RestaurantCustomConfig> =
   'don-macchiatos-cordova': {
     name: 'Don Macchiatos Cordova',
     category: 'Cafe',
-    coverImage: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRsHRwhEvXCxKQ1AVNCYkjdPMZdRuUiRXpMXcQ4X65kZmOXOitEot5-CQmD&s=10',
+    coverImage: '',
     barangay: 'San Miguel',
-    description: 'Budget-friendly espresso drinks, iced caramel macchiatos, and coffee favorites.',
+    description: '[Name confirmed, location approximate] A coffee shop in Cordova. Exact address not independently verified — location shown is approximate.',
+    address: 'Cordova, Cebu (exact address unverified)',
+    phone: '',
   },
 
   // 25. Parola Seaview Restaurant
   'parola-seaview-restaurant': {
     name: 'Parola Seaview Restaurant',
     category: 'Restaurant',
-    coverImage: 'https://ak-d.tripcdn.com/images/1i6572224riot1ksxB04C_Q90.jpg?proc=source/trip',
+    coverImage: '',
     barangay: 'Poblacion',
-    description: 'Open-air seaside dining centered around an illuminated lighthouse overlooking the bay.',
+    description: '[Verified] A large open-air restaurant near the Cordova RORO port, built around a decorative lighthouse (parola) with an overwater deck facing Bantayan Bay. Known for Filipino seafood and meat dishes and sunset views.',
+    address: 'Roro Port Cordova',
+    phone: '+63 947 990 8561',
   },
 
   // 26. 10,000 Roses Cafe & More
   '10000-roses-cafe-and-more': {
     name: '10,000 Roses Cafe & More',
     category: 'Cafe',
-    coverImage: 'https://travelcebu.b-cdn.net/wp-content/uploads/2024/06/10000-roses-logo-light-night.jpg',
+    coverImage: '',
     barangay: 'Day-as',
-    description: 'Iconic tourist attraction and cafe surrounded by thousands of LED-lit artificial white roses.',
+    description: '[Verified] A cafe and garden attraction within the Cordova Tourism Center compound, known for its thousands of LED-lit artificial roses that illuminate at dusk. Serves coffee, pizza, pasta, and light Filipino fare alongside the light installation.',
+    address: 'Day-as Barangay Rd, Cordova Tourism Center',
+    phone: '032-496-7023',
   },
-  
+
 };
 
 

@@ -9,6 +9,7 @@ const asyncHandler = require('../utils/asyncHandler');
 const ApiError = require('../utils/apiError');
 const cache = require('../utils/cache');
 const { parsePagination, buildPageMeta } = require('../utils/pagination');
+const { syncToRestaurantTs } = require('../services/restaurantSync.service');
 
 /** GET /api/restaurants — public browse/search/filter/sort/paginate */
 const search = asyncHandler(async (req, res) => {
@@ -142,6 +143,9 @@ const create = asyncHandler(async (req, res) => {
     await userModel.updateRole(req.user.id, 'owner');
   }
 
+  // Automatically sync to restaurants.ts so it is immediately registered on frontend
+  syncToRestaurantTs(restaurant);
+
   res.status(201).json({
     success: true,
     message: 'Business created and verified successfully!',
@@ -164,6 +168,8 @@ const update = asyncHandler(async (req, res) => {
     await restaurantModel.replaceCuisines(req.params.id, cuisines.map((c) => c.id));
   }
 
+  syncToRestaurantTs(restaurant);
+
   res.json({ success: true, message: 'Restaurant updated', data: { restaurant } });
 });
 
@@ -177,6 +183,8 @@ const uploadCoverImage = asyncHandler(async (req, res) => {
   const processed = await uploadService.processImage(req.file);
   const coverImageUrl = uploadService.publicUrlFor(processed);
   const restaurant = await restaurantModel.update(req.params.id, { coverImageUrl });
+
+  syncToRestaurantTs(restaurant);
 
   res.json({ success: true, message: 'Cover image updated', data: { restaurant } });
 });
@@ -210,6 +218,11 @@ const verify = asyncHandler(async (req, res) => {
     rejectionReason: status === 'rejected' ? rejectionReason : null,
   });
   if (!restaurant) throw ApiError.notFound('Restaurant not found');
+
+  if (status === 'verified') {
+    syncToRestaurantTs(restaurant);
+  }
+
   res.json({ success: true, message: `Business ${status}`, data: { restaurant } });
 });
 
