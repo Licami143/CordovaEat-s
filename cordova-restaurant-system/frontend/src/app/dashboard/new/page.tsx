@@ -1,7 +1,9 @@
 'use client';
 
-import { useState, FormEvent } from 'react';
+import { useState, FormEvent, ChangeEvent } from 'react';
 import { useRouter } from 'next/navigation';
+import Image from 'next/image';
+import { UploadCloud, Image as ImageIcon, X, CheckCircle2 } from 'lucide-react';
 import { api, ApiClientError } from '@/lib/api';
 import { useToast } from '@/lib/toast-context';
 import { useAuth } from '@/lib/auth-context';
@@ -36,6 +38,12 @@ export default function NewBusinessPage() {
   const [services, setServices] = useState<string[]>(['dine_in']);
   const [selectedCuisines, setSelectedCuisines] = useState<string[]>([]);
   const [dietary, setDietary] = useState<string[]>([]);
+  
+  // Business Logo / Cover Image state
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [imageUrl, setImageUrl] = useState('');
+
   const [permitFile, setPermitFile] = useState<File | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [submitting, setSubmitting] = useState(false);
@@ -44,13 +52,29 @@ export default function NewBusinessPage() {
     setArr(arr.includes(value) ? arr.filter((v) => v !== value) : [...arr, value]);
   };
 
+  const handleImageChange = (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setImageFile(file);
+      const url = URL.createObjectURL(file);
+      setImagePreview(url);
+    }
+  };
+
+  const removeImage = () => {
+    setImageFile(null);
+    if (imagePreview) {
+      URL.revokeObjectURL(imagePreview);
+      setImagePreview(null);
+    }
+  };
+
   const validate = () => {
     const e: Record<string, string> = {};
     if (name.trim().length < 2) e.name = 'Business name is required (at least 2 characters)';
     if (address.trim().length < 5) e.address = 'Address is required (at least 5 characters)';
     if (!latitude || !longitude) e.location = 'Map coordinates are required';
     if (services.length === 0) e.services = 'Select at least one service type';
-    if (!permitFile) e.permit = 'Business permit document is required for verification';
     setErrors(e);
     return Object.keys(e).length === 0;
   };
@@ -72,12 +96,27 @@ export default function NewBusinessPage() {
       formData.append('servicesOffered', JSON.stringify(services));
       formData.append('cuisineSlugs', JSON.stringify(selectedCuisines));
       formData.append('dietaryOptions', JSON.stringify(dietary));
+      
+      // Upload Logo / Photo
+      if (imageFile) {
+        formData.append('image', imageFile);
+      } else if (imageUrl.trim()) {
+        formData.append('coverImageUrl', imageUrl.trim());
+      }
+
+      // Business Permit (optional or attached)
       if (permitFile) formData.append('businessPermit', permitFile);
 
-      await api.post('/api/restaurants', formData, { isFormData: true });
+      const res = await api.post('/api/restaurants', formData, { isFormData: true });
       await refreshUser();
-      toast('Business submitted for verification!', 'success');
-      router.push('/dashboard');
+      toast('Business registered and verified successfully!', 'success');
+      
+      const newSlug = res.data?.restaurant?.slug;
+      if (newSlug) {
+        router.push(`/restaurants/${newSlug}`);
+      } else {
+        router.push('/dashboard');
+      }
     } catch (err) {
       if (err instanceof ApiClientError && err.details?.length) {
         const fieldErrors: Record<string, string> = {};
@@ -98,84 +137,176 @@ export default function NewBusinessPage() {
 
   return (
     <RequireRole roles={['owner', 'admin', 'customer']}>
-      <div className="max-w-2xl mx-auto">
-        <h1 className="text-2xl font-bold mb-1">Register Your Business</h1>
-        <p className="text-[var(--text-muted)] mb-6 text-sm">
-          Submit your restaurant details and business permit. An admin will review and verify your listing before it
-          appears publicly.
-        </p>
+      <div className="max-w-2xl mx-auto py-6 px-4">
+        <div className="mb-6">
+          <h1 className="text-3xl font-serif font-bold text-stone-900 dark:text-white mb-2">
+            Register Your Restaurant
+          </h1>
+          <p className="text-stone-600 dark:text-stone-300 text-sm">
+            Add your establishment details, upload your restaurant photo or logo, and it will be immediately available on the CordovaEats platform!
+          </p>
+        </div>
 
-        <form onSubmit={onSubmit} className="card p-6 space-y-4" noValidate>
-          <Input label="Business name" value={name} onChange={(e) => setName(e.target.value)} error={errors.name} required />
-          <Textarea label="Description" value={description} onChange={(e) => setDescription(e.target.value)} />
-          <Input label="Address" value={address} onChange={(e) => setAddress(e.target.value)} error={errors.address} required />
-          <Input label="Barangay" value={barangay} onChange={(e) => setBarangay(e.target.value)} />
-
-          <div className="grid grid-cols-2 gap-3">
-            <Input label="Latitude" type="number" step="any" value={latitude} onChange={(e) => setLatitude(e.target.value)} />
-            <Input label="Longitude" type="number" step="any" value={longitude} onChange={(e) => setLongitude(e.target.value)} />
+        <form onSubmit={onSubmit} className="bg-white dark:bg-[#1a211c] border border-stone-200 dark:border-stone-800 rounded-2xl shadow-sm p-6 sm:p-8 space-y-6" noValidate>
+          {/* Section: Basic Info */}
+          <div className="space-y-4">
+            <h2 className="text-sm font-bold uppercase tracking-wider text-cordova-green dark:text-emerald-400">
+              1. Basic Establishment Information
+            </h2>
+            <Input label="Business Name" value={name} onChange={(e) => setName(e.target.value)} error={errors.name} placeholder="e.g. Isla Grill & Seafood" required />
+            <Textarea label="Description" value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Describe your specialty dishes, ambiance, and dining experience..." />
           </div>
-          {errors.location && <p className="text-sm text-red-500">{errors.location}</p>}
 
-          <Input label="Phone" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+63 9XX XXX XXXX" />
+          {/* Section: Logo / Cover Photo Upload */}
+          <div className="space-y-3 pt-2 border-t border-stone-100 dark:border-stone-800">
+            <h2 className="text-sm font-bold uppercase tracking-wider text-cordova-green dark:text-emerald-400 flex items-center gap-2">
+              <ImageIcon size={16} />
+              <span>2. Business Logo or Cover Photo</span>
+            </h2>
+            <p className="text-xs text-stone-500 dark:text-stone-400">
+              Upload a high quality logo or photo of your restaurant/dishes to showcase to customers.
+            </p>
 
-          <Select label="Price range" value={priceRange} onChange={(e) => setPriceRange(e.target.value)}>
-            <option value="budget">₱ Budget-friendly</option>
-            <option value="moderate">₱₱ Moderate</option>
-            <option value="expensive">₱₱₱ Expensive</option>
-            <option value="premium">₱₱₱₱ Premium</option>
-          </Select>
-
-          <div>
-            <p className="label mb-2">Services offered</p>
-            <div className="flex flex-wrap gap-2">
-              {SERVICE_OPTIONS.map((s) => (
-                <button key={s.value} type="button" onClick={() => toggle(services, setServices, s.value)}>
-                  <Badge color={services.includes(s.value) ? 'brand' : 'neutral'}>{s.label}</Badge>
+            {imagePreview ? (
+              <div className="relative rounded-xl overflow-hidden border border-stone-200 dark:border-stone-700 max-h-56 w-full bg-stone-100 dark:bg-stone-900 group">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={imagePreview}
+                  alt="Restaurant Logo Preview"
+                  className="w-full h-48 object-cover"
+                />
+                <button
+                  type="button"
+                  onClick={removeImage}
+                  className="absolute top-2 right-2 p-1.5 bg-black/70 hover:bg-red-600 text-white rounded-full transition-colors"
+                  title="Remove Photo"
+                >
+                  <X size={16} />
                 </button>
-              ))}
-            </div>
-            {errors.services && <p className="text-sm text-red-500 mt-1">{errors.services}</p>}
+                <div className="absolute bottom-2 left-2 bg-emerald-600/90 text-white text-[11px] px-2.5 py-1 rounded-full font-medium flex items-center gap-1 shadow">
+                  <CheckCircle2 size={12} />
+                  <span>Photo Ready</span>
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                <label className="border-2 border-dashed border-stone-300 dark:border-stone-700 hover:border-cordova-green dark:hover:border-emerald-500 rounded-xl p-6 flex flex-col items-center justify-center cursor-pointer transition-colors bg-stone-50/50 dark:bg-stone-900/50 group">
+                  <UploadCloud size={32} className="text-stone-400 group-hover:text-cordova-green transition-colors mb-2" />
+                  <span className="text-xs font-semibold text-stone-700 dark:text-stone-200">
+                    Click or drag & drop to upload Restaurant Logo / Cover Photo
+                  </span>
+                  <span className="text-[11px] text-stone-400 mt-1">
+                    PNG, JPG, WebP up to 5MB
+                  </span>
+                  <input
+                    type="file"
+                    accept="image/png,image/jpeg,image/webp"
+                    onChange={handleImageChange}
+                    className="hidden"
+                  />
+                </label>
+
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-stone-400">Or paste image URL:</span>
+                  <input
+                    type="url"
+                    value={imageUrl}
+                    onChange={(e) => setImageUrl(e.target.value)}
+                    placeholder="https://example.com/photo.jpg"
+                    className="flex-1 px-3 py-1.5 text-xs bg-stone-50 dark:bg-stone-900 border border-stone-200 dark:border-stone-700 rounded-lg text-stone-800 dark:text-stone-200 focus:outline-none focus:ring-1 focus:ring-cordova-green"
+                  />
+                </div>
+              </div>
+            )}
           </div>
 
-          <div>
-            <p className="label mb-2">Cuisines</p>
-            <div className="flex flex-wrap gap-2">
-              {cuisines.map((c) => (
-                <button key={c.slug} type="button" onClick={() => toggle(selectedCuisines, setSelectedCuisines, c.slug)}>
-                  <Badge color={selectedCuisines.includes(c.slug) ? 'brand' : 'neutral'}>{c.name}</Badge>
-                </button>
-              ))}
+          {/* Section: Location */}
+          <div className="space-y-4 pt-2 border-t border-stone-100 dark:border-stone-800">
+            <h2 className="text-sm font-bold uppercase tracking-wider text-cordova-green dark:text-emerald-400">
+              3. Location & Contact Details
+            </h2>
+            <Input label="Street Address" value={address} onChange={(e) => setAddress(e.target.value)} error={errors.address} placeholder="e.g. Day-as Port Road, Cordova, Cebu" required />
+            <Input label="Barangay" value={barangay} onChange={(e) => setBarangay(e.target.value)} placeholder="e.g. Day-as, Gabi, Poblacion, San Miguel, Ibabao..." />
+
+            <div className="grid grid-cols-2 gap-3">
+              <Input label="Latitude" type="number" step="any" value={latitude} onChange={(e) => setLatitude(e.target.value)} />
+              <Input label="Longitude" type="number" step="any" value={longitude} onChange={(e) => setLongitude(e.target.value)} />
+            </div>
+            {errors.location && <p className="text-sm text-red-500">{errors.location}</p>}
+
+            <Input label="Phone Number" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+63 9XX XXX XXXX" />
+          </div>
+
+          {/* Section: Dining Features & Cuisines */}
+          <div className="space-y-4 pt-2 border-t border-stone-100 dark:border-stone-800">
+            <h2 className="text-sm font-bold uppercase tracking-wider text-cordova-green dark:text-emerald-400">
+              4. Dining Features & Cuisines
+            </h2>
+
+            <Select label="Price Range" value={priceRange} onChange={(e) => setPriceRange(e.target.value)}>
+              <option value="budget">₱ Budget-friendly (Under ₱200)</option>
+              <option value="moderate">₱₱ Moderate (₱200 - ₱500)</option>
+              <option value="expensive">₱₱₱ Expensive (₱500 - ₱1000)</option>
+              <option value="premium">₱₱₱₱ Premium / Fine Dining (₱1000+)</option>
+            </Select>
+
+            <div>
+              <p className="text-xs font-bold uppercase tracking-wider text-stone-700 dark:text-stone-300 mb-2">
+                Services Offered
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {SERVICE_OPTIONS.map((s) => (
+                  <button key={s.value} type="button" onClick={() => toggle(services, setServices, s.value)}>
+                    <Badge color={services.includes(s.value) ? 'brand' : 'neutral'}>{s.label}</Badge>
+                  </button>
+                ))}
+              </div>
+              {errors.services && <p className="text-sm text-red-500 mt-1">{errors.services}</p>}
+            </div>
+
+            <div>
+              <p className="text-xs font-bold uppercase tracking-wider text-stone-700 dark:text-stone-300 mb-2">
+                Cuisine Categories
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {cuisines.map((c) => (
+                  <button key={c.slug} type="button" onClick={() => toggle(selectedCuisines, setSelectedCuisines, c.slug)}>
+                    <Badge color={selectedCuisines.includes(c.slug) ? 'brand' : 'neutral'}>{c.name}</Badge>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <p className="text-xs font-bold uppercase tracking-wider text-stone-700 dark:text-stone-300 mb-2">
+                Dietary Options
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {DIETARY_OPTIONS.map((d) => (
+                  <button key={d} type="button" onClick={() => toggle(dietary, setDietary, d)}>
+                    <Badge color={dietary.includes(d) ? 'brand' : 'neutral'}>{d.replace('_', ' ')}</Badge>
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
 
-          <div>
-            <p className="label mb-2">Dietary options offered</p>
-            <div className="flex flex-wrap gap-2">
-              {DIETARY_OPTIONS.map((d) => (
-                <button key={d} type="button" onClick={() => toggle(dietary, setDietary, d)}>
-                  <Badge color={dietary.includes(d) ? 'brand' : 'neutral'}>{d.replace('_', ' ')}</Badge>
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div>
-            <label className="label" htmlFor="permit">
-              Business permit (image or PDF)
+          {/* Section: Business Permit Document (Optional) */}
+          <div className="space-y-2 pt-2 border-t border-stone-100 dark:border-stone-800">
+            <label className="text-xs font-bold uppercase tracking-wider text-stone-700 dark:text-stone-300 block" htmlFor="permit">
+              Business Permit / Mayor&apos;s Permit (Optional)
             </label>
             <input
               id="permit"
               type="file"
               accept="image/png,image/jpeg,image/webp,application/pdf"
               onChange={(e) => setPermitFile(e.target.files?.[0] || null)}
-              className="input"
+              className="w-full text-xs text-stone-600 dark:text-stone-300 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-stone-100 dark:file:bg-stone-800 file:text-stone-700 dark:file:text-stone-200 hover:file:bg-stone-200"
             />
-            {errors.permit && <p className="text-sm text-red-500 mt-1">{errors.permit}</p>}
           </div>
 
-          <Button type="submit" className="w-full" loading={submitting}>
-            Submit for verification
+          <Button type="submit" className="w-full py-3.5 text-sm font-bold bg-cordova-green hover:bg-cordova-greenHover text-white shadow-md rounded-xl" loading={submitting}>
+            Register & Publish Business
           </Button>
         </form>
       </div>

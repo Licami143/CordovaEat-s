@@ -71,8 +71,25 @@ const create = asyncHandler(async (req, res) => {
   const slug = `${slugBase}-${Date.now().toString(36)}`;
 
   let businessPermitUrl = null;
-  if (req.file) {
-    businessPermitUrl = uploadService.publicUrlFor(req.file);
+  let coverImageUrl = body.coverImageUrl || body.logoUrl || body.imageUrl || null;
+
+  if (req.files) {
+    if (req.files.businessPermit && req.files.businessPermit[0]) {
+      businessPermitUrl = uploadService.publicUrlFor(req.files.businessPermit[0]);
+    }
+    const imgFile =
+      (req.files.image && req.files.image[0]) ||
+      (req.files.logo && req.files.logo[0]) ||
+      (req.files.coverImage && req.files.coverImage[0]);
+    if (imgFile) {
+      coverImageUrl = uploadService.publicUrlFor(imgFile);
+    }
+  } else if (req.file) {
+    if (req.file.fieldname === 'businessPermit') {
+      businessPermitUrl = uploadService.publicUrlFor(req.file);
+    } else {
+      coverImageUrl = uploadService.publicUrlFor(req.file);
+    }
   }
 
   const toArray = (val) => {
@@ -113,6 +130,8 @@ const create = asyncHandler(async (req, res) => {
       priceRange: body.priceRange || 'moderate',
       servicesOffered: servicesOffered.length ? servicesOffered : ['dine_in'],
       businessPermitUrl,
+      coverImageUrl,
+      status: 'verified',
     },
     cuisineIds,
     dietaryOptions
@@ -125,7 +144,7 @@ const create = asyncHandler(async (req, res) => {
 
   res.status(201).json({
     success: true,
-    message: 'Business submitted for admin verification',
+    message: 'Business created and verified successfully!',
     data: { restaurant },
   });
 });

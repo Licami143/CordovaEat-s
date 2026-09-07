@@ -234,15 +234,32 @@ async function findAllForRecommendation({ userLat, userLng }) {
 
 async function create(data, cuisineIds = [], dietaryOptions = []) {
   return withTransaction(async (client) => {
+    const status = data.status || 'verified';
+    const verifiedAt = status === 'verified' ? new Date() : null;
     const { rows } = await client.query(
       `INSERT INTO restaurants
         (owner_id, name, slug, description, address, barangay, latitude, longitude,
-         phone, email, price_range, services_offered, business_permit_url)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)
+         phone, email, price_range, services_offered, business_permit_url, cover_image_url, status, verified_at, is_active)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16, TRUE)
        RETURNING *`,
-      [data.ownerId, data.name, data.slug, data.description, data.address, data.barangay,
-        data.latitude, data.longitude, data.phone, data.email, data.priceRange,
-        data.servicesOffered, data.businessPermitUrl]
+      [
+        data.ownerId,
+        data.name,
+        data.slug,
+        data.description,
+        data.address,
+        data.barangay,
+        data.latitude,
+        data.longitude,
+        data.phone,
+        data.email,
+        data.priceRange,
+        data.servicesOffered,
+        data.businessPermitUrl,
+        data.coverImageUrl || null,
+        status,
+        verifiedAt,
+      ]
     );
     const restaurant = rows[0];
 

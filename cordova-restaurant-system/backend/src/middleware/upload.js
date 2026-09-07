@@ -53,4 +53,35 @@ const uploadAvatar = multer({
   limits: { fileSize: 2 * 1024 * 1024 },
 });
 
-module.exports = { uploadRestaurantImage, uploadBusinessPermit, uploadAvatar };
+// Used for business registration & creation (supports permit AND logo/cover image)
+const uploadBusinessCreation = multer({
+  storage: multer.diskStorage({
+    destination: (req, file, cb) => {
+      const isPermit = file.fieldname === 'businessPermit';
+      const subdir = isPermit ? 'business-permits' : 'restaurant-images';
+      const dest = path.join(env.upload.dir, subdir);
+      fs.mkdirSync(dest, { recursive: true });
+      cb(null, dest);
+    },
+    filename: (req, file, cb) => {
+      const ext = path.extname(file.originalname).toLowerCase();
+      const safeName = `${Date.now()}-${crypto.randomBytes(8).toString('hex')}${ext}`;
+      cb(null, safeName);
+    },
+  }),
+  fileFilter: (req, file, cb) => {
+    if (file.fieldname === 'businessPermit') {
+      if (!DOCUMENT_TYPES.includes(file.mimetype)) {
+        return cb(ApiError.badRequest(`Unsupported permit file type: ${file.mimetype}`));
+      }
+    } else {
+      if (!IMAGE_TYPES.includes(file.mimetype)) {
+        return cb(ApiError.badRequest(`Unsupported image file type: ${file.mimetype}`));
+      }
+    }
+    cb(null, true);
+  },
+  limits,
+});
+
+module.exports = { uploadRestaurantImage, uploadBusinessPermit, uploadAvatar, uploadBusinessCreation };

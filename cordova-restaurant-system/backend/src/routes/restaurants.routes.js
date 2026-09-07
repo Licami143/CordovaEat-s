@@ -10,7 +10,7 @@ const favoriteController = require('../controllers/favorite.controller');
 const { requireAuth, optionalAuth } = require('../middleware/auth');
 const { requireRole } = require('../middleware/rbac');
 const validate = require('../middleware/validate');
-const { uploadRestaurantImage, uploadBusinessPermit } = require('../middleware/upload');
+const { uploadRestaurantImage, uploadBusinessPermit, uploadBusinessCreation } = require('../middleware/upload');
 
 const {
   createRestaurantValidator, updateRestaurantValidator, searchValidator,
@@ -31,7 +31,12 @@ router.post(
   '/',
   requireAuth,
   requireRole('owner', 'admin', 'customer'),
-  uploadBusinessPermit.single('businessPermit'),
+  uploadBusinessCreation.fields([
+    { name: 'businessPermit', maxCount: 1 },
+    { name: 'image', maxCount: 1 },
+    { name: 'logo', maxCount: 1 },
+    { name: 'coverImage', maxCount: 1 },
+  ]),
   validate(createRestaurantValidator),
   restaurantController.create
 );
