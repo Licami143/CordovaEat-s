@@ -437,16 +437,40 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* RECOMMENDED FOR YOU SWIPEABLE CAROUSEL SECTION (LOGGED IN USERS ONLY) */}
-      {user && (
-        <section className="max-w-6xl mx-auto px-4 mt-20">
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mb-8">
-            <div>
+      {/* RECOMMENDED FOR YOU SWIPEABLE CAROUSEL SECTION */}
+      <section className="max-w-6xl mx-auto px-4 mt-20">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-8">
+          <div>
+            <div className="flex items-center gap-2">
+              <Sparkles size={20} className="text-cordova-gold animate-pulse" />
               <h2 className="font-serif text-3xl sm:text-4xl font-bold text-stone-900 dark:text-white">
                 Recommended For You
               </h2>
-              <div className="h-0.5 w-16 bg-cordova-gold mt-3" />
             </div>
+            <p className="text-xs sm:text-sm text-stone-500 dark:text-stone-400 mt-1">
+              {user
+                ? 'Handpicked recommendations curated for your taste preferences.'
+                : 'Top-rated culinary hotspots and local favorites in Cordova.'}
+            </p>
+            <div className="h-0.5 w-16 bg-cordova-gold mt-3" />
+          </div>
+
+          <div className="flex items-center gap-3 self-end sm:self-center">
+            {user ? (
+              <button
+                onClick={() => router.push('/profile#taste-preferences')}
+                className="text-xs font-semibold text-cordova-green dark:text-emerald-400 hover:underline px-2 py-1"
+              >
+                Adjust Preferences
+              </button>
+            ) : (
+              <button
+                onClick={() => router.push('/login')}
+                className="text-xs font-semibold text-cordova-gold hover:underline px-2 py-1"
+              >
+                Personalize Tastes
+              </button>
+            )}
 
             {/* Swipe / Carousel Control Arrows */}
             {recommendations.length > 0 && (
@@ -468,46 +492,46 @@ export default function HomePage() {
               </div>
             )}
           </div>
+        </div>
 
-          {recLoading ? (
-            <RestaurantGridSkeleton count={3} />
-          ) : recommendations.length > 0 ? (
-            /* Horizontal Swipeable Container */
-            <div
-              ref={recScrollRef}
-              className="flex gap-6 overflow-x-auto snap-x snap-mandatory scrollbar-none pb-4 pt-2 px-1 scroll-smooth"
-            >
-              {recommendations.map(({ restaurant, score }, idx) => (
-                <motion.div
-                  key={restaurant.id}
-                  initial={{ opacity: 0, x: 20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ duration: 0.35, delay: Math.min(idx, 8) * 0.06 }}
-                  className="snap-start shrink-0 w-[290px] sm:w-[320px] lg:w-[350px]"
-                >
-                  <RestaurantCard restaurant={restaurant} matchScore={score} />
-                </motion.div>
-              ))}
-            </div>
-          ) : (
-            <div className="bg-white dark:bg-[#1a211c] rounded-lg border border-stone-200 dark:border-stone-800 p-8 text-center text-stone-500 max-w-md mx-auto">
-              <p className="text-2xl mb-2">✨</p>
-              <p className="font-serif font-medium text-stone-800 dark:text-stone-200 mb-1">
-                Personalize Your Experience
-              </p>
-              <p className="text-xs text-stone-500 mb-4">
-                Set your food preferences to get personalized restaurant recommendations.
-              </p>
-              <button
-                onClick={() => router.push('/preferences')}
-                className="bg-cordova-green hover:bg-cordova-greenHover text-white text-xs font-semibold px-5 py-2.5 rounded shadow"
+        {recLoading ? (
+          <RestaurantGridSkeleton count={3} />
+        ) : recommendations.length > 0 ? (
+          /* Horizontal Swipeable Container */
+          <div
+            ref={recScrollRef}
+            className="flex gap-6 overflow-x-auto snap-x snap-mandatory scrollbar-none pb-4 pt-2 px-1 scroll-smooth"
+          >
+            {recommendations.map(({ restaurant, score }, idx) => (
+              <motion.div
+                key={restaurant.id}
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ duration: 0.35, delay: Math.min(idx, 8) * 0.06 }}
+                className="snap-start shrink-0 w-[290px] sm:w-[320px] lg:w-[350px]"
               >
-                Set Preferences
-              </button>
-            </div>
-          )}
-        </section>
-      )}
+                <RestaurantCard restaurant={restaurant} matchScore={score} />
+              </motion.div>
+            ))}
+          </div>
+        ) : (
+          <div className="bg-white dark:bg-[#1a211c] rounded-lg border border-stone-200 dark:border-stone-800 p-8 text-center text-stone-500 max-w-md mx-auto">
+            <p className="text-2xl mb-2">✨</p>
+            <p className="font-serif font-medium text-stone-800 dark:text-stone-200 mb-1">
+              Personalize Your Experience
+            </p>
+            <p className="text-xs text-stone-500 mb-4">
+              Set your food preferences to get personalized restaurant recommendations.
+            </p>
+            <button
+              onClick={() => router.push(user ? '/profile#taste-preferences' : '/login')}
+              className="bg-cordova-green hover:bg-cordova-greenHover text-white text-xs font-semibold px-5 py-2.5 rounded shadow"
+            >
+              Set Preferences
+            </button>
+          </div>
+        )}
+      </section>
 
       {/* ALL ESTABLISHMENTS SECTION */}
       <section ref={establishmentsRef} className="max-w-6xl mx-auto px-4 mt-20 scroll-mt-6">

@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { AnimatePresence, motion } from 'framer-motion';
-import { ChevronDown, Heart, PlusCircle, LayoutDashboard, Shield, History, UserCircle, AlertCircle, Sparkles, SlidersHorizontal } from 'lucide-react';
+import { ChevronDown, Heart, PlusCircle, LayoutDashboard, Shield, History, UserCircle, AlertCircle } from 'lucide-react';
 import { useAuth } from '@/lib/auth-context';
 
 export function ProfileDropdown() {
@@ -36,8 +36,6 @@ export function ProfileDropdown() {
 
   const menuItems: { href: string; label: string; icon: any }[] = [
     { href: '/profile', label: 'My Profile', icon: UserCircle },
-    { href: '/recommendations', label: 'Recommended For You', icon: Sparkles },
-    { href: '/preferences?returnTo=/recommendations', label: 'Taste Preferences', icon: SlidersHorizontal },
   ];
 
   if (user.role === 'admin') {
