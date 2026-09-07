@@ -28,7 +28,7 @@ export interface UserPreferences {
   preferred_cuisines: string[];
   dietary_restrictions: string[];
   budget_range?: PriceRange;
-  preferred_services: ServiceType[];
+  preferred_services: string[];
   home_latitude?: number;
   home_longitude?: number;
   max_distance_km: number;

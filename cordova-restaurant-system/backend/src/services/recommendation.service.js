@@ -82,11 +82,23 @@ function passesHardFilters(restaurant, params) {
     if (!meetsAll) return false;
   }
 
-  // Must offer at least one required service type (dine-in/takeout/delivery)
+  // Must offer at least one required service type if specific core services (dine-in/takeout/delivery) are requested
   if (requiredServices.length) {
-    const offers = restaurant.services_offered || [];
-    const meetsAny = requiredServices.some((s) => offers.includes(s));
-    if (!meetsAny) return false;
+    const coreServices = requiredServices
+      .map((s) => {
+        const lower = String(s).toLowerCase();
+        if (lower.includes('dine')) return 'dine_in';
+        if (lower.includes('takeout') || lower.includes('take-out')) return 'takeout';
+        if (lower.includes('delivery')) return 'delivery';
+        return s;
+      })
+      .filter((s) => ['dine_in', 'takeout', 'delivery'].includes(s));
+
+    if (coreServices.length > 0) {
+      const offers = restaurant.services_offered || [];
+      const meetsAny = coreServices.some((s) => offers.includes(s));
+      if (!meetsAny) return false;
+    }
   }
 
   // Hard distance cutoff, if the user supplied a location

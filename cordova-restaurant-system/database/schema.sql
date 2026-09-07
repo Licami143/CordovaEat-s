@@ -65,7 +65,7 @@ CREATE TABLE user_preferences (
   preferred_cuisines  TEXT[] DEFAULT '{}',
   dietary_restrictions TEXT[] DEFAULT '{}',   -- e.g. vegetarian, vegan, halal, gluten_free
   budget_range        price_range,
-  preferred_services   service_type[] DEFAULT '{}',
+  preferred_services   TEXT[] DEFAULT '{}',
   home_latitude        DOUBLE PRECISION,
   home_longitude        DOUBLE PRECISION,
   max_distance_km      NUMERIC(5,2) DEFAULT 5.0,
