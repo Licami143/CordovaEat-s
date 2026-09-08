@@ -93,4 +93,73 @@ async function remove(id, restaurantId) {
   await query(`DELETE FROM promotions WHERE id = $1 AND restaurant_id = $2`, [id, restaurantId]);
 }
 
-module.exports = { listActive, listForRestaurant, findById, create, update, remove, autoExpireOldPromotions };
+async function adminRemove(id) {
+  await query(`DELETE FROM promotions WHERE id = $1`, [id]);
+}
+
+async function listAllAdmin({ status, search, limit = 50, offset = 0 } = {}) {
+  await autoExpireOldPromotions();
+  const params = [];
+  let idx = 1;
+  const conditions = [];
+
+  if (status && status !== 'all') {
+    if (status === 'active') {
+      conditions.push(`p.status = 'active' AND p.end_date >= CURRENT_DATE`);
+    } else if (status === 'expired') {
+      conditions.push(`(p.status = 'expired' OR p.end_date < CURRENT_DATE)`);
+    } else {
+      conditions.push(`p.status = $${idx++}`);
+      params.push(status);
+    }
+  }
+
+  if (search && search.trim()) {
+    conditions.push(`(p.title ILIKE $${idx} OR r.name ILIKE $${idx} OR p.description ILIKE $${idx})`);
+    params.push(`%${search.trim()}%`);
+    idx++;
+  }
+
+  const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
+  const { rows } = await query(
+    `SELECT p.*, r.name AS restaurant_name, r.slug AS restaurant_slug, r.cover_image_url AS restaurant_cover
+     FROM promotions p
+     JOIN restaurants r ON r.id = p.restaurant_id
+     ${where}
+     ORDER BY p.created_at DESC
+     LIMIT $${idx++} OFFSET $${idx++}`,
+    [...params, limit, offset]
+  );
+  const { rows: countRows } = await query(
+    `SELECT COUNT(*) FROM promotions p JOIN restaurants r ON r.id = p.restaurant_id ${where}`,
+    params
+  );
+  return { rows, totalCount: parseInt(countRows[0]?.count || '0', 10) };
+}
+
+async function adminUpdate(id, data) {
+  const fields = [];
+  const params = [id];
+  let idx = 2;
+  const fieldMap = {
+    title: 'title', description: 'description', imageUrl: 'image_url',
+    discountLabel: 'discount_label', startDate: 'start_date', endDate: 'end_date', status: 'status',
+  };
+  for (const [key, column] of Object.entries(fieldMap)) {
+    if (data[key] !== undefined) {
+      fields.push(`${column} = $${idx++}`);
+      params.push(data[key]);
+    }
+  }
+  if (!fields.length) return findById(id);
+  const { rows } = await query(
+    `UPDATE promotions SET ${fields.join(', ')} WHERE id = $1 RETURNING *`,
+    params
+  );
+  return rows[0] || null;
+}
+
+module.exports = {
+  listActive, listForRestaurant, findById, create, update, remove,
+  adminRemove, listAllAdmin, adminUpdate, autoExpireOldPromotions,
+};

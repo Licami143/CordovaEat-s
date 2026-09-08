@@ -52,7 +52,7 @@ async function ownerRestaurantStats(restaurantId, { days = 30 } = {}) {
 
 /** Admin-facing: system-wide dashboard numbers. */
 async function adminOverview() {
-  const [{ rows: userStats }, { rows: restaurantStats }, { rows: reviewStats }, { rows: cuisineTrend }, { rows: peakHours }] =
+  const [{ rows: userStats }, { rows: restaurantStats }, { rows: reviewStats }, { rows: promotionStats }, { rows: cuisineTrend }, { rows: peakHours }] =
     await Promise.all([
       query(
         `SELECT
@@ -75,6 +75,13 @@ async function adminOverview() {
          FROM reviews`
       ),
       query(
+        `SELECT
+           COUNT(*) FILTER (WHERE status = 'active' AND end_date >= CURRENT_DATE) AS active,
+           COUNT(*) FILTER (WHERE status = 'expired' OR end_date < CURRENT_DATE) AS expired,
+           COUNT(*) AS total
+         FROM promotions`
+      ),
+      query(
         `SELECT c.name, COUNT(*) AS search_count
          FROM recommendation_logs rl, jsonb_array_elements_text(COALESCE(rl.query_params->'cuisines', '[]'::jsonb)) cuisine_name
          JOIN cuisines c ON c.name = cuisine_name
@@ -93,6 +100,7 @@ async function adminOverview() {
     users: userStats[0],
     restaurants: restaurantStats[0],
     reviews: reviewStats[0],
+    promotions: promotionStats[0] || { active: 0, expired: 0, total: 0 },
     topCuisineDemand: cuisineTrend,
     peakSearchHours: peakHours.map((r) => ({ hour: r.hour, searches: parseInt(r.searches, 10) })),
   };

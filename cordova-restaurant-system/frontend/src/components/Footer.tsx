@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import Image from 'next/image';
+import { usePathname } from 'next/navigation';
 import { useAuth } from '@/lib/auth-context';
 
 interface FooterLink {
@@ -51,6 +52,12 @@ const COLUMNS: FooterColumn[] = [
 
 export function Footer() {
   const { user } = useAuth();
+  const pathname = usePathname();
+
+  // Do not display footer on admin portal pages
+  if (pathname?.startsWith('/admin')) {
+    return null;
+  }
 
   return (
     <footer className="border-t border-stone-200/80 dark:border-white/10 mt-20 bg-white/70 dark:bg-[#141815]/70 backdrop-blur-xl relative z-10">

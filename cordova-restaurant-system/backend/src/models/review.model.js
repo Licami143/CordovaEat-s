@@ -108,21 +108,35 @@ async function moderate(id, { status, flaggedReason, moderatorId }) {
 }
 
 async function listFlagged({ limit, offset }) {
+  return listAdminReviews({ status: 'flagged', limit, offset });
+}
+
+async function listAdminReviews({ status = 'flagged', limit = 50, offset = 0 } = {}) {
+  const params = [];
+  let idx = 1;
+  const conditions = [];
+
+  if (status && status !== 'all') {
+    conditions.push(`rv.status = $${idx++}`);
+    params.push(status);
+  }
+
+  const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
   const { rows } = await query(
-    `SELECT rv.*, u.full_name AS reviewer_name, r.name AS restaurant_name
+    `SELECT rv.*, u.full_name AS reviewer_name, u.avatar_url AS reviewer_avatar, r.name AS restaurant_name, r.slug AS restaurant_slug
      FROM reviews rv
      JOIN users u ON u.id = rv.user_id
      JOIN restaurants r ON r.id = rv.restaurant_id
-     WHERE rv.status = 'flagged'
-     ORDER BY rv.updated_at DESC
-     LIMIT $1 OFFSET $2`,
-    [limit, offset]
+     ${where}
+     ORDER BY rv.created_at DESC
+     LIMIT $${idx++} OFFSET $${idx++}`,
+    [...params, limit, offset]
   );
-  const { rows: countRows } = await query(`SELECT COUNT(*) FROM reviews WHERE status = 'flagged'`);
-  return { rows, totalCount: parseInt(countRows[0].count, 10) };
+  const { rows: countRows } = await query(`SELECT COUNT(*) FROM reviews rv ${where}`, params.slice(0, conditions.length));
+  return { rows, totalCount: parseInt(countRows[0]?.count || '0', 10) };
 }
 
 module.exports = {
   listForRestaurant, findById, findByUserAndRestaurant,
-  create, update, remove, ownerReply, moderate, listFlagged, toggleLike, react,
+  create, update, remove, ownerReply, moderate, listFlagged, listAdminReviews, toggleLike, react,
 };

@@ -3,6 +3,7 @@ const restaurantController = require('../controllers/restaurant.controller');
 const reviewController = require('../controllers/review.controller');
 const analyticsController = require('../controllers/analytics.controller');
 const userController = require('../controllers/user.controller');
+const promotionController = require('../controllers/promotion.controller');
 const { requireAuth } = require('../middleware/auth');
 const { requireRole } = require('../middleware/rbac');
 const validate = require('../middleware/validate');
@@ -21,8 +22,14 @@ router.get('/users', userController.listUsers);
 router.patch('/users/:id/active', userController.setUserActive);
 
 // Content & review moderation
+router.get('/reviews', reviewController.listAdminReviews);
 router.get('/reviews/flagged', reviewController.listFlagged);
 router.patch('/reviews/:id/moderate', validate(moderateReviewValidator), reviewController.moderate);
+
+// Promotions moderation & management
+router.get('/promotions', promotionController.adminList);
+router.patch('/promotions/:id/status', promotionController.adminUpdateStatus);
+router.delete('/promotions/:id', promotionController.adminDelete);
 
 // System-wide analytics reports, cuisine demand & peak search trends
 router.get('/analytics/overview', analyticsController.adminOverview);

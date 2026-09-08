@@ -1,6 +1,18 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, Suspense } from 'react';
+import { useSearchParams, useRouter } from 'next/navigation';
+import {
+  Users,
+  Search,
+  UserCheck,
+  UserX,
+  Store,
+  ShieldAlert,
+  Calendar,
+  Mail,
+  Phone,
+} from 'lucide-react';
 import { api, ApiClientError } from '@/lib/api';
 import { useToast } from '@/lib/toast-context';
 import { Badge } from '@/components/ui/Badge';
@@ -10,13 +22,25 @@ import { Skeleton } from '@/components/ui/Skeleton';
 import { useDebounce } from '@/hooks/useDebounce';
 import type { User } from '@/lib/types';
 
-export default function AdminUsersPage() {
+function AdminUsersContent() {
   const { toast } = useToast();
+  const searchParams = useSearchParams();
+  const router = useRouter();
+
+  const initialRole = searchParams.get('role') || '';
   const [users, setUsers] = useState<User[]>([]);
   const [search, setSearch] = useState('');
-  const debouncedSearch = useDebounce(search, 350);
-  const [roleFilter, setRoleFilter] = useState('');
+  const debouncedSearch = useDebounce(search, 300);
+  const [roleFilter, setRoleFilter] = useState(initialRole);
   const [loading, setLoading] = useState(true);
+
+  // Sync state if URL param changes
+  useEffect(() => {
+    const urlRole = searchParams.get('role') || '';
+    if (urlRole !== roleFilter) {
+      setRoleFilter(urlRole);
+    }
+  }, [searchParams]);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -24,20 +48,29 @@ export default function AdminUsersPage() {
       const params = new URLSearchParams();
       if (debouncedSearch) params.set('search', debouncedSearch);
       if (roleFilter) params.set('role', roleFilter);
-      params.set('limit', '30');
+      params.set('limit', '50');
       const res = await api.get(`/api/admin/users?${params.toString()}`);
-      setUsers(res.data);
+      setUsers(res.data || []);
     } catch (err) {
       setUsers([]);
       toast(err instanceof ApiClientError ? err.message : 'Failed to load users', 'error');
     } finally {
       setLoading(false);
     }
-  }, [debouncedSearch, roleFilter]);
+  }, [debouncedSearch, roleFilter, toast]);
 
   useEffect(() => {
     load();
   }, [load]);
+
+  const handleRoleChange = (role: string) => {
+    setRoleFilter(role);
+    if (role) {
+      router.replace(`/admin/users?role=${role}`, { scroll: false });
+    } else {
+      router.replace(`/admin/users`, { scroll: false });
+    }
+  };
 
   const toggleActive = async (user: User) => {
     try {
@@ -45,56 +78,178 @@ export default function AdminUsersPage() {
       toast(user.is_active ? 'User deactivated' : 'User activated', 'success');
       load();
     } catch (err) {
-      toast(err instanceof ApiClientError ? err.message : 'Failed', 'error');
+      toast(err instanceof ApiClientError ? err.message : 'Failed to update user status', 'error');
+    }
+  };
+
+  const getRoleBadge = (role: string) => {
+    switch (role) {
+      case 'admin':
+        return <Badge color="warning">Admin</Badge>;
+      case 'owner':
+        return <Badge color="brand">Restaurant Owner</Badge>;
+      default:
+        return <Badge color="neutral">Customer</Badge>;
     }
   };
 
   return (
-    <div>
-      <h1 className="font-serif text-2xl sm:text-3xl font-bold text-stone-900 dark:text-white mb-6">
-        User Account Management
-      </h1>
+    <div className="space-y-6">
+      <div>
+        <h1 className="font-serif text-2xl sm:text-3xl font-bold text-stone-900 dark:text-white">
+          User Account Management
+        </h1>
+        <p className="text-xs sm:text-sm text-stone-500 mt-1">
+          Oversee all registered diners, restaurant owners, and administrators across Cordova.
+        </p>
+      </div>
 
-      <div className="flex flex-wrap gap-3 mb-6">
-        <Input placeholder="Search by name or email..." value={search} onChange={(e) => setSearch(e.target.value)} className="max-w-xs" />
-        <div className="flex gap-2 items-center">
-          {['', 'customer', 'owner', 'admin'].map((r) => (
-            <button key={r} onClick={() => setRoleFilter(r)}>
-              <Badge color={roleFilter === r ? 'brand' : 'neutral'}>{r || 'all'}</Badge>
-            </button>
-          ))}
+      {/* Filter and Search Bar */}
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-white dark:bg-[#1a211c] p-3 rounded-2xl border border-stone-200 dark:border-stone-800 shadow-sm">
+        {/* Role Tabs */}
+        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0">
+          {[
+            { id: '', label: 'All Users', icon: Users },
+            { id: 'customer', label: 'Customers', icon: UserCheck },
+            { id: 'owner', label: 'Restaurant Owners', icon: Store },
+            { id: 'admin', label: 'Admins', icon: ShieldAlert },
+          ].map((tab) => {
+            const Icon = tab.icon;
+            const isSelected = roleFilter === tab.id;
+            return (
+              <button
+                key={tab.id}
+                onClick={() => handleRoleChange(tab.id)}
+                className={`inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold transition-all whitespace-nowrap ${
+                  isSelected
+                    ? 'bg-cordova-green text-white shadow-sm'
+                    : 'bg-stone-50 dark:bg-stone-800/60 text-stone-600 dark:text-stone-300 hover:bg-stone-100 dark:hover:bg-stone-800'
+                }`}
+              >
+                <Icon size={14} />
+                <span>{tab.label}</span>
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Search */}
+        <div className="relative min-w-[240px]">
+          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-stone-400" />
+          <Input
+            placeholder="Search name, email, phone..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="pl-9 pr-3 py-1.5 text-xs w-full"
+          />
         </div>
       </div>
 
+      {/* Table / Results */}
       {loading ? (
-        <Skeleton className="h-64 w-full" />
+        <div className="space-y-3">
+          <Skeleton className="h-16 w-full rounded-xl" />
+          <Skeleton className="h-16 w-full rounded-xl" />
+          <Skeleton className="h-16 w-full rounded-xl" />
+        </div>
+      ) : users.length === 0 ? (
+        <div className="spatial-card bg-white dark:bg-[#1a211c] border border-stone-200 dark:border-stone-800 rounded-3xl p-12 text-center text-stone-500">
+          <Users className="mx-auto text-stone-300 dark:text-stone-700 mb-3" size={40} />
+          <p className="font-serif font-bold text-base text-stone-800 dark:text-stone-200">
+            No users found matching the filters
+          </p>
+          <p className="text-xs text-stone-400 mt-1">
+            Try clearing your search query or selecting a different role.
+          </p>
+        </div>
       ) : (
-        <div className="overflow-x-auto bg-white dark:bg-[#1a211c] border border-stone-200 dark:border-stone-800 rounded-lg shadow-sm">
-          <table className="w-full text-sm">
+        <div className="overflow-x-auto bg-white dark:bg-[#1a211c] border border-stone-200 dark:border-stone-800 rounded-2xl shadow-sm">
+          <table className="w-full text-left text-xs sm:text-sm">
             <thead>
-              <tr className="text-left border-b border-stone-200 dark:border-stone-800 font-serif">
-                <th className="p-3">Name</th>
-                <th className="p-3">Email</th>
-                <th className="p-3">Role</th>
-                <th className="p-3">Status</th>
-                <th className="p-3"></th>
+              <tr className="border-b border-stone-200 dark:border-stone-800 bg-stone-50/70 dark:bg-stone-900/50 font-serif text-stone-600 dark:text-stone-300">
+                <th className="p-4">User</th>
+                <th className="p-4">Contact</th>
+                <th className="p-4">Role</th>
+                <th className="p-4">Status</th>
+                <th className="p-4">Joined</th>
+                <th className="p-4 text-right">Actions</th>
               </tr>
             </thead>
-            <tbody>
+            <tbody className="divide-y divide-stone-100 dark:divide-stone-800/60">
               {users.map((u) => (
-                <tr key={u.id} className="border-b border-stone-100 dark:border-stone-800/60 last:border-0 hover:bg-stone-50 dark:hover:bg-stone-800/40">
-                  <td className="p-3 font-medium">{u.full_name}</td>
-                  <td className="p-3 text-stone-500">{u.email}</td>
-                  <td className="p-3">
-                    <Badge>{u.role}</Badge>
+                <tr
+                  key={u.id}
+                  className="hover:bg-stone-50/80 dark:hover:bg-stone-800/40 transition-colors"
+                >
+                  <td className="p-4">
+                    <div className="flex items-center gap-3">
+                      <div className="w-9 h-9 rounded-xl bg-cordova-green/10 text-cordova-green font-bold text-xs flex items-center justify-center border border-cordova-green/20 shrink-0">
+                        {u.full_name?.charAt(0)?.toUpperCase() || 'U'}
+                      </div>
+                      <div>
+                        <p className="font-semibold text-stone-900 dark:text-white">
+                          {u.full_name}
+                        </p>
+                        <p className="text-xs text-stone-400 font-mono">
+                          ID: {u.id.substring(0, 8)}...
+                        </p>
+                      </div>
+                    </div>
                   </td>
-                  <td className="p-3">
-                    <Badge color={u.is_active ? 'success' : 'danger'}>{u.is_active ? 'active' : 'inactive'}</Badge>
+
+                  <td className="p-4 text-stone-600 dark:text-stone-300">
+                    <div className="space-y-0.5">
+                      <div className="flex items-center gap-1.5">
+                        <Mail size={12} className="text-stone-400" />
+                        <span>{u.email}</span>
+                      </div>
+                      {u.phone && (
+                        <div className="flex items-center gap-1.5 text-xs text-stone-400">
+                          <Phone size={12} />
+                          <span>{u.phone}</span>
+                        </div>
+                      )}
+                    </div>
                   </td>
-                  <td className="p-3 text-right">
+
+                  <td className="p-4">
+                    {getRoleBadge(u.role)}
+                  </td>
+
+                  <td className="p-4">
+                    <Badge color={u.is_active ? 'success' : 'danger'}>
+                      {u.is_active ? 'Active' : 'Deactivated'}
+                    </Badge>
+                  </td>
+
+                  <td className="p-4 text-stone-500 text-xs">
+                    <div className="flex items-center gap-1.5">
+                      <Calendar size={12} className="text-stone-400" />
+                      <span>{new Date(u.created_at).toLocaleDateString()}</span>
+                    </div>
+                  </td>
+
+                  <td className="p-4 text-right">
                     {u.role !== 'admin' && (
-                      <Button variant="secondary" onClick={() => toggleActive(u)}>
-                        {u.is_active ? 'Deactivate' : 'Activate'}
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        onClick={() => toggleActive(u)}
+                        className={`text-xs font-semibold ${
+                          u.is_active
+                            ? 'text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30'
+                            : 'text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/30'
+                        }`}
+                      >
+                        {u.is_active ? (
+                          <>
+                            <UserX size={13} className="mr-1" /> Deactivate
+                          </>
+                        ) : (
+                          <>
+                            <UserCheck size={13} className="mr-1" /> Activate
+                          </>
+                        )}
                       </Button>
                     )}
                   </td>
@@ -105,5 +260,13 @@ export default function AdminUsersPage() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function AdminUsersPage() {
+  return (
+    <Suspense fallback={<Skeleton className="h-96 w-full rounded-2xl" />}>
+      <AdminUsersContent />
+    </Suspense>
   );
 }

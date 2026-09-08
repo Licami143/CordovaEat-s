@@ -100,6 +100,17 @@ const listFlagged = asyncHandler(async (req, res) => {
   res.json({ success: true, data: rows, meta: buildPageMeta({ page, limit, totalCount }) });
 });
 
+/** Admin: list reviews with status filtering */
+const listAdminReviews = asyncHandler(async (req, res) => {
+  const { page, limit, offset } = parsePagination(req.query);
+  const { rows, totalCount } = await reviewModel.listAdminReviews({
+    status: req.query.status || 'flagged',
+    limit,
+    offset,
+  });
+  res.json({ success: true, data: rows, meta: buildPageMeta({ page, limit, totalCount }) });
+});
+
 /** POST /api/reviews/:id/like — toggle a "helpful" like on a review */
 const toggleLike = asyncHandler(async (req, res) => {
   const review = await reviewModel.findById(req.params.id);
@@ -119,4 +130,4 @@ const react = asyncHandler(async (req, res) => {
   res.json({ success: true, data: { reactions } });
 });
 
-module.exports = { listForRestaurant, create, update, remove, reply, moderate, listFlagged, toggleLike, react };
+module.exports = { listForRestaurant, create, update, remove, reply, moderate, listFlagged, listAdminReviews, toggleLike, react };

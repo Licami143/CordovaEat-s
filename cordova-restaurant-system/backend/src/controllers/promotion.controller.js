@@ -62,4 +62,32 @@ const remove = asyncHandler(async (req, res) => {
   res.json({ success: true, message: 'Promotion deleted' });
 });
 
-module.exports = { listActive, listForRestaurant, create, update, remove };
+/** Admin-specific endpoints */
+const adminList = asyncHandler(async (req, res) => {
+  const { page, limit, offset } = parsePagination(req.query);
+  const { rows, totalCount } = await promotionModel.listAllAdmin({
+    status: req.query.status,
+    search: req.query.search,
+    limit,
+    offset,
+  });
+  res.json({ success: true, data: rows, meta: buildPageMeta({ page, limit, totalCount }) });
+});
+
+const adminUpdateStatus = asyncHandler(async (req, res) => {
+  const { status } = req.body;
+  if (!status) throw ApiError.badRequest('Status is required');
+  const promo = await promotionModel.adminUpdate(req.params.id, { status });
+  if (!promo) throw ApiError.notFound('Promotion not found');
+  res.json({ success: true, message: `Promotion marked as ${status}`, data: { promotion: promo } });
+});
+
+const adminDelete = asyncHandler(async (req, res) => {
+  await promotionModel.adminRemove(req.params.id);
+  res.json({ success: true, message: 'Promotion permanently deleted' });
+});
+
+module.exports = {
+  listActive, listForRestaurant, create, update, remove,
+  adminList, adminUpdateStatus, adminDelete,
+};

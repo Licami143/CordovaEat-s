@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { ArrowLeft, LayoutDashboard, Building2, MessageSquare, Users, Sliders } from 'lucide-react';
+import { ArrowLeft, LayoutDashboard, Building2, MessageSquare, Users, Sliders, Tag } from 'lucide-react';
 import { RequireRole } from '@/components/RequireRole';
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
@@ -13,6 +13,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     { href: '/admin/businesses', label: 'Business Verification', icon: Building2 },
     { href: '/admin/reviews', label: 'Review Moderation', icon: MessageSquare },
     { href: '/admin/users', label: 'Users', icon: Users },
+    { href: '/admin/promotions', label: 'Promotions', icon: Tag },
     { href: '/admin/ai-model', label: 'AI Model Tuning', icon: Sliders },
   ];
 
