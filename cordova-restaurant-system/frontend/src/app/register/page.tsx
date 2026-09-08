@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, FormEvent } from 'react';
+import { useState, useEffect, FormEvent } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -41,7 +41,7 @@ const strengthConfig: Record<PasswordStrength, { label: string; color: string; w
 };
 
 export default function RegisterPage() {
-  const { register, login, loginWithGoogle, loginWithFacebook } = useAuth();
+  const { user, register, login, loginWithGoogle, loginWithFacebook } = useAuth();
   const { showToast } = useToast();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -60,6 +60,20 @@ export default function RegisterPage() {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(false);
   const [oauthLoading, setOauthLoading] = useState<'google' | 'facebook' | null>(null);
+
+  useEffect(() => {
+    if (user && !loading && !oauthLoading) {
+      if (redirectTo && redirectTo !== '/' && redirectTo.startsWith('/')) {
+        router.replace(redirectTo);
+      } else if (user.role === 'owner') {
+        router.replace('/dashboard');
+      } else if (user.role === 'admin') {
+        router.replace('/admin');
+      } else {
+        router.replace('/');
+      }
+    }
+  }, [user, loading, oauthLoading, redirectTo, router]);
 
   const strength = password.length > 0 ? getPasswordStrength(password) : null;
 

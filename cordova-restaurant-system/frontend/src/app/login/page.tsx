@@ -1,10 +1,10 @@
 'use client';
 
-import { useState, FormEvent } from 'react';
+import { useState, useEffect, FormEvent } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
-import { Eye, EyeOff } from 'lucide-react';
+import { Eye, EyeOff, Sparkles, ArrowRight } from 'lucide-react';
 import { useAuth } from '@/lib/auth-context';
 import { useToast } from '@/lib/toast-context';
 import { ApiClientError } from '@/lib/api';
@@ -20,7 +20,7 @@ const GOOGLE_CLIENT_ID =
 const REQUIRE_EMAIL_VERIFICATION = process.env.NEXT_PUBLIC_REQUIRE_EMAIL_VERIFICATION === 'true';
 
 export default function LoginPage() {
-  const { login, loginWithGoogle, loginWithFacebook } = useAuth();
+  const { user, login, loginWithGoogle, loginWithFacebook } = useAuth();
   const { showToast } = useToast();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -34,6 +34,36 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [oauthLoading, setOauthLoading] = useState<'google' | 'facebook' | null>(null);
 
+  const handleSuccessfulAuth = (authUserData?: any) => {
+    const targetUser = authUserData || user;
+    if (REQUIRE_EMAIL_VERIFICATION && targetUser && !targetUser.email_verified) {
+      showToast('Please verify your email address to unlock all features.', 'warning');
+      router.replace('/verify-email-required');
+      return;
+    }
+    // Honour ?redirect= param from protected-route redirects (e.g. /dashboard/new)
+    if (redirectTo && redirectTo !== '/' && redirectTo.startsWith('/')) {
+      router.replace(redirectTo);
+      return;
+    }
+    if (targetUser?.role === 'admin') {
+      router.replace('/admin');
+      return;
+    }
+    if (targetUser?.role === 'owner') {
+      router.replace('/dashboard');
+    } else {
+      router.replace('/');
+    }
+  };
+
+  // If user is already authenticated, immediately navigate away from login
+  useEffect(() => {
+    if (user && !loading && !oauthLoading) {
+      handleSuccessfulAuth(user);
+    }
+  }, [user, loading, oauthLoading]);
+
   const validate = () => {
     const e: Record<string, string> = {};
     if (!email.trim()) e.email = 'Please enter your email address.';
@@ -43,36 +73,14 @@ export default function LoginPage() {
     return Object.keys(e).length === 0;
   };
 
-  const handleSuccessfulAuth = (user: any) => {
-    if (REQUIRE_EMAIL_VERIFICATION && !user.email_verified) {
-      showToast('Please verify your email address to unlock all features.', 'warning');
-      router.push('/verify-email-required');
-      return;
-    }
-    // Honour ?redirect= param from protected-route redirects (e.g. /dashboard/new)
-    if (redirectTo && redirectTo !== '/' && redirectTo.startsWith('/')) {
-      router.push(redirectTo);
-      return;
-    }
-    if (user.role === 'admin') {
-      router.push('/admin');
-      return;
-    }
-    if (user.role === 'owner') {
-      router.push('/dashboard');
-    } else {
-      router.push('/');
-    }
-  };
-
   const onSubmit = async (event: FormEvent) => {
     event.preventDefault();
     if (!validate()) return;
     setLoading(true);
     try {
-      const user = await login(email, password);
+      const loggedUser = await login(email, password);
       showToast('Welcome back to CordovaEats!', 'success');
-      handleSuccessfulAuth(user);
+      handleSuccessfulAuth(loggedUser);
     } catch (err) {
       if (err instanceof ApiClientError) {
         showToast(err.message, 'error');
@@ -99,9 +107,9 @@ export default function LoginPage() {
             return;
           }
           try {
-            const user = await loginWithGoogle(tokenResponse.access_token);
+            const loggedUser = await loginWithGoogle(tokenResponse.access_token);
             showToast('Signed in with Google successfully!', 'success');
-            handleSuccessfulAuth(user);
+            handleSuccessfulAuth(loggedUser);
           } catch (err) {
             if (err instanceof ApiClientError) showToast(err.message, 'error');
             else showToast('Google authentication failed. Please try again.', 'error');
@@ -125,9 +133,9 @@ export default function LoginPage() {
     try {
       showToast('Dev Mode: Signing in with simulated Google account…', 'info');
       const devToken = `google_oauth_token_${Date.now()}`;
-      const user = await loginWithGoogle(devToken);
+      const loggedUser = await loginWithGoogle(devToken);
       showToast('Signed in with Google (Dev Mode)!', 'success');
-      handleSuccessfulAuth(user);
+      handleSuccessfulAuth(loggedUser);
     } catch (err) {
       if (err instanceof ApiClientError) showToast(err.message, 'error');
       else showToast('Google authentication failed.', 'error');
@@ -140,9 +148,9 @@ export default function LoginPage() {
     setOauthLoading('facebook');
     try {
       const mockFbToken = `fb_oauth_token_${Date.now()}`;
-      const user = await loginWithFacebook(mockFbToken);
+      const loggedUser = await loginWithFacebook(mockFbToken);
       showToast('Signed in with Facebook successfully!', 'success');
-      handleSuccessfulAuth(user);
+      handleSuccessfulAuth(loggedUser);
     } catch (err) {
       if (err instanceof ApiClientError) showToast(err.message, 'error');
       else showToast('Facebook authentication failed.', 'error');
@@ -151,9 +159,25 @@ export default function LoginPage() {
     }
   };
 
+  if (user && !loading && !oauthLoading) {
+    return (
+      <div className="min-h-[80vh] flex items-center justify-center py-10 px-4">
+        <div className="spatial-card w-full max-w-md bg-white/90 dark:bg-[#1a211c]/90 backdrop-blur-xl rounded-3xl shadow-[0_12px_40px_rgba(0,0,0,0.08)] border border-stone-200/80 dark:border-stone-800/80 p-8 sm:p-10 text-center">
+          <div className="w-12 h-12 rounded-full border-4 border-emerald-500 border-t-transparent animate-spin mx-auto mb-4" />
+          <h2 className="font-serif text-xl font-bold text-stone-900 dark:text-white">
+            Welcome Back, {user.full_name || 'Foodie'}!
+          </h2>
+          <p className="text-xs text-stone-500 dark:text-stone-400 mt-2">
+            Redirecting to your Cordova dining hub...
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-[80vh] flex items-center justify-center py-10 px-4">
-      <div className="w-full max-w-md bg-white dark:bg-[#1a211c] rounded-2xl shadow-2xl border border-stone-200 dark:border-stone-800 p-8 sm:p-10">
+      <div className="spatial-card w-full max-w-md bg-white/90 dark:bg-[#1a211c]/90 backdrop-blur-xl rounded-3xl shadow-[0_12px_40px_rgba(0,0,0,0.08)] border border-stone-200/80 dark:border-stone-800/80 p-8 sm:p-10">
         {/* Brand Emblem */}
         <div className="text-center mb-7">
           <div className="relative h-16 w-16 mx-auto mb-4">
@@ -163,7 +187,7 @@ export default function LoginPage() {
             Log in to CordovaEats
           </h1>
           <p className="text-xs text-stone-500 dark:text-stone-400 mt-1.5">
-            Discover Cordova's best dining experiences
+            Discover Cordova&apos;s best dining experiences
           </p>
         </div>
 
