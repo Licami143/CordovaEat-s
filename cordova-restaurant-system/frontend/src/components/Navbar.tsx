@@ -22,9 +22,11 @@ export function Navbar() {
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
 
+  const isAdminPage = pathname?.startsWith('/admin');
+
   const navLinks = [
     { href: '/', label: 'Home' },
-    { href: '/promotions', label: 'Promotions' },
+    ...(!isAdminPage ? [{ href: '/promotions', label: 'Promotions' }] : []),
   ];
 
   const roleLinks: { href: string; label: string }[] =
