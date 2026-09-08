@@ -7,6 +7,15 @@ const nextConfig = {
       { protocol: 'https', hostname: '**' },
     ],
   },
+  async redirects() {
+    return [
+      {
+        source: '/trails',
+        destination: '/',
+        permanent: true,
+      },
+    ];
+  },
   async rewrites() {
     const rawApi = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
     const backendBase = rawApi.replace(/\/api\/?$/, '');
