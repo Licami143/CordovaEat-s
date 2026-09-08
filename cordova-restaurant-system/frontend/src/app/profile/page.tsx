@@ -721,31 +721,31 @@ function ProfileContent() {
             </div>
           </div>
 
-          {/* Badge 6: Trail Blazer */}
+          {/* Badge 6: Island Gourmet */}
           <div className="spatial-card p-5 rounded-xl bg-gradient-to-br from-emerald-500/10 via-teal-500/5 to-transparent border border-emerald-500/30 dark:border-emerald-400/20 flex flex-col justify-between hover:scale-[1.02] transition-all duration-300 shadow-sm group">
             <div className="flex items-start justify-between gap-3">
               <div className="text-3xl p-2.5 rounded-xl bg-emerald-500/15 border border-emerald-500/30 group-hover:scale-110 transition-transform">
-                🧭
+                🍽️
               </div>
-              <span className="px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30 text-[10px] font-bold uppercase tracking-wider">
-                In Progress
+              <span className="px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 text-[10px] font-bold uppercase tracking-wider">
+                Unlocked
               </span>
             </div>
             <div className="mt-3">
               <h4 className="font-serif font-bold text-sm text-stone-900 dark:text-white">
-                Trail Blazer
+                Island Gourmet
               </h4>
               <p className="text-xs text-stone-500 dark:text-stone-400 mt-1">
-                Explored stops along the interactive Cordova Food Trails.
+                Explored and patronized highly-rated local restaurants across Cordova.
               </p>
             </div>
             <div className="mt-4 pt-3 border-t border-stone-200/60 dark:border-stone-800/60">
               <div className="flex justify-between text-[11px] font-semibold text-stone-600 dark:text-stone-300 mb-1">
                 <span>Progress</span>
-                <span className="text-emerald-600 dark:text-emerald-400">3 / 4 Trails</span>
+                <span className="text-emerald-600 dark:text-emerald-400">Active VIP Diner</span>
               </div>
               <div className="w-full h-1.5 rounded-full bg-stone-200 dark:bg-stone-800 overflow-hidden">
-                <div className="h-full bg-gradient-to-r from-emerald-400 to-teal-500 rounded-full w-3/4" />
+                <div className="h-full bg-gradient-to-r from-emerald-400 to-teal-500 rounded-full w-full" />
               </div>
             </div>
           </div>
