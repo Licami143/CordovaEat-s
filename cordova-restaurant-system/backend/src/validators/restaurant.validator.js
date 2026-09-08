@@ -47,7 +47,7 @@ const updateRestaurantValidator = [
 
 const searchValidator = [
   query('page').optional().isInt({ min: 1 }),
-  query('limit').optional().isInt({ min: 1, max: 50 }),
+  query('limit').optional().isInt({ min: 1, max: 100 }),
   query('priceRange').optional().isIn(PRICE_RANGES),
   query('sortBy').optional().isIn(['relevance', 'rating', 'distance', 'newest', 'price_asc', 'price_desc']),
   query('lat').optional().isFloat({ min: -90, max: 90 }),

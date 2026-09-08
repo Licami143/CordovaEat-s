@@ -333,10 +333,10 @@ export default function RestaurantDetailPage() {
     ? `${restaurant.barangay}, Cordova`
     : restaurant.address || 'Cordova, Cebu';
 
-  const phoneText = restaurant.phone || '+63 912 345 6789';
-  const hoursText = hours.length > 0 && !hours[0].is_closed
+  const phoneText = restaurant.phone || 'N/A';
+  const hoursText = restaurant.hours || (hours.length > 0 && !hours[0].is_closed
     ? `${hours[0].open_time.slice(0, 5)} AM - ${hours[0].close_time.slice(0, 5)} PM`
-    : '10:00 AM - 8:00 PM';
+    : 'Hours currently unlisted');
   const tagText = restaurant.cuisines?.[0]
     ? `${restaurant.cuisines[0]} Cuisine`
     : 'Award-Winning Cuisine';

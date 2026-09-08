@@ -54,8 +54,8 @@ export function Footer() {
   const { user } = useAuth();
   const pathname = usePathname();
 
-  // Do not display footer on admin portal pages
-  if (pathname?.startsWith('/admin')) {
+  // Do not display footer on admin portal pages or when admin views profile
+  if (pathname?.startsWith('/admin') || (user?.role === 'admin' && pathname?.startsWith('/profile'))) {
     return null;
   }
 

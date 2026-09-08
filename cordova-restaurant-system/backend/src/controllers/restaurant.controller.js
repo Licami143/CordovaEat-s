@@ -9,7 +9,7 @@ const asyncHandler = require('../utils/asyncHandler');
 const ApiError = require('../utils/apiError');
 const cache = require('../utils/cache');
 const { parsePagination, buildPageMeta } = require('../utils/pagination');
-const { syncToRestaurantTs, getDefaultCoverImage, inferCategory } = require('../services/restaurantSync.service');
+const { syncToRestaurantTs, removeFromRestaurantTs, getDefaultCoverImage, inferCategory } = require('../services/restaurantSync.service');
 
 /** GET /api/restaurants — public browse/search/filter/sort/paginate */
 const search = asyncHandler(async (req, res) => {
@@ -233,6 +233,8 @@ const verify = asyncHandler(async (req, res) => {
       restaurant.cover_image_url = defaultCover;
     }
     syncToRestaurantTs(restaurant);
+  } else if (status === 'rejected' || status === 'suspended') {
+    removeFromRestaurantTs(restaurant);
   }
 
   res.json({ success: true, message: `Business ${status}`, data: { restaurant } });
@@ -245,6 +247,7 @@ const suspend = asyncHandler(async (req, res) => {
     adminId: req.user.id,
   });
   if (!restaurant) throw ApiError.notFound('Restaurant not found');
+  removeFromRestaurantTs(restaurant);
   res.json({ success: true, message: 'Business suspended', data: { restaurant } });
 });
 
@@ -319,12 +322,20 @@ const updateSubscription = asyncHandler(async (req, res) => {
     expiresAt,
   });
 
+  res.json({
+    success: true,
+    data: updated,
+    message: 'Subscription updated successfully',
+  });
+});
+
 /** DELETE /api/admin/restaurants/:id — admin permanently removes an establishment */
 const adminDelete = asyncHandler(async (req, res) => {
   const existing = await restaurantModel.findById(req.params.id);
   if (!existing) throw ApiError.notFound('Restaurant not found');
 
   await restaurantModel.remove(req.params.id);
+  removeFromRestaurantTs(existing);
   res.json({
     success: true,
     message: 'Establishment has been permanently removed from the system',

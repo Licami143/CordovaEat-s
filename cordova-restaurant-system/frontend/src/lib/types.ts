@@ -46,6 +46,7 @@ export interface Restaurant {
   longitude: number;
   phone?: string;
   email?: string;
+  hours?: string;
   price_range: PriceRange;
   services_offered: ServiceType[];
   cover_image_url?: string;

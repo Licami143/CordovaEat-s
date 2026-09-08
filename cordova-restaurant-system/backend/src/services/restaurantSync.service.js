@@ -115,4 +115,52 @@ function syncToRestaurantTs(restaurant) {
   }
 }
 
-module.exports = { syncToRestaurantTs, inferCategory, getDefaultCoverImage };
+function removeFromRestaurantTs(restaurant) {
+  try {
+    if (!fs.existsSync(RESTAURANTS_TS_PATH)) {
+      logger.warn(`restaurants.ts not found at ${RESTAURANTS_TS_PATH}`);
+      return false;
+    }
+
+    let content = fs.readFileSync(RESTAURANTS_TS_PATH, 'utf8');
+    const rawSlug = restaurant?.slug || restaurant?.id || '';
+    const name = restaurant?.name || '';
+
+    const normSlug = normalizeKey(rawSlug);
+    const normName = normalizeKey(name);
+
+    if (!normSlug && !normName) return false;
+
+    // Matches optional comment and entry block in RESTAURANT_CUSTOMIZATIONS
+    const entryBlockRegex = /(?:\r?\n\s*\/\/[^\r\n]*\r?\n)?\s*['"]([^'"]+)['"]\s*:\s*\{[\s\S]*?^\s*\},?/gm;
+    let match;
+    let fullMatchedBlock = null;
+
+    while ((match = entryBlockRegex.exec(content)) !== null) {
+      const key = match[1];
+      const normKey = normalizeKey(key);
+      if (
+        (normSlug && normKey === normSlug) ||
+        (normName && normKey === normName) ||
+        (normSlug && (normKey.includes(normSlug) || normSlug.includes(normKey))) ||
+        (normName && (normKey.includes(normName) || normName.includes(normKey)))
+      ) {
+        fullMatchedBlock = match[0];
+        break;
+      }
+    }
+
+    if (fullMatchedBlock) {
+      content = content.replace(fullMatchedBlock, '');
+      fs.writeFileSync(RESTAURANTS_TS_PATH, content, 'utf8');
+      logger.info(`Removed entry for ${name || rawSlug} from restaurants.ts`);
+      return true;
+    }
+    return false;
+  } catch (err) {
+    logger.error('Failed to remove restaurant from restaurants.ts', { error: err.message });
+    return false;
+  }
+}
+
+module.exports = { syncToRestaurantTs, removeFromRestaurantTs, inferCategory, getDefaultCoverImage };
