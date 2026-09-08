@@ -383,6 +383,15 @@ async function updateSubscription(id, { tier = 'none', expiresAt = null }) {
   return rows[0] || null;
 }
 
+async function remove(id) {
+  return withTransaction(async (client) => {
+    await client.query(`UPDATE recommendation_logs SET top_result_id = NULL WHERE top_result_id = $1`, [id]).catch(() => {});
+    await client.query(`DELETE FROM restaurant_view_logs WHERE restaurant_id = $1`, [id]).catch(() => {});
+    const { rows } = await client.query(`DELETE FROM restaurants WHERE id = $1 RETURNING *`, [id]);
+    return rows[0] || null;
+  });
+}
+
 module.exports = {
   search,
   findById,
@@ -392,6 +401,7 @@ module.exports = {
   findSimilar,
   create,
   update,
+  remove,
   updateSubscription,
   setVerificationStatus,
   incrementViewCount,

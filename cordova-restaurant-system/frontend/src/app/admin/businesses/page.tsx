@@ -15,6 +15,8 @@ import {
   Phone,
   Mail,
   MapPin,
+  Trash2,
+  AlertTriangle,
 } from 'lucide-react';
 import { api, ApiClientError } from '@/lib/api';
 import { useToast } from '@/lib/toast-context';
@@ -37,6 +39,8 @@ function BusinessVerificationContent() {
   const [searchTerm, setSearchTerm] = useState('');
   const [rejectTarget, setRejectTarget] = useState<Restaurant | null>(null);
   const [rejectionReason, setRejectionReason] = useState('');
+  const [deleteTarget, setDeleteTarget] = useState<Restaurant | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   // Sync state if URL search param changes
   useEffect(() => {
@@ -98,6 +102,21 @@ function BusinessVerificationContent() {
       load();
     } catch (err) {
       toast(err instanceof ApiClientError ? err.message : 'Failed to reject business', 'error');
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!deleteTarget) return;
+    setIsDeleting(true);
+    try {
+      await api.delete(`/api/admin/restaurants/${deleteTarget.id}`);
+      toast(`Establishment "${deleteTarget.name}" has been permanently removed`, 'success');
+      setDeleteTarget(null);
+      load();
+    } catch (err) {
+      toast(err instanceof ApiClientError ? err.message : 'Failed to delete establishment', 'error');
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -304,23 +323,43 @@ function BusinessVerificationContent() {
                 )}
 
                 {status === 'suspended' && (
-                  <Button
-                    onClick={() => verify(r.id)}
-                    size="sm"
-                    className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold"
-                  >
-                    Reactivate & Verify
-                  </Button>
+                  <>
+                    <Button
+                      onClick={() => verify(r.id)}
+                      size="sm"
+                      className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold"
+                    >
+                      Reactivate & Verify
+                    </Button>
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      onClick={() => setDeleteTarget(r)}
+                      className="text-xs text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30 border-rose-200 dark:border-rose-900/40"
+                    >
+                      <Trash2 size={13} className="mr-1" /> Remove Establishment
+                    </Button>
+                  </>
                 )}
 
                 {status === 'rejected' && (
-                  <Button
-                    onClick={() => verify(r.id)}
-                    size="sm"
-                    className="bg-cordova-green hover:bg-cordova-greenHover text-white text-xs font-bold"
-                  >
-                    Re-evaluate & Approve
-                  </Button>
+                  <>
+                    <Button
+                      onClick={() => verify(r.id)}
+                      size="sm"
+                      className="bg-cordova-green hover:bg-cordova-greenHover text-white text-xs font-bold"
+                    >
+                      Re-evaluate & Approve
+                    </Button>
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      onClick={() => setDeleteTarget(r)}
+                      className="text-xs text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30 border-rose-200 dark:border-rose-900/40"
+                    >
+                      <Trash2 size={13} className="mr-1" /> Remove Establishment
+                    </Button>
+                  </>
                 )}
               </div>
             </div>
@@ -351,6 +390,37 @@ function BusinessVerificationContent() {
               className="bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs"
             >
               Confirm Rejection
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Delete Establishment Confirmation Modal */}
+      <Modal open={!!deleteTarget} onClose={() => !isDeleting && setDeleteTarget(null)} title="Remove Establishment">
+        <div className="space-y-4">
+          <div className="flex items-start gap-3 p-3.5 rounded-xl bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-900/40 text-rose-800 dark:text-rose-200">
+            <AlertTriangle className="text-rose-600 shrink-0 mt-0.5" size={18} />
+            <div className="text-xs space-y-1">
+              <p className="font-bold">Permanent Removal Confirmation</p>
+              <p>
+                Are you sure you want to permanently remove <strong className="font-semibold text-rose-900 dark:text-rose-100">{deleteTarget?.name}</strong> from establishments?
+              </p>
+              <p className="text-rose-600 dark:text-rose-400">
+                This will immediately delete the establishment and all associated menus, reviews, photos, and promotions. This action cannot be undone.
+              </p>
+            </div>
+          </div>
+
+          <div className="flex justify-end gap-2 pt-2">
+            <Button variant="secondary" onClick={() => setDeleteTarget(null)} disabled={isDeleting}>
+              Cancel
+            </Button>
+            <Button
+              onClick={handleDelete}
+              disabled={isDeleting}
+              className="bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs"
+            >
+              <Trash2 size={13} className="mr-1" /> {isDeleting ? 'Removing...' : 'Confirm Permanent Removal'}
             </Button>
           </div>
         </div>

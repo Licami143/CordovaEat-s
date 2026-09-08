@@ -16,6 +16,7 @@ router.use(requireAuth, requireRole('admin'));
 router.get('/restaurants', restaurantController.adminList);
 router.patch('/restaurants/:id/verify', validate(verifyBusinessValidator), restaurantController.verify);
 router.patch('/restaurants/:id/suspend', restaurantController.suspend);
+router.delete('/restaurants/:id', restaurantController.adminDelete);
 
 // User account management
 router.get('/users', userController.listUsers);

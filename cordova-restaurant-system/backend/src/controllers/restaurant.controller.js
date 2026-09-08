@@ -319,15 +319,21 @@ const updateSubscription = asyncHandler(async (req, res) => {
     expiresAt,
   });
 
+/** DELETE /api/admin/restaurants/:id — admin permanently removes an establishment */
+const adminDelete = asyncHandler(async (req, res) => {
+  const existing = await restaurantModel.findById(req.params.id);
+  if (!existing) throw ApiError.notFound('Restaurant not found');
+
+  await restaurantModel.remove(req.params.id);
   res.json({
     success: true,
-    message: `Subscription successfully updated to ${tier.toUpperCase()}`,
-    data: { restaurant: updated },
+    message: 'Establishment has been permanently removed from the system',
   });
 });
 
 module.exports = {
   search, getById, getBySlug, listMine, create, update, uploadCoverImage,
-  listCuisines, adminList, verify, suspend, getSimilar, listImages, uploadImage, deleteImage,
+  listCuisines, adminList, verify, suspend, adminDelete, getSimilar, listImages, uploadImage, deleteImage,
   updateSubscription,
 };
+
