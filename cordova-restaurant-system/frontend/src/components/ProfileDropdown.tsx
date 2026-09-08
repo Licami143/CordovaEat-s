@@ -40,10 +40,7 @@ export function ProfileDropdown() {
 
   if (user.role === 'admin') {
     menuItems.push(
-      { href: '/admin', label: 'Admin Panel', icon: Shield },
-      { href: '/dashboard/new', label: 'Add Business', icon: PlusCircle },
-      { href: '/favorites', label: 'My Favorites', icon: Heart },
-      { href: '/history', label: 'Search History', icon: History }
+      { href: '/admin', label: 'Admin Panel', icon: Shield }
     );
   } else if (user.role === 'owner') {
     menuItems.push(
