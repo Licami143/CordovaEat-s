@@ -24,6 +24,7 @@ export function Navbar() {
 
   const navLinks = [
     { href: '/', label: 'Home' },
+    { href: '/trails', label: 'Food Trails' },
     { href: '/promotions', label: 'Promotions' },
   ];
 

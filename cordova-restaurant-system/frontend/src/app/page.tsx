@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback, useRef } from 'react';
 import Image from 'next/image';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import {
@@ -439,6 +440,35 @@ export default function HomePage() {
               </button>
             );
           })}
+        </div>
+      </section>
+
+      {/* FEATURED FOOD TRAILS SHOWCASE BANNER */}
+      <section className="max-w-6xl mx-auto px-4 mt-16 relative z-10">
+        <div className="spatial-card p-6 sm:p-8 overflow-hidden relative border border-cordova-gold/30 bg-gradient-to-br from-stone-900 via-[#16221a] to-[#121c16] text-white shadow-spatial-lg">
+          <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6 relative z-10">
+            <div className="space-y-2 max-w-xl">
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-cordova-gold/20 text-cordova-gold text-xs font-bold uppercase tracking-wider border border-cordova-gold/30">
+                <span>🗺️ Interactive Food Trails</span>
+              </div>
+              <h3 className="font-serif text-2xl sm:text-3xl font-bold text-white tracking-tight">
+                Discover Cordova Through Themed Food Tours
+              </h3>
+              <p className="text-xs sm:text-sm text-stone-300 leading-relaxed font-sans">
+                Follow curated gastronomic routes across Cordova: from Netflix-famous Bakasi & floating native seafood to ocean-breeze cafes and late-night BBQ crawls.
+              </p>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-3 shrink-0">
+              <Link
+                href="/trails"
+                className="bg-gradient-to-r from-cordova-gold to-amber-600 hover:from-cordova-goldHover hover:to-amber-700 text-white font-bold text-xs uppercase tracking-wider px-6 py-3.5 rounded-xl shadow-spatial-sm hover:shadow-spatial-gold-glow transition-all active:scale-95 flex items-center gap-2 border border-white/20"
+              >
+                <span>Launch Food Trails Map</span>
+                <ChevronRight size={16} />
+              </Link>
+            </div>
+          </div>
         </div>
       </section>
 
