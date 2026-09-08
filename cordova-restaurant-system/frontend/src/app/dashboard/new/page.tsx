@@ -109,14 +109,9 @@ export default function NewBusinessPage() {
 
       const res = await api.post('/api/restaurants', formData, { isFormData: true });
       await refreshUser();
-      toast('Business registered and verified successfully!', 'success');
+      toast('Business submitted for municipal admin review! It will appear publicly once approved.', 'success');
       
-      const newSlug = res.data?.restaurant?.slug;
-      if (newSlug) {
-        router.push(`/restaurants/${newSlug}`);
-      } else {
-        router.push('/dashboard');
-      }
+      router.push('/dashboard');
     } catch (err) {
       if (err instanceof ApiClientError && err.details?.length) {
         const fieldErrors: Record<string, string> = {};
@@ -143,7 +138,7 @@ export default function NewBusinessPage() {
             Register Your Restaurant
           </h1>
           <p className="text-stone-600 dark:text-stone-300 text-sm">
-            Add your establishment details, upload your restaurant photo or logo, and it will be immediately available on the CordovaEats platform!
+            Add your establishment details, photo/logo, and business permit. Your registration will be reviewed and verified by municipal administrators before appearing publicly on CordovaEats.
           </p>
         </div>
 

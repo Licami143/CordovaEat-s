@@ -5,6 +5,8 @@ const ApiError = require('../utils/apiError');
 const { parsePagination, buildPageMeta } = require('../utils/pagination');
 const xss = require('xss');
 
+const uploadService = require('../services/upload.service');
+
 const listForRestaurant = asyncHandler(async (req, res) => {
   const { page, limit, offset } = parsePagination(req.query);
   const isModerator = req.user?.role === 'admin';
@@ -24,19 +26,45 @@ const create = asyncHandler(async (req, res) => {
   const existing = await reviewModel.findByUserAndRestaurant(req.user.id, req.params.restaurantId);
   if (existing) throw ApiError.conflict('You already reviewed this restaurant. Edit your existing review instead.');
 
+  const photos = [];
+  if (req.files && Array.isArray(req.files)) {
+    for (const f of req.files) {
+      photos.push(uploadService.publicUrlFor(f));
+    }
+  } else if (req.file) {
+    photos.push(uploadService.publicUrlFor(req.file));
+  }
+
+  if (req.body.photos) {
+    if (Array.isArray(req.body.photos)) {
+      photos.push(...req.body.photos);
+    } else if (typeof req.body.photos === 'string') {
+      try {
+        const parsed = JSON.parse(req.body.photos);
+        if (Array.isArray(parsed)) photos.push(...parsed);
+        else photos.push(req.body.photos);
+      } catch {
+        photos.push(req.body.photos);
+      }
+    }
+  }
+
   const review = await reviewModel.create({
     restaurantId: req.params.restaurantId,
     userId: req.user.id,
-    rating: req.body.rating,
+    rating: parseInt(req.body.rating, 10),
     comment: req.body.comment ? xss(req.body.comment) : null,
+    photos,
+    reactions: {},
   });
   res.status(201).json({ success: true, message: 'Review submitted', data: { review } });
 });
 
 const update = asyncHandler(async (req, res) => {
   const review = await reviewModel.update(req.params.id, req.user.id, {
-    rating: req.body.rating,
+    rating: req.body.rating ? parseInt(req.body.rating, 10) : undefined,
     comment: req.body.comment ? xss(req.body.comment) : undefined,
+    photos: req.body.photos,
   });
   if (!review) throw ApiError.notFound('Review not found or not yours');
   res.json({ success: true, message: 'Review updated', data: { review } });
@@ -81,4 +109,14 @@ const toggleLike = asyncHandler(async (req, res) => {
   res.json({ success: true, data: { liked } });
 });
 
-module.exports = { listForRestaurant, create, update, remove, reply, moderate, listFlagged, toggleLike };
+/** POST /api/reviews/:id/react — add/increment spatial emoji reaction */
+const react = asyncHandler(async (req, res) => {
+  const review = await reviewModel.findById(req.params.id);
+  if (!review) throw ApiError.notFound('Review not found');
+
+  const emoji = req.body.emoji || '❤️';
+  const reactions = await reviewModel.react(req.params.id, emoji);
+  res.json({ success: true, data: { reactions } });
+});
+
+module.exports = { listForRestaurant, create, update, remove, reply, moderate, listFlagged, toggleLike, react };

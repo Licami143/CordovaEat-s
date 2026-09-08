@@ -119,6 +119,8 @@ export interface Review {
   reviewer_avatar?: string;
   rating: number;
   comment?: string;
+  photos?: string[];
+  reactions?: Record<string, number>;
   owner_reply?: string;
   owner_reply_at?: string;
   status: 'visible' | 'flagged' | 'removed';

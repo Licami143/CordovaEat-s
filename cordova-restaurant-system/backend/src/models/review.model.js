@@ -47,22 +47,39 @@ async function findByUserAndRestaurant(userId, restaurantId) {
   return rows[0] || null;
 }
 
-async function create({ restaurantId, userId, rating, comment }) {
+async function create({ restaurantId, userId, rating, comment, photos = [], reactions = {} }) {
   const { rows } = await query(
-    `INSERT INTO reviews (restaurant_id, user_id, rating, comment)
-     VALUES ($1,$2,$3,$4) RETURNING *`,
-    [restaurantId, userId, rating, comment || null]
+    `INSERT INTO reviews (restaurant_id, user_id, rating, comment, photos, reactions)
+     VALUES ($1,$2,$3,$4,$5,$6) RETURNING *`,
+    [restaurantId, userId, rating, comment || null, photos, reactions]
   );
   return rows[0];
 }
 
-async function update(id, userId, { rating, comment }) {
+async function update(id, userId, { rating, comment, photos }) {
   const { rows } = await query(
-    `UPDATE reviews SET rating = COALESCE($3, rating), comment = COALESCE($4, comment)
+    `UPDATE reviews SET rating = COALESCE($3, rating), comment = COALESCE($4, comment), photos = COALESCE($5, photos)
      WHERE id = $1 AND user_id = $2 RETURNING *`,
-    [id, userId, rating, comment]
+    [id, userId, rating, comment, photos]
   );
   return rows[0] || null;
+}
+
+async function react(reviewId, emoji) {
+  const safeEmoji = String(emoji || '❤️').slice(0, 10);
+  const { rows } = await query(
+    `UPDATE reviews
+     SET reactions = jsonb_set(
+       COALESCE(reactions, '{}'::jsonb),
+       ARRAY[$2],
+       to_jsonb(COALESCE((reactions->>$2)::int, 0) + 1),
+       true
+     )
+     WHERE id = $1
+     RETURNING reactions`,
+    [reviewId, safeEmoji]
+  );
+  return rows[0]?.reactions || {};
 }
 
 async function remove(id, userId) {
@@ -107,5 +124,5 @@ async function listFlagged({ limit, offset }) {
 
 module.exports = {
   listForRestaurant, findById, findByUserAndRestaurant,
-  create, update, remove, ownerReply, moderate, listFlagged, toggleLike,
+  create, update, remove, ownerReply, moderate, listFlagged, toggleLike, react,
 };

@@ -318,6 +318,17 @@ export const RESTAURANT_CUSTOMIZATIONS: Record<string, RestaurantCustomConfig> =
     description: 'a popular Filipino casual dining restaurant chain known for its signature charcoal-grilled specialties and rustic, modern ambiance',
     address: 'Barangay Bang-bang, Cordova, Cebu.',
   },
+
+  // bojong
+  'bojong-mtscblot': {
+    name: 'bojong',
+    category: 'Restaurant',
+    coverImage: '/uploads/restaurant-images/1788852047447-ec44dbf72282c279.jpg',
+    barangay: 'loso',
+    description: 'lajong',
+    address: 'mahayahay',
+    phone: '09123123123',
+  },
 };
 
 export function normalizeKey(str?: string): string {

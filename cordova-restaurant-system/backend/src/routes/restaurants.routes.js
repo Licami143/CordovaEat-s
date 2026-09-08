@@ -88,6 +88,7 @@ router.post(
   '/:restaurantId/reviews',
   requireAuth,
   requireRole('customer'),
+  uploadRestaurantImage.array('photos', 5),
   validate(createReviewValidator),
   reviewController.create
 );

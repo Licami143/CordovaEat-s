@@ -8,5 +8,6 @@ router.patch('/:id', requireAuth, requireRole('customer'), reviewController.upda
 router.delete('/:id', requireAuth, requireRole('customer'), reviewController.remove);
 router.post('/:id/reply', requireAuth, requireRole('owner'), reviewController.reply);
 router.post('/:id/like', requireAuth, reviewController.toggleLike);
+router.post('/:id/react', requireAuth, reviewController.react);
 
 module.exports = router;

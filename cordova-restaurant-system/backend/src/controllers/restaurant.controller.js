@@ -137,7 +137,7 @@ const create = asyncHandler(async (req, res) => {
       servicesOffered: servicesOffered.length ? servicesOffered : ['dine_in'],
       businessPermitUrl,
       coverImageUrl,
-      status: 'verified',
+      status: 'pending',
     },
     cuisineIds,
     dietaryOptions
@@ -148,12 +148,9 @@ const create = asyncHandler(async (req, res) => {
     await userModel.updateRole(req.user.id, 'owner');
   }
 
-  // Automatically sync to restaurants.ts so it is immediately registered on frontend
-  syncToRestaurantTs(restaurant);
-
   res.status(201).json({
     success: true,
-    message: 'Business created and verified successfully!',
+    message: 'Business registered successfully! Submitted for municipal admin verification.',
     data: { restaurant },
   });
 });
@@ -173,7 +170,9 @@ const update = asyncHandler(async (req, res) => {
     await restaurantModel.replaceCuisines(req.params.id, cuisines.map((c) => c.id));
   }
 
-  syncToRestaurantTs(restaurant);
+  if (restaurant.status === 'verified') {
+    syncToRestaurantTs(restaurant);
+  }
 
   res.json({ success: true, message: 'Restaurant updated', data: { restaurant } });
 });
@@ -189,7 +188,9 @@ const uploadCoverImage = asyncHandler(async (req, res) => {
   const coverImageUrl = uploadService.publicUrlFor(processed);
   const restaurant = await restaurantModel.update(req.params.id, { coverImageUrl });
 
-  syncToRestaurantTs(restaurant);
+  if (restaurant.status === 'verified') {
+    syncToRestaurantTs(restaurant);
+  }
 
   res.json({ success: true, message: 'Cover image updated', data: { restaurant } });
 });

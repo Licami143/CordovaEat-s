@@ -18,6 +18,11 @@ import {
   Check,
   MapPin,
   RotateCcw,
+  Trophy,
+  Award,
+  Compass,
+  CheckCircle2,
+  Flame,
 } from 'lucide-react';
 import { useAuth } from '@/lib/auth-context';
 import { useToast } from '@/lib/toast-context';
@@ -548,6 +553,203 @@ function ProfileContent() {
             </div>
           </form>
         )}
+      </div>
+
+      {/* Community Foodie Badges & Diners Club Section */}
+      <div className="spatial-card p-6 sm:p-8">
+        <div className="flex flex-wrap items-center justify-between gap-3 mb-6 pb-4 border-b border-stone-200/80 dark:border-stone-800/80">
+          <div>
+            <div className="flex items-center gap-2">
+              <Trophy size={20} className="text-cordova-gold" />
+              <h3 className="font-serif text-lg sm:text-xl font-bold text-stone-900 dark:text-white">
+                Community Foodie Badges & Diners Club
+              </h3>
+            </div>
+            <p className="text-xs sm:text-sm text-stone-500 dark:text-stone-400 mt-1">
+              Explore Cordova&apos;s culinary hotspots, share dish reviews with photos, and unlock municipal foodie achievements.
+            </p>
+          </div>
+          <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-600 dark:text-amber-400 text-xs font-bold">
+            <Sparkles size={14} /> Level 4 Gourmet Explorer
+          </div>
+        </div>
+
+        {/* Badges Grid */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {/* Badge 1: Cordova Explorer */}
+          <div className="spatial-card p-5 rounded-xl bg-gradient-to-br from-amber-500/10 via-emerald-500/5 to-transparent border border-amber-500/30 dark:border-amber-400/20 flex flex-col justify-between hover:scale-[1.02] transition-all duration-300 shadow-sm group">
+            <div className="flex items-start justify-between gap-3">
+              <div className="text-3xl p-2.5 rounded-xl bg-amber-500/15 border border-amber-500/30 group-hover:scale-110 transition-transform">
+                🗺️
+              </div>
+              <span className="px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 text-[10px] font-bold uppercase tracking-wider">
+                Unlocked
+              </span>
+            </div>
+            <div className="mt-3">
+              <h4 className="font-serif font-bold text-sm text-stone-900 dark:text-white">
+                Cordova Explorer
+              </h4>
+              <p className="text-xs text-stone-500 dark:text-stone-400 mt-1">
+                Discovered and explored 5+ dining destinations across Cordova.
+              </p>
+            </div>
+            <div className="mt-4 pt-3 border-t border-stone-200/60 dark:border-stone-800/60">
+              <div className="flex justify-between text-[11px] font-semibold text-stone-600 dark:text-stone-300 mb-1">
+                <span>Progress</span>
+                <span className="text-emerald-600 dark:text-emerald-400">5 / 5 (Completed)</span>
+              </div>
+              <div className="w-full h-1.5 rounded-full bg-stone-200 dark:bg-stone-800 overflow-hidden">
+                <div className="h-full bg-gradient-to-r from-amber-400 to-emerald-500 rounded-full w-full" />
+              </div>
+            </div>
+          </div>
+
+          {/* Badge 2: Bakasi Connoisseur */}
+          <div className="spatial-card p-5 rounded-xl bg-gradient-to-br from-rose-500/10 via-amber-500/5 to-transparent border border-rose-500/30 dark:border-rose-400/20 flex flex-col justify-between hover:scale-[1.02] transition-all duration-300 shadow-sm group">
+            <div className="flex items-start justify-between gap-3">
+              <div className="text-3xl p-2.5 rounded-xl bg-rose-500/15 border border-rose-500/30 group-hover:scale-110 transition-transform">
+                🦞
+              </div>
+              <span className="px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 text-[10px] font-bold uppercase tracking-wider">
+                Unlocked
+              </span>
+            </div>
+            <div className="mt-3">
+              <h4 className="font-serif font-bold text-sm text-stone-900 dark:text-white">
+                Bakasi Connoisseur
+              </h4>
+              <p className="text-xs text-stone-500 dark:text-stone-400 mt-1">
+                Tasted authentic Buagsong Bakasi & fresh coastal seafood specialties.
+              </p>
+            </div>
+            <div className="mt-4 pt-3 border-t border-stone-200/60 dark:border-stone-800/60">
+              <div className="flex justify-between text-[11px] font-semibold text-stone-600 dark:text-stone-300 mb-1">
+                <span>Progress</span>
+                <span className="text-emerald-600 dark:text-emerald-400">3 / 3 (Completed)</span>
+              </div>
+              <div className="w-full h-1.5 rounded-full bg-stone-200 dark:bg-stone-800 overflow-hidden">
+                <div className="h-full bg-gradient-to-r from-rose-400 to-amber-500 rounded-full w-full" />
+              </div>
+            </div>
+          </div>
+
+          {/* Badge 3: Seaside Foodie */}
+          <div className="spatial-card p-5 rounded-xl bg-gradient-to-br from-teal-500/10 via-emerald-500/5 to-transparent border border-teal-500/30 dark:border-teal-400/20 flex flex-col justify-between hover:scale-[1.02] transition-all duration-300 shadow-sm group">
+            <div className="flex items-start justify-between gap-3">
+              <div className="text-3xl p-2.5 rounded-xl bg-teal-500/15 border border-teal-500/30 group-hover:scale-110 transition-transform">
+                🌅
+              </div>
+              <span className="px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30 text-[10px] font-bold uppercase tracking-wider">
+                In Progress
+              </span>
+            </div>
+            <div className="mt-3">
+              <h4 className="font-serif font-bold text-sm text-stone-900 dark:text-white">
+                Seaside Diner
+              </h4>
+              <p className="text-xs text-stone-500 dark:text-stone-400 mt-1">
+                Dined at seaside & floating sunset restobars along Cordova coastal waters.
+              </p>
+            </div>
+            <div className="mt-4 pt-3 border-t border-stone-200/60 dark:border-stone-800/60">
+              <div className="flex justify-between text-[11px] font-semibold text-stone-600 dark:text-stone-300 mb-1">
+                <span>Progress</span>
+                <span className="text-teal-600 dark:text-teal-400">2 / 3 Spots</span>
+              </div>
+              <div className="w-full h-1.5 rounded-full bg-stone-200 dark:bg-stone-800 overflow-hidden">
+                <div className="h-full bg-gradient-to-r from-teal-400 to-emerald-500 rounded-full w-2/3" />
+              </div>
+            </div>
+          </div>
+
+          {/* Badge 4: Top Reviewer */}
+          <div className="spatial-card p-5 rounded-xl bg-gradient-to-br from-purple-500/10 via-indigo-500/5 to-transparent border border-purple-500/30 dark:border-purple-400/20 flex flex-col justify-between hover:scale-[1.02] transition-all duration-300 shadow-sm group">
+            <div className="flex items-start justify-between gap-3">
+              <div className="text-3xl p-2.5 rounded-xl bg-purple-500/15 border border-purple-500/30 group-hover:scale-110 transition-transform">
+                📸
+              </div>
+              <span className="px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30 text-[10px] font-bold uppercase tracking-wider">
+                In Progress
+              </span>
+            </div>
+            <div className="mt-3">
+              <h4 className="font-serif font-bold text-sm text-stone-900 dark:text-white">
+                Photo Review Maestro
+              </h4>
+              <p className="text-xs text-stone-500 dark:text-stone-400 mt-1">
+                Shared verified reviews with food photos and spatial emoji reactions.
+              </p>
+            </div>
+            <div className="mt-4 pt-3 border-t border-stone-200/60 dark:border-stone-800/60">
+              <div className="flex justify-between text-[11px] font-semibold text-stone-600 dark:text-stone-300 mb-1">
+                <span>Progress</span>
+                <span className="text-purple-600 dark:text-purple-400">4 / 5 Reviews</span>
+              </div>
+              <div className="w-full h-1.5 rounded-full bg-stone-200 dark:bg-stone-800 overflow-hidden">
+                <div className="h-full bg-gradient-to-r from-purple-400 to-indigo-500 rounded-full w-4/5" />
+              </div>
+            </div>
+          </div>
+
+          {/* Badge 5: Taste Maestro */}
+          <div className="spatial-card p-5 rounded-xl bg-gradient-to-br from-amber-500/10 via-yellow-500/5 to-transparent border border-amber-500/30 dark:border-amber-400/20 flex flex-col justify-between hover:scale-[1.02] transition-all duration-300 shadow-sm group">
+            <div className="flex items-start justify-between gap-3">
+              <div className="text-3xl p-2.5 rounded-xl bg-yellow-500/15 border border-yellow-500/30 group-hover:scale-110 transition-transform">
+                👑
+              </div>
+              <span className="px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 text-[10px] font-bold uppercase tracking-wider">
+                Unlocked
+              </span>
+            </div>
+            <div className="mt-3">
+              <h4 className="font-serif font-bold text-sm text-stone-900 dark:text-white">
+                Taste Maestro
+              </h4>
+              <p className="text-xs text-stone-500 dark:text-stone-400 mt-1">
+                Customized your personalized flavor preferences and dietary filters.
+              </p>
+            </div>
+            <div className="mt-4 pt-3 border-t border-stone-200/60 dark:border-stone-800/60">
+              <div className="flex justify-between text-[11px] font-semibold text-stone-600 dark:text-stone-300 mb-1">
+                <span>Progress</span>
+                <span className="text-emerald-600 dark:text-emerald-400">Active & Synced</span>
+              </div>
+              <div className="w-full h-1.5 rounded-full bg-stone-200 dark:bg-stone-800 overflow-hidden">
+                <div className="h-full bg-gradient-to-r from-amber-400 to-yellow-500 rounded-full w-full" />
+              </div>
+            </div>
+          </div>
+
+          {/* Badge 6: Trail Blazer */}
+          <div className="spatial-card p-5 rounded-xl bg-gradient-to-br from-emerald-500/10 via-teal-500/5 to-transparent border border-emerald-500/30 dark:border-emerald-400/20 flex flex-col justify-between hover:scale-[1.02] transition-all duration-300 shadow-sm group">
+            <div className="flex items-start justify-between gap-3">
+              <div className="text-3xl p-2.5 rounded-xl bg-emerald-500/15 border border-emerald-500/30 group-hover:scale-110 transition-transform">
+                🧭
+              </div>
+              <span className="px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30 text-[10px] font-bold uppercase tracking-wider">
+                In Progress
+              </span>
+            </div>
+            <div className="mt-3">
+              <h4 className="font-serif font-bold text-sm text-stone-900 dark:text-white">
+                Trail Blazer
+              </h4>
+              <p className="text-xs text-stone-500 dark:text-stone-400 mt-1">
+                Explored stops along the interactive Cordova Food Trails.
+              </p>
+            </div>
+            <div className="mt-4 pt-3 border-t border-stone-200/60 dark:border-stone-800/60">
+              <div className="flex justify-between text-[11px] font-semibold text-stone-600 dark:text-stone-300 mb-1">
+                <span>Progress</span>
+                <span className="text-emerald-600 dark:text-emerald-400">3 / 4 Trails</span>
+              </div>
+              <div className="w-full h-1.5 rounded-full bg-stone-200 dark:bg-stone-800 overflow-hidden">
+                <div className="h-full bg-gradient-to-r from-emerald-400 to-teal-500 rounded-full w-3/4" />
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* Change Password — only for email/password accounts */}

@@ -16,6 +16,13 @@ import {
   ThumbsUp,
   Star,
   Sparkles,
+  Camera,
+  X,
+  Maximize2,
+  CheckCircle2,
+  MessageSquare,
+  Smile,
+  UploadCloud,
 } from 'lucide-react';
 import { api, ApiClientError } from '@/lib/api';
 import { useAuth } from '@/lib/auth-context';
@@ -32,6 +39,14 @@ import type {
   Promotion,
 } from '@/lib/types';
 import { applyRestaurantCustomization, getStaticRestaurantBySlug } from '@/data/restaurants';
+
+const SPATIAL_EMOJIS = [
+  { emoji: '❤️', label: 'Love it' },
+  { emoji: '😋', label: 'Yummy' },
+  { emoji: '🔥', label: 'Fire' },
+  { emoji: '👏', label: 'Bravo' },
+  { emoji: '🦞', label: 'Bakasi/Fresh' },
+];
 
 export default function RestaurantDetailPage() {
   const params = useParams();
@@ -53,6 +68,10 @@ export default function RestaurantDetailPage() {
 
   const [reviewRating, setReviewRating] = useState(5);
   const [reviewComment, setReviewComment] = useState('');
+  const [reviewPhotos, setReviewPhotos] = useState<File[]>([]);
+  const [reviewPhotoPreviews, setReviewPhotoPreviews] = useState<string[]>([]);
+  const [lightboxImage, setLightboxImage] = useState<string | null>(null);
+  const [userReactions, setUserReactions] = useState<Record<string, string>>({});
   const [submittingReview, setSubmittingReview] = useState(false);
   const [heroImgError, setHeroImgError] = useState(false);
 
@@ -183,18 +202,98 @@ export default function RestaurantDetailPage() {
     }
   };
 
+  const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    if (!files.length) return;
+    if (reviewPhotos.length + files.length > 5) {
+      toast('Maximum 5 dish photos allowed per review', 'info');
+      return;
+    }
+    const newPhotos = [...reviewPhotos, ...files];
+    setReviewPhotos(newPhotos);
+    const newPreviews = files.map((f) => URL.createObjectURL(f));
+    setReviewPhotoPreviews((prev) => [...prev, ...newPreviews]);
+  };
+
+  const removePhoto = (idx: number) => {
+    const updatedPhotos = reviewPhotos.filter((_, i) => i !== idx);
+    const updatedPreviews = reviewPhotoPreviews.filter((_, i) => i !== idx);
+    if (reviewPhotoPreviews[idx]) URL.revokeObjectURL(reviewPhotoPreviews[idx]);
+    setReviewPhotos(updatedPhotos);
+    setReviewPhotoPreviews(updatedPreviews);
+  };
+
+  const toggleHelpful = async (reviewId: string) => {
+    if (!user) {
+      toast('Please log in to mark reviews as helpful', 'info');
+      return;
+    }
+    try {
+      const res = await api.post(`/api/reviews/${reviewId}/like`);
+      const isLiked = res.data?.liked;
+      setReviews((prev) =>
+        prev.map((r) =>
+          r.id === reviewId
+            ? {
+                ...r,
+                liked_by_me: isLiked,
+                like_count: Math.max(0, r.like_count + (isLiked ? 1 : -1)),
+              }
+            : r
+        )
+      );
+      toast(isLiked ? 'Marked review as helpful!' : 'Removed helpful vote', 'info');
+    } catch {
+      toast('Failed to update helpful vote', 'error');
+    }
+  };
+
+  const reactToReview = async (reviewId: string, emoji: string) => {
+    if (!user) {
+      toast('Please log in to react to reviews', 'info');
+      return;
+    }
+    // Optimistic update
+    setUserReactions((prev) => ({ ...prev, [reviewId]: emoji }));
+    setReviews((prev) =>
+      prev.map((r) => {
+        if (r.id !== reviewId) return r;
+        const currentReactions = { ...(r.reactions || {}) };
+        currentReactions[emoji] = (currentReactions[emoji] || 0) + 1;
+        return { ...r, reactions: currentReactions };
+      })
+    );
+    try {
+      await api.post(`/api/reviews/${reviewId}/react`, { emoji });
+    } catch {
+      // Ignore background reaction sync errors
+    }
+  };
+
   const submitReview = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!restaurant) return;
     setSubmittingReview(true);
     try {
-      const res = await api.post(`/api/restaurants/${restaurant.id}/reviews`, {
-        rating: reviewRating,
-        comment: reviewComment,
-      });
-      setReviews((prev) => [res.data.review, ...prev]);
+      let res;
+      if (reviewPhotos.length > 0) {
+        const formData = new FormData();
+        formData.append('rating', String(reviewRating));
+        if (reviewComment.trim()) formData.append('comment', reviewComment.trim());
+        reviewPhotos.forEach((file) => formData.append('photos', file));
+        res = await api.post(`/api/restaurants/${restaurant.id}/reviews`, formData, { isFormData: true });
+      } else {
+        res = await api.post(`/api/restaurants/${restaurant.id}/reviews`, {
+          rating: reviewRating,
+          comment: reviewComment,
+        });
+      }
+      const newReview = res.data.review;
+      setReviews((prev) => [newReview, ...prev]);
       setReviewComment('');
-      toast('Review submitted!', 'success');
+      setReviewPhotos([]);
+      setReviewPhotoPreviews([]);
+      toast('Review submitted with spatial badges!', 'success');
     } catch (err) {
       toast(err instanceof ApiClientError ? err.message : 'Failed to submit review', 'error');
     } finally {
@@ -573,94 +672,358 @@ export default function RestaurantDetailPage() {
             {/* REVIEWS TAB */}
             {activeTab === 'reviews' && (
               <div className="space-y-8">
-                <h2 className="font-serif text-3xl font-bold text-cordova-green dark:text-emerald-400 tracking-wider uppercase">
-                  REVIEWS
-                </h2>
+                <div className="flex flex-wrap items-center justify-between gap-4 pb-4 border-b border-stone-200/80 dark:border-stone-800/80">
+                  <div>
+                    <h2 className="font-serif text-2xl sm:text-3xl font-bold text-stone-900 dark:text-white tracking-wide">
+                      Community Reviews & Foodie Notes
+                    </h2>
+                    <p className="text-xs sm:text-sm text-stone-500 dark:text-stone-400 mt-1">
+                      Real culinary reviews, dish photos, and taste reactions from diners in Cordova.
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-3 px-4 py-2 rounded-xl bg-amber-500/10 dark:bg-amber-400/10 border border-amber-500/20">
+                    <div className="flex items-center text-amber-500">
+                      <Star size={18} className="fill-amber-400 text-amber-400 mr-1.5" />
+                      <span className="font-bold text-lg text-stone-900 dark:text-white">
+                        {Number(restaurant.avg_rating || 5).toFixed(1)}
+                      </span>
+                    </div>
+                    <span className="text-xs text-stone-500 dark:text-stone-400 font-medium">
+                      ({reviews.length} {reviews.length === 1 ? 'review' : 'reviews'})
+                    </span>
+                  </div>
+                </div>
 
                 {/* Review List */}
-                <div className="space-y-4">
+                <div className="space-y-5">
                   {reviews.length === 0 ? (
-                    <div className="bg-stone-100 dark:bg-stone-900 p-8 rounded text-center text-stone-500">
-                      <p className="text-sm">No reviews yet. Be the first to share your experience!</p>
+                    <div className="spatial-card p-10 rounded-2xl text-center text-stone-500 bg-stone-50/70 dark:bg-stone-900/60 border border-stone-200/60 dark:border-stone-800/60">
+                      <MessageSquare size={36} className="mx-auto mb-3 text-stone-400 opacity-60" />
+                      <p className="font-medium text-stone-700 dark:text-stone-300 text-sm">
+                        No reviews yet. Be the first to share your dining experience!
+                      </p>
+                      <p className="text-xs text-stone-400 mt-1">
+                        Rate the dishes, upload food photos, and earn community foodie badges.
+                      </p>
                     </div>
                   ) : (
-                    reviews.map((r) => (
-                      <div
-                        key={r.id}
-                        className="bg-stone-200/60 dark:bg-stone-800/60 p-6 rounded border-l-4 border-cordova-gold flex flex-col justify-between gap-3 shadow-sm"
-                      >
-                        <div className="flex justify-between items-center">
-                          <span className="font-mono text-xs font-bold text-stone-800 dark:text-stone-200 uppercase tracking-widest">
-                            {r.reviewer_name || 'JUAN DELA CRUZ'}
-                          </span>
-                          <span className="font-mono text-[10px] font-semibold text-stone-500 uppercase tracking-widest">
-                            VERIFIED REVIEW
-                          </span>
-                        </div>
+                    reviews.map((r) => {
+                      const reviewerName = r.reviewer_name || 'Juan Dela Cruz';
+                      const initials = reviewerName
+                        .split(' ')
+                        .map((n) => n[0])
+                        .join('')
+                        .slice(0, 2)
+                        .toUpperCase();
+                      const reviewPhotosList = r.photos || [];
 
-                        <p className="font-serif italic text-stone-800 dark:text-stone-100 text-sm sm:text-base my-2">
-                          &apos; {r.comment || 'GREAT FOOD, AMAZING EXPERIENCE!'} &apos;
-                        </p>
+                      return (
+                        <div
+                          key={r.id}
+                          className="spatial-card p-6 rounded-2xl bg-white/80 dark:bg-[#1a211c]/90 backdrop-blur-xl border border-stone-200/80 dark:border-stone-800/80 shadow-[0_4px_24px_rgba(0,0,0,0.03)] hover:shadow-[0_8px_30px_rgba(16,185,129,0.07)] transition-all duration-300"
+                        >
+                          {/* Header: User avatar, name, badges, stars */}
+                          <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-stone-100 dark:border-stone-800/60">
+                            <div className="flex items-center gap-3">
+                              <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-emerald-600 to-teal-400 text-white font-bold text-xs flex items-center justify-center shadow-sm">
+                                {r.reviewer_avatar ? (
+                                  <Image
+                                    src={r.reviewer_avatar}
+                                    alt={reviewerName}
+                                    width={40}
+                                    height={40}
+                                    className="rounded-full object-cover w-full h-full"
+                                  />
+                                ) : (
+                                  initials
+                                )}
+                              </div>
+                              <div>
+                                <div className="flex items-center gap-2">
+                                  <span className="font-semibold text-sm text-stone-900 dark:text-white">
+                                    {reviewerName}
+                                  </span>
+                                  <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                                    <CheckCircle2 size={10} /> Verified Diner
+                                  </span>
+                                </div>
+                                <span className="text-[11px] text-stone-400">
+                                  {r.created_at ? new Date(r.created_at).toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' }) : 'Recently reviewed'}
+                                </span>
+                              </div>
+                            </div>
 
-                        <div className="flex items-center gap-1 text-cordova-gold text-xs">
-                          {Array.from({ length: 5 }).map((_, i) => (
-                            <Star
-                              key={i}
-                              size={13}
-                              className={i < r.rating ? 'fill-cordova-gold' : 'text-stone-300 dark:text-stone-700'}
-                            />
-                          ))}
+                            {/* Rating Stars */}
+                            <div className="flex items-center gap-1 bg-amber-50 dark:bg-stone-800/70 px-2.5 py-1 rounded-lg border border-amber-200/60 dark:border-amber-900/30">
+                              {Array.from({ length: 5 }).map((_, i) => (
+                                <Star
+                                  key={i}
+                                  size={14}
+                                  className={i < r.rating ? 'fill-amber-400 text-amber-400' : 'text-stone-300 dark:text-stone-600'}
+                                />
+                              ))}
+                              <span className="text-xs font-bold text-amber-600 dark:text-amber-400 ml-1">
+                                {r.rating}.0
+                              </span>
+                            </div>
+                          </div>
+
+                          {/* Review Comment */}
+                          {r.comment && (
+                            <p className="text-stone-800 dark:text-stone-200 text-sm sm:text-base leading-relaxed my-3.5">
+                              {r.comment}
+                            </p>
+                          )}
+
+                          {/* Dish Photos Attached */}
+                          {reviewPhotosList.length > 0 && (
+                            <div className="my-3.5">
+                              <div className="flex flex-wrap gap-2.5">
+                                {reviewPhotosList.map((photoUrl, pIdx) => (
+                                  <button
+                                    key={pIdx}
+                                    type="button"
+                                    onClick={() => setLightboxImage(photoUrl)}
+                                    className="relative h-24 w-28 sm:h-28 sm:w-32 rounded-xl overflow-hidden group/photo border border-stone-200/80 dark:border-stone-700/80 shadow-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                                  >
+                                    <Image
+                                      src={photoUrl}
+                                      alt={`Dish photo by ${reviewerName}`}
+                                      fill
+                                      className="object-cover group-hover/photo:scale-110 transition-transform duration-300"
+                                    />
+                                    <div className="absolute inset-0 bg-black/20 opacity-0 group-hover/photo:opacity-100 transition-opacity flex items-center justify-center">
+                                      <Maximize2 size={16} className="text-white drop-shadow" />
+                                    </div>
+                                  </button>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Owner Reply if exists */}
+                          {r.owner_reply && (
+                            <div className="mt-3 p-3.5 rounded-xl bg-stone-100/90 dark:bg-stone-800/90 border-l-4 border-emerald-500 text-xs space-y-1">
+                              <p className="font-bold text-stone-900 dark:text-white flex items-center gap-1.5">
+                                <span>🏪</span> Response from the Owner
+                              </p>
+                              <p className="text-stone-700 dark:text-stone-300">{r.owner_reply}</p>
+                            </div>
+                          )}
+
+                          {/* Action Footer: Spatial Emojis & Helpfulness */}
+                          <div className="mt-4 pt-3 border-t border-stone-100 dark:border-stone-800/60 flex flex-wrap items-center justify-between gap-3">
+                            {/* Spatial Emoji Reaction Bar */}
+                            <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
+                              {SPATIAL_EMOJIS.map(({ emoji, label }) => {
+                                const count = r.reactions?.[emoji] || 0;
+                                const isSelected = userReactions[r.id] === emoji;
+
+                                return (
+                                  <button
+                                    key={emoji}
+                                    type="button"
+                                    onClick={() => reactToReview(r.id, emoji)}
+                                    title={label}
+                                    className={`spatial-pill group px-2.5 sm:px-3 py-1 rounded-full text-xs font-medium flex items-center gap-1.5 transition-all duration-200 cursor-pointer select-none ${
+                                      isSelected
+                                        ? 'bg-emerald-500/15 border-emerald-500 text-emerald-700 dark:text-emerald-300 ring-2 ring-emerald-400/30'
+                                        : 'bg-stone-100/80 dark:bg-stone-800/80 border border-stone-200/80 dark:border-stone-700/80 hover:border-emerald-500/50 hover:bg-emerald-50/50 dark:hover:bg-emerald-950/30 text-stone-700 dark:text-stone-300'
+                                    } hover:scale-105 active:scale-95 shadow-sm`}
+                                  >
+                                    <span className="text-sm group-hover:scale-125 transition-transform duration-200">
+                                      {emoji}
+                                    </span>
+                                    {count > 0 && (
+                                      <span className="text-[11px] font-bold opacity-90">
+                                        {count}
+                                      </span>
+                                    )}
+                                  </button>
+                                );
+                              })}
+                            </div>
+
+                            {/* Helpful Upvote Button */}
+                            <button
+                              type="button"
+                              onClick={() => toggleHelpful(r.id)}
+                              className={`spatial-pill px-3 py-1 rounded-full text-xs font-semibold flex items-center gap-1.5 transition-all duration-200 ${
+                                r.liked_by_me
+                                  ? 'bg-emerald-600 text-white border border-emerald-500 shadow-sm'
+                                  : 'bg-stone-100/80 dark:bg-stone-800/80 border border-stone-200/80 dark:border-stone-700/80 text-stone-600 dark:text-stone-300 hover:border-emerald-500/60'
+                              } hover:scale-105 active:scale-95`}
+                            >
+                              <ThumbsUp size={12} className={r.liked_by_me ? 'fill-white' : ''} />
+                              <span>Helpful</span>
+                              {r.like_count > 0 && <span>({r.like_count})</span>}
+                            </button>
+                          </div>
                         </div>
-                      </div>
-                    ))
+                      );
+                    })
                   )}
                 </div>
 
                 {/* Add Review Form */}
-                {user?.role === 'customer' && (
-                  <form onSubmit={submitReview} className="bg-stone-50 dark:bg-stone-900 p-6 rounded-lg border border-stone-200 dark:border-stone-800 space-y-4 mt-8">
-                    <h3 className="font-serif text-lg font-bold text-stone-900 dark:text-white">
-                      Leave a Review
-                    </h3>
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs text-stone-500 font-medium">Rating:</span>
-                      <div className="flex gap-1">
-                        {[1, 2, 3, 4, 5].map((star) => (
-                          <button
-                            key={star}
-                            type="button"
-                            onClick={() => setReviewRating(star)}
-                            className="p-1 text-cordova-gold"
+                {user?.role === 'customer' ? (
+                  <form
+                    onSubmit={submitReview}
+                    className="spatial-card p-6 sm:p-7 rounded-2xl bg-white/90 dark:bg-[#1a211c]/90 backdrop-blur-xl border border-stone-200/80 dark:border-stone-800/80 shadow-[0_8px_32px_rgba(0,0,0,0.05)] space-y-5 mt-8"
+                  >
+                    <div className="flex items-center gap-2.5 pb-2 border-b border-stone-200/80 dark:border-stone-800/80">
+                      <Sparkles size={20} className="text-cordova-gold" />
+                      <h3 className="font-serif text-lg sm:text-xl font-bold text-stone-900 dark:text-white">
+                        Write a Spatial Review & Upload Dish Photos
+                      </h3>
+                    </div>
+
+                    {/* Star Selector */}
+                    <div>
+                      <label className="block text-xs font-bold uppercase tracking-wider text-stone-600 dark:text-stone-300 mb-2">
+                        Your Overall Rating
+                      </label>
+                      <div className="flex items-center gap-2">
+                        <div className="flex gap-1.5 p-2 rounded-xl bg-stone-100 dark:bg-stone-800/80 border border-stone-200 dark:border-stone-700">
+                          {[1, 2, 3, 4, 5].map((star) => (
+                            <button
+                              key={star}
+                              type="button"
+                              onClick={() => setReviewRating(star)}
+                              className="p-1 text-cordova-gold hover:scale-125 transition-transform"
+                            >
+                              <Star
+                                size={22}
+                                className={
+                                  star <= reviewRating
+                                    ? 'fill-cordova-gold text-cordova-gold drop-shadow'
+                                    : 'text-stone-300 dark:text-stone-600'
+                                }
+                              />
+                            </button>
+                          ))}
+                        </div>
+                        <span className="text-xs font-bold text-stone-600 dark:text-stone-300 ml-2">
+                          {reviewRating === 5 && '🌟 Outstanding Culinary Experience!'}
+                          {reviewRating === 4 && '✨ Very Good & Tasty!'}
+                          {reviewRating === 3 && '👍 Good / Average'}
+                          {reviewRating === 2 && '👎 Needs Improvement'}
+                          {reviewRating === 1 && '⚠️ Poor Experience'}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Review Text */}
+                    <div>
+                      <label className="block text-xs font-bold uppercase tracking-wider text-stone-600 dark:text-stone-300 mb-1.5">
+                        Your Dining Feedback
+                      </label>
+                      <textarea
+                        rows={3}
+                        value={reviewComment}
+                        onChange={(e) => setReviewComment(e.target.value)}
+                        placeholder="Tell the Cordova community about the signature dishes, taste quality, ambiance, and service..."
+                        className="w-full p-3.5 rounded-xl bg-white dark:bg-stone-800/90 border border-stone-200 dark:border-stone-700 text-sm outline-none focus:ring-2 focus:ring-emerald-500/50 shadow-inner"
+                      />
+                    </div>
+
+                    {/* Dish Photos Attachment Section */}
+                    <div>
+                      <label className="block text-xs font-bold uppercase tracking-wider text-stone-600 dark:text-stone-300 mb-1.5">
+                        Add Dish Photos <span className="text-stone-400 font-normal">(Optional, up to 5 photos)</span>
+                      </label>
+
+                      <div className="flex flex-wrap items-center gap-3">
+                        <label className="cursor-pointer px-4 py-2.5 rounded-xl bg-stone-100 hover:bg-stone-200 dark:bg-stone-800 dark:hover:bg-stone-700 border border-dashed border-stone-300 dark:border-stone-600 text-xs font-semibold text-stone-700 dark:text-stone-300 flex items-center gap-2 transition-colors">
+                          <Camera size={16} className="text-emerald-500" />
+                          <span>Attach Food Photos</span>
+                          <input
+                            type="file"
+                            multiple
+                            accept="image/*"
+                            onChange={handlePhotoChange}
+                            className="hidden"
+                          />
+                        </label>
+
+                        {/* Selected Photo Previews */}
+                        {reviewPhotoPreviews.map((previewUrl, pIdx) => (
+                          <div
+                            key={pIdx}
+                            className="relative h-14 w-14 rounded-lg overflow-hidden border border-stone-300 dark:border-stone-700 shadow-sm group"
                           >
-                            <Star
-                              size={18}
-                              className={star <= reviewRating ? 'fill-cordova-gold' : 'text-stone-300 dark:text-stone-700'}
+                            <Image
+                              src={previewUrl}
+                              alt="Dish preview"
+                              fill
+                              className="object-cover"
                             />
-                          </button>
+                            <button
+                              type="button"
+                              onClick={() => removePhoto(pIdx)}
+                              className="absolute top-0.5 right-0.5 w-4 h-4 rounded-full bg-red-600 text-white flex items-center justify-center text-[10px] hover:bg-red-700"
+                            >
+                              <X size={10} />
+                            </button>
+                          </div>
                         ))}
                       </div>
                     </div>
-                    <textarea
-                      rows={3}
-                      value={reviewComment}
-                      onChange={(e) => setReviewComment(e.target.value)}
-                      placeholder="Share your thoughts about this restaurant..."
-                      className="w-full p-3 rounded bg-white dark:bg-stone-800 border border-stone-200 dark:border-stone-700 text-sm outline-none focus:ring-2 focus:ring-cordova-gold/40"
-                    />
+
                     <button
                       type="submit"
                       disabled={submittingReview}
-                      className="bg-cordova-green hover:bg-cordova-greenHover text-white text-xs font-semibold px-6 py-2.5 rounded shadow transition-colors"
+                      className="bg-cordova-green hover:bg-cordova-greenHover text-white text-xs font-bold px-7 py-3 rounded-xl shadow-md transition-all hover:scale-[1.02] active:scale-98 flex items-center gap-2"
                     >
-                      {submittingReview ? 'Submitting...' : 'Submit Review'}
+                      <Sparkles size={14} />
+                      {submittingReview ? 'Posting Review...' : 'Post Review with Spatial Badges'}
                     </button>
                   </form>
-                )}
+                ) : !user ? (
+                  <div className="spatial-card p-6 rounded-2xl bg-amber-50/60 dark:bg-amber-950/20 border border-amber-200/60 dark:border-amber-900/40 text-center">
+                    <p className="text-sm font-semibold text-stone-800 dark:text-stone-200">
+                      Want to review this restaurant and share food photos?
+                    </p>
+                    <p className="text-xs text-stone-500 dark:text-stone-400 mt-1 mb-3">
+                      Log in to post your review and earn Cordova Foodie Badges.
+                    </p>
+                    <Link
+                      href="/login"
+                      className="inline-block px-5 py-2 rounded-xl bg-cordova-green hover:bg-cordova-greenHover text-white text-xs font-bold shadow-sm transition-all"
+                    >
+                      Log In to Review
+                    </Link>
+                  </div>
+                ) : null}
               </div>
             )}
           </div>
         </div>
       </section>
+
+      {/* Full-Screen Lightbox Modal for Dish Photos */}
+      {lightboxImage && (
+        <div
+          className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in duration-200"
+          onClick={() => setLightboxImage(null)}
+        >
+          <div className="relative max-w-4xl max-h-[85vh] w-full h-[70vh]" onClick={(e) => e.stopPropagation()}>
+            <Image
+              src={lightboxImage}
+              alt="Full size dish view"
+              fill
+              className="object-contain rounded-xl"
+            />
+            <button
+              type="button"
+              onClick={() => setLightboxImage(null)}
+              className="absolute top-4 right-4 w-9 h-9 rounded-full bg-black/60 text-white hover:bg-black/90 flex items-center justify-center transition-colors"
+            >
+              <X size={18} />
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

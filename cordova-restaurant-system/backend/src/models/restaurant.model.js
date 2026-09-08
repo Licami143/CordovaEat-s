@@ -234,7 +234,7 @@ async function findAllForRecommendation({ userLat, userLng }) {
 
 async function create(data, cuisineIds = [], dietaryOptions = []) {
   return withTransaction(async (client) => {
-    const status = data.status || 'verified';
+    const status = data.status || 'pending';
     const verifiedAt = status === 'verified' ? new Date() : null;
     const { rows } = await client.query(
       `INSERT INTO restaurants
