@@ -21,7 +21,7 @@ const {
 
 // ---- Public browse/search ----
 router.get('/', validate(searchValidator), restaurantController.search);
-router.get('/mine', requireAuth, requireRole('owner', 'admin'), restaurantController.listMine);
+router.get('/mine', requireAuth, requireRole('owner', 'admin', 'customer'), restaurantController.listMine);
 router.get('/by-slug/:slug', optionalAuth, restaurantController.getBySlug);
 router.get('/:id/similar', restaurantController.getSimilar);
 router.get('/:id', optionalAuth, restaurantController.getById);
