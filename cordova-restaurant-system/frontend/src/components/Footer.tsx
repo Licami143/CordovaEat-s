@@ -53,7 +53,7 @@ export function Footer() {
   const { user } = useAuth();
 
   return (
-    <footer className="border-t border-stone-200 dark:border-stone-800 mt-16 bg-white dark:bg-[#141815]">
+    <footer className="border-t border-stone-200/80 dark:border-white/10 mt-20 bg-white/70 dark:bg-[#141815]/70 backdrop-blur-xl relative z-10">
       <div className="max-w-6xl mx-auto px-4 py-12">
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-8">
           <div className="col-span-2 sm:col-span-4 mb-2">
@@ -66,11 +66,11 @@ export function Footer() {
                   className="object-contain"
                 />
               </div>
-              <span className="font-serif text-2xl font-bold text-stone-900 dark:text-white">
+              <span className="font-serif text-2xl font-bold text-stone-900 dark:text-white group-hover:text-cordova-green dark:group-hover:text-emerald-400 transition-colors">
                 CordovaEats
               </span>
             </Link>
-            <p className="text-sm text-[var(--text-muted)] mt-2 max-w-sm">
+            <p className="text-sm text-stone-500 dark:text-stone-400 mt-2 max-w-sm">
               A local recommendation platform connecting diners with accredited restaurants
               in the Municipality of Cordova, Cebu.
             </p>
@@ -84,7 +84,7 @@ export function Footer() {
                 <ul className="space-y-2">
                   {visibleLinks.map((link) => (
                     <li key={link.href}>
-                      <Link href={link.href} className="text-sm text-[var(--text-muted)] hover:text-cordova-green dark:hover:text-emerald-400 transition-colors">
+                      <Link href={link.href} className="text-sm text-stone-500 dark:text-stone-400 hover:text-cordova-green dark:hover:text-emerald-400 transition-colors">
                         {link.label}
                       </Link>
                     </li>
@@ -95,7 +95,7 @@ export function Footer() {
           })}
         </div>
 
-        <div className="border-t border-[var(--border)] mt-10 pt-6 text-center text-sm text-[var(--text-muted)]">
+        <div className="border-t border-stone-200/60 dark:border-white/10 mt-10 pt-6 text-center text-xs sm:text-sm text-stone-500 dark:text-stone-400 font-medium">
           <p>© {new Date().getFullYear()} Cordova Eats — Municipality of Cordova, Cebu. All rights reserved.</p>
         </div>
       </div>

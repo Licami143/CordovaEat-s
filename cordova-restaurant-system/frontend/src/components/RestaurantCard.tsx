@@ -55,36 +55,39 @@ export const RestaurantCard = memo(function RestaurantCard({
       : fallbackImage;
 
   return (
-    <div className={`bg-white dark:bg-[#1a211c] rounded-lg border transition-all duration-300 flex flex-col h-full group ${
+    <div className={`spatial-card overflow-hidden flex flex-col h-full group transition-all duration-300 ${
       isSponsored
-        ? 'border-amber-400/80 dark:border-amber-600/60 shadow-md ring-1 ring-amber-400/20'
-        : 'border-stone-200/80 dark:border-stone-800/80 shadow-sm hover:shadow-md'
+        ? 'border-amber-400/60 dark:border-amber-500/40 ring-1 ring-amber-400/20 shadow-spatial-md'
+        : 'border-stone-200/80 dark:border-white/10'
     }`}>
-      {/* Cover Image */}
-      <div className="relative h-48 sm:h-52 w-full bg-stone-100 dark:bg-stone-800 overflow-hidden">
+      {/* Cover Image Container */}
+      <div className="relative h-48 sm:h-52 w-full bg-stone-100 dark:bg-stone-800/80 overflow-hidden">
         <Image
           src={imageSrc}
           alt={restaurant.name}
           fill
           unoptimized
           onError={() => setImgError(true)}
-          className="object-cover transition-transform duration-500 group-hover:scale-105"
+          className="object-cover transition-transform duration-700 ease-out group-hover:scale-105"
           sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
         />
 
+        {/* Ambient Gradient Overlay for depth */}
+        <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-black/15 pointer-events-none" />
+
         {/* Sponsored Badge (Top Left) */}
         {isSponsored && (
-          <div className="absolute top-2.5 left-2.5 z-10">
-            <span className="bg-amber-500/90 text-white text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded shadow-sm backdrop-blur-sm flex items-center gap-1">
-              <span>★</span> Sponsored
+          <div className="absolute top-3 left-3 z-10">
+            <span className="bg-amber-500/90 text-white text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full shadow-spatial-sm backdrop-blur-md flex items-center gap-1 border border-white/20">
+              <span className="text-xs">★</span> Sponsored
             </span>
           </div>
         )}
 
         {/* Match / Relevance Score (Top Right) */}
         {displayScore !== undefined && (
-          <div className="absolute top-2.5 right-2.5 z-10">
-            <span className="bg-cordova-green/90 text-white text-xs font-semibold px-2.5 py-1 rounded shadow-sm backdrop-blur-sm">
+          <div className="absolute top-3 right-3 z-10">
+            <span className="bg-[#1B5232]/85 dark:bg-emerald-700/85 text-white text-xs font-semibold px-3 py-1 rounded-full shadow-spatial-sm backdrop-blur-md border border-white/20">
               {Math.round(displayScore)}% match
             </span>
           </div>
@@ -93,16 +96,18 @@ export const RestaurantCard = memo(function RestaurantCard({
 
       {/* Card Content */}
       <div className="p-5 flex flex-col flex-1 justify-between gap-4">
-        <div className="space-y-2.5">
-          {/* Title */}
+        <div className="space-y-3">
+          {/* Title & Price Category */}
           <div>
-            <h3 className="font-serif text-xl font-bold text-stone-900 dark:text-white leading-tight group-hover:text-cordova-green transition-colors">
+            <h3 className="font-serif text-xl font-bold text-stone-900 dark:text-white leading-tight group-hover:text-cordova-green dark:group-hover:text-emerald-400 transition-colors">
               {restaurant.name}
             </h3>
             {restaurant.price_range && (
-              <span className="text-[11px] font-semibold text-stone-500 dark:text-stone-400 uppercase tracking-wider">
-                {restaurant.price_range} • {restaurant.category || restaurant.cuisines?.[0] || 'Restaurant'}
-              </span>
+              <div className="flex items-center gap-2 mt-1">
+                <span className="text-[11px] font-semibold text-stone-500 dark:text-stone-400 uppercase tracking-wider">
+                  {restaurant.price_range} • {restaurant.category || restaurant.cuisines?.[0] || 'Restaurant'}
+                </span>
+              </div>
             )}
           </div>
 
@@ -113,14 +118,14 @@ export const RestaurantCard = memo(function RestaurantCard({
               <span className="truncate">{locationText}</span>
             </div>
             {restaurant.distance_km != null && (
-              <span className="shrink-0 text-stone-500 font-medium ml-2">
+              <span className="shrink-0 text-stone-500 dark:text-stone-400 font-medium ml-2 px-2 py-0.5 rounded-full bg-stone-100 dark:bg-white/5">
                 {restaurant.distance_km} km
               </span>
             )}
           </div>
 
           {/* Rating & Availability */}
-          <div className="flex items-center justify-between text-xs">
+          <div className="flex items-center justify-between text-xs pt-1 border-t border-stone-100 dark:border-white/5">
             <div className="flex items-center gap-1 font-semibold text-stone-800 dark:text-stone-200">
               <Star size={14} className="fill-cordova-gold text-cordova-gold" />
               <span>{ratingVal}</span>
@@ -128,23 +133,27 @@ export const RestaurantCard = memo(function RestaurantCard({
             </div>
 
             {restaurant.is_open === false ? (
-              <span className="text-red-500 font-medium text-[11px]">Closed</span>
+              <span className="text-red-500 dark:text-red-400 font-medium text-[11px] px-2 py-0.5 rounded-full bg-red-50 dark:bg-red-950/40">
+                Closed
+              </span>
             ) : (
-              <span className="text-emerald-600 dark:text-emerald-400 font-medium text-[11px]">Open now</span>
+              <span className="text-emerald-600 dark:text-emerald-400 font-medium text-[11px] px-2 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950/40">
+                Open now
+              </span>
             )}
           </div>
 
           {/* Matched Menu Items Preview */}
           {restaurant.matched_menu_items && restaurant.matched_menu_items.length > 0 && (
-            <div className="pt-2 border-t border-stone-100 dark:border-stone-800/80">
-              <p className="text-[11px] font-semibold text-stone-500 dark:text-stone-400 mb-1">
+            <div className="pt-2 border-t border-stone-100 dark:border-white/5">
+              <p className="text-[11px] font-semibold text-stone-500 dark:text-stone-400 mb-1.5">
                 Matching dishes:
               </p>
-              <div className="flex flex-wrap gap-1">
+              <div className="flex flex-wrap gap-1.5">
                 {restaurant.matched_menu_items.map((item, idx) => (
                   <span
                     key={idx}
-                    className="inline-block bg-amber-50 dark:bg-amber-950/40 text-amber-900 dark:text-amber-300 text-[10px] px-2 py-0.5 rounded border border-amber-200 dark:border-amber-800"
+                    className="inline-block bg-amber-500/10 text-amber-900 dark:text-amber-200 text-[10px] font-medium px-2.5 py-1 rounded-full border border-amber-500/20 backdrop-blur-sm"
                   >
                     {item.name} (₱{item.price})
                   </span>
@@ -157,7 +166,7 @@ export const RestaurantCard = memo(function RestaurantCard({
         {/* Action Button */}
         <Link
           href={`/restaurants/${restaurant.slug}`}
-          className="w-full bg-cordova-green hover:bg-cordova-greenHover text-white font-medium text-sm py-2.5 rounded text-center transition-colors duration-200 shadow-sm block mt-2"
+          className="w-full bg-cordova-green hover:bg-cordova-greenHover dark:bg-emerald-700 dark:hover:bg-emerald-600 text-white font-semibold text-xs uppercase tracking-wider py-3 rounded-xl text-center transition-all duration-200 shadow-spatial-sm hover:shadow-spatial-glow active:scale-[0.98] block mt-2 border border-white/10"
         >
           View Details
         </Link>

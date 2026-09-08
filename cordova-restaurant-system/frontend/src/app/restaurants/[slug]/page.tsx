@@ -273,7 +273,11 @@ export default function RestaurantDetailPage() {
       : fallbackHeroImage;
 
   return (
-    <div className="min-h-screen bg-cordova-cream dark:bg-[#121614] pb-24">
+    <div className="min-h-screen bg-cordova-cream dark:bg-[#121614] pb-24 relative overflow-hidden">
+      {/* Ambient Lighting Background Accents */}
+      <div className="absolute top-[25%] left-[-10%] w-[500px] h-[500px] rounded-full bg-emerald-500/10 dark:bg-emerald-500/15 blur-[120px] pointer-events-none -z-0" />
+      <div className="absolute top-[60%] right-[-10%] w-[500px] h-[500px] rounded-full bg-amber-500/10 dark:bg-amber-500/15 blur-[120px] pointer-events-none -z-0" />
+
       {/* HERO COVER SECTION */}
       <section className="relative w-full h-[400px] sm:h-[480px] overflow-hidden bg-stone-900">
         <Image
@@ -287,20 +291,20 @@ export default function RestaurantDetailPage() {
         />
 
         {/* Dark Gradient Overlay */}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/40 to-black/30" />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/40 to-black/30 backdrop-blur-[1px]" />
 
         {/* Top Control Buttons */}
         <div className="absolute top-6 left-6 right-6 z-20 max-w-6xl mx-auto flex justify-between items-center">
           <button
             onClick={() => router.back()}
-            className="w-10 h-10 rounded-full bg-white/80 dark:bg-black/60 backdrop-blur-md flex items-center justify-center text-stone-800 dark:text-white shadow hover:bg-white transition-colors"
+            className="w-10 h-10 rounded-full bg-white/80 dark:bg-black/60 backdrop-blur-xl flex items-center justify-center text-stone-800 dark:text-white shadow-spatial-sm hover:bg-white dark:hover:bg-black/80 transition-all active:scale-90 border border-white/20"
             aria-label="Back"
           >
             <ArrowLeft size={18} />
           </button>
           <button
             onClick={toggleFavorite}
-            className="w-10 h-10 rounded-full bg-white/80 dark:bg-black/60 backdrop-blur-md flex items-center justify-center text-stone-800 dark:text-white shadow hover:bg-white transition-colors"
+            className="w-10 h-10 rounded-full bg-white/80 dark:bg-black/60 backdrop-blur-xl flex items-center justify-center text-stone-800 dark:text-white shadow-spatial-sm hover:bg-white dark:hover:bg-black/80 transition-all active:scale-90 border border-white/20"
             aria-label="Favorite"
           >
             <Heart size={18} className={isFavorite ? 'fill-red-500 text-red-500' : ''} />
@@ -312,7 +316,7 @@ export default function RestaurantDetailPage() {
           <div className="max-w-4xl mx-auto text-center sm:text-left flex flex-col sm:flex-row items-center justify-between gap-4">
             <div>
               {/* Badge */}
-              <div className="inline-flex items-center gap-1.5 text-cordova-gold text-xs font-semibold tracking-widest uppercase mb-2">
+              <div className="inline-flex items-center gap-1.5 text-cordova-gold text-xs font-semibold tracking-widest uppercase mb-2 drop-shadow">
                 <Award size={14} /> FEATURED ESTABLISHMENT
               </div>
               {/* Name */}
@@ -322,7 +326,7 @@ export default function RestaurantDetailPage() {
             </div>
 
             {/* Location Badge */}
-            <div className="flex items-center gap-1.5 text-white/90 text-sm font-medium bg-black/40 backdrop-blur-sm px-4 py-2 rounded-full border border-white/10 shrink-0">
+            <div className="flex items-center gap-1.5 text-white/95 text-sm font-medium bg-black/40 backdrop-blur-md px-4 py-2 rounded-full border border-white/20 shrink-0 shadow-spatial-sm">
               <MapPin size={15} className="text-cordova-gold" />
               <span>{locationText}</span>
             </div>
@@ -334,9 +338,9 @@ export default function RestaurantDetailPage() {
       <section className="relative z-30 -mt-10 px-4 max-w-4xl mx-auto">
         {/* ACTIVE PROMOTION BANNER IF AVAILABLE */}
         {activePromotions.length > 0 && (
-          <div className="mb-4 bg-gradient-to-r from-amber-500 via-cordova-gold to-amber-600 rounded-xl p-4 sm:p-5 text-white shadow-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 border border-amber-300/40">
+          <div className="mb-4 bg-gradient-to-r from-amber-500 via-cordova-gold to-amber-600 rounded-2xl p-4 sm:p-5 text-white shadow-spatial-lg flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 border border-amber-300/40 backdrop-blur-md">
             <div className="space-y-1">
-              <div className="inline-flex items-center gap-1.5 bg-black/25 text-amber-200 text-[11px] font-extrabold px-2.5 py-0.5 rounded uppercase tracking-wider">
+              <div className="inline-flex items-center gap-1.5 bg-black/25 text-amber-200 text-[11px] font-extrabold px-2.5 py-0.5 rounded-full uppercase tracking-wider">
                 🎁 Active Special Promotion
               </div>
               <h3 className="font-serif text-lg sm:text-xl font-bold drop-shadow">
@@ -349,7 +353,7 @@ export default function RestaurantDetailPage() {
               )}
             </div>
             {activePromotions[0].discount_label && (
-              <span className="bg-white text-stone-900 font-extrabold text-xs px-3.5 py-1.5 rounded-lg shadow-md shrink-0 uppercase tracking-wider">
+              <span className="bg-white text-stone-900 font-extrabold text-xs px-3.5 py-1.5 rounded-xl shadow-md shrink-0 uppercase tracking-wider">
                 {activePromotions[0].discount_label}
               </span>
             )}
@@ -358,7 +362,7 @@ export default function RestaurantDetailPage() {
 
         {/* GUEST SIGN IN / SIGN UP PROMPT BANNER */}
         {!user && (
-          <div className="mb-4 bg-gradient-to-r from-[#1b241f] via-stone-900 to-[#1b241f] rounded-xl p-5 sm:p-6 text-white shadow-xl border border-cordova-gold/40 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <div className="mb-4 bg-gradient-to-r from-[#1b241f] via-stone-900 to-[#1b241f] rounded-2xl p-5 sm:p-6 text-white shadow-spatial-lg border border-cordova-gold/40 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 backdrop-blur-xl">
             <div className="space-y-1.5">
               <div className="inline-flex items-center gap-1.5 text-cordova-gold text-xs font-bold uppercase tracking-wider">
                 <Sparkles size={16} /> Unlock Best Features
@@ -373,13 +377,13 @@ export default function RestaurantDetailPage() {
             <div className="flex items-center gap-2.5 shrink-0">
               <Link
                 href="/login"
-                className="text-xs font-semibold text-white hover:text-cordova-gold transition-colors px-3.5 py-2 border border-white/20 rounded-lg"
+                className="text-xs font-semibold text-white hover:text-cordova-gold transition-colors px-4 py-2 border border-white/20 rounded-xl hover:bg-white/10"
               >
                 Sign In
               </Link>
               <Link
                 href="/register"
-                className="bg-cordova-gold hover:bg-cordova-goldHover text-white text-xs font-bold px-4 py-2 rounded-lg shadow-sm transition-colors uppercase tracking-wider"
+                className="bg-gradient-to-r from-cordova-gold to-amber-600 hover:from-cordova-goldHover hover:to-amber-700 text-white text-xs font-bold px-4 py-2 rounded-xl shadow-spatial-sm transition-all uppercase tracking-wide active:scale-95"
               >
                 Sign Up
               </Link>
@@ -387,10 +391,10 @@ export default function RestaurantDetailPage() {
           </div>
         )}
 
-        <div className="bg-white dark:bg-[#1a211c] rounded-t-xl shadow-2xl overflow-hidden border border-stone-200/80 dark:border-stone-800/80">
+        <div className="spatial-card rounded-2xl shadow-spatial-lg overflow-hidden border border-stone-200/80 dark:border-white/10">
           
           {/* QUICK INFO BAR (3 Columns) */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 border-b border-stone-200 dark:border-stone-800 text-center text-xs font-serif divide-y sm:divide-y-0 sm:divide-x divide-stone-200 dark:divide-stone-800 bg-white dark:bg-[#1a211c]">
+          <div className="grid grid-cols-1 sm:grid-cols-3 border-b border-stone-200/80 dark:border-white/10 text-center text-xs font-serif divide-y sm:divide-y-0 sm:divide-x divide-stone-200/80 dark:divide-white/10 bg-white/60 dark:bg-white/[0.02]">
             <div className="p-4 flex flex-col items-center justify-center gap-1.5">
               <Phone size={18} className="text-cordova-green dark:text-emerald-400" />
               <span className="font-medium text-stone-700 dark:text-stone-300">{phoneText}</span>
@@ -406,7 +410,7 @@ export default function RestaurantDetailPage() {
           </div>
 
           {/* TAB NAVIGATION HEADER */}
-          <div className="border-t-2 border-cordova-green border-b border-stone-200 dark:border-stone-800 bg-white dark:bg-[#1a211c]">
+          <div className="border-t-2 border-cordova-green dark:border-emerald-500 border-b border-stone-200/80 dark:border-white/10 bg-white/40 dark:bg-white/[0.01]">
             <div className="grid grid-cols-4 text-center">
               {(['overview', 'menu', 'map', 'reviews'] as const).map((tab) => {
                 const isActive = activeTab === tab;
@@ -416,8 +420,8 @@ export default function RestaurantDetailPage() {
                     onClick={() => setActiveTab(tab)}
                     className={`py-4 text-xs sm:text-sm font-semibold tracking-wider uppercase transition-all duration-200 relative ${
                       isActive
-                        ? 'text-stone-900 dark:text-white bg-stone-100/70 dark:bg-stone-800/70 border-b-2 border-cordova-gold'
-                        : 'text-stone-500 dark:text-stone-400 hover:text-stone-900 dark:hover:text-white'
+                        ? 'text-stone-900 dark:text-white bg-stone-100/80 dark:bg-white/10 border-b-2 border-cordova-gold font-bold'
+                        : 'text-stone-500 dark:text-stone-400 hover:text-stone-900 dark:hover:text-white hover:bg-black/[0.02] dark:hover:bg-white/[0.03]'
                     }`}
                   >
                     {tab}

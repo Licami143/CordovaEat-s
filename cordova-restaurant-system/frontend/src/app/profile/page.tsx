@@ -250,26 +250,30 @@ function ProfileContent() {
   const isOAuthOnly = user?.has_password === false || (!user?.has_password && !!(user?.google_id || user?.facebook_id));
 
   return (
-    <div className="max-w-3xl mx-auto px-4 py-10">
-      <h1 className="font-serif text-3xl font-bold text-stone-900 dark:text-white mb-8">My Profile</h1>
+    <div className="max-w-3xl mx-auto px-4 py-10 relative">
+      {/* Ambient Lighting Cones */}
+      <div className="absolute top-[10%] left-[-15%] w-[400px] h-[400px] rounded-full bg-emerald-500/10 dark:bg-emerald-500/15 blur-[100px] pointer-events-none -z-10" />
+      <div className="absolute top-[50%] right-[-15%] w-[450px] h-[450px] rounded-full bg-amber-500/10 dark:bg-amber-500/15 blur-[110px] pointer-events-none -z-10" />
+
+      <h1 className="font-serif text-3xl sm:text-4xl font-bold text-stone-900 dark:text-white mb-8">My Profile</h1>
 
       {/* Avatar + Account Overview */}
-      <div className="bg-white dark:bg-[#1a211c] rounded-2xl border border-stone-200 dark:border-stone-800 shadow p-6 sm:p-8 mb-6 flex flex-col sm:flex-row items-center sm:items-start gap-6">
+      <div className="spatial-card p-6 sm:p-8 mb-6 flex flex-col sm:flex-row items-center sm:items-start gap-6">
         {/* Avatar */}
         <div className="relative shrink-0">
           {user?.avatar_url ? (
-            <div className="relative h-24 w-24 rounded-full overflow-hidden border-2 border-stone-200 dark:border-stone-700">
+            <div className="relative h-24 w-24 rounded-full overflow-hidden border-2 border-white/60 dark:border-white/15 shadow-spatial-sm">
               <Image src={user.avatar_url} alt={user.full_name || ''} fill className="object-cover" />
             </div>
           ) : (
-            <div className="h-24 w-24 rounded-full bg-cordova-green flex items-center justify-center text-white text-2xl font-bold border-2 border-stone-200 dark:border-stone-700">
+            <div className="h-24 w-24 rounded-full bg-gradient-to-tr from-cordova-green to-emerald-600 flex items-center justify-center text-white text-2xl font-bold border-2 border-white/60 dark:border-white/15 shadow-spatial-sm">
               {getInitials(user?.full_name)}
             </div>
           )}
           <button
             type="button"
             onClick={() => fileInputRef.current?.click()}
-            className="absolute -bottom-1 -right-1 bg-cordova-gold hover:bg-cordova-goldHover text-white rounded-full p-1.5 shadow-md transition-colors"
+            className="absolute -bottom-1 -right-1 bg-gradient-to-r from-cordova-gold to-amber-600 hover:from-cordova-goldHover hover:to-amber-700 text-white rounded-full p-2 shadow-spatial-sm transition-all duration-200 active:scale-95 border border-white/30"
             title="Change profile picture"
           >
             <Camera size={14} />
@@ -290,12 +294,12 @@ function ProfileContent() {
           </h2>
           <p className="text-sm text-stone-500 dark:text-stone-400 mt-0.5">{user?.email}</p>
 
-          <div className="flex flex-wrap justify-center sm:justify-start gap-3 mt-4 text-xs text-stone-500 dark:text-stone-400">
-            <span className="flex items-center gap-1.5">
-              <User size={13} className="text-cordova-green" />
+          <div className="flex flex-wrap justify-center sm:justify-start gap-2.5 mt-4 text-xs text-stone-500 dark:text-stone-400">
+            <span className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-stone-100/80 dark:bg-white/5 border border-stone-200/60 dark:border-white/5">
+              <User size={13} className="text-cordova-green dark:text-emerald-400" />
               <span className="capitalize">{user?.role} Account</span>
             </span>
-            <span className="flex items-center gap-1.5">
+            <span className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-stone-100/80 dark:bg-white/5 border border-stone-200/60 dark:border-white/5">
               {user?.email_verified ? (
                 <ShieldCheck size={13} className="text-emerald-500" />
               ) : (
@@ -303,11 +307,11 @@ function ProfileContent() {
               )}
               <span>{user?.email_verified ? 'Email Verified' : 'Email Unverified'}</span>
             </span>
-            <span className="flex items-center gap-1.5">
+            <span className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-stone-100/80 dark:bg-white/5 border border-stone-200/60 dark:border-white/5">
               <Mail size={13} className="text-cordova-gold" />
               <span>via {provider}</span>
             </span>
-            <span className="flex items-center gap-1.5">
+            <span className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-stone-100/80 dark:bg-white/5 border border-stone-200/60 dark:border-white/5">
               <Calendar size={13} />
               <span>Joined {formatDate(user?.created_at)}</span>
             </span>
@@ -325,9 +329,9 @@ function ProfileContent() {
       </div>
 
       {/* Edit Profile Info */}
-      <div className="bg-white dark:bg-[#1a211c] rounded-2xl border border-stone-200 dark:border-stone-800 shadow p-6 sm:p-8 mb-6">
+      <div className="spatial-card p-6 sm:p-8 mb-6">
         <h3 className="text-base font-bold text-stone-900 dark:text-white mb-5 flex items-center gap-2">
-          <User size={16} className="text-cordova-green" />
+          <User size={16} className="text-cordova-green dark:text-emerald-400" />
           Personal Information
         </h3>
         <form onSubmit={handleProfileSave} className="space-y-4">
@@ -365,7 +369,7 @@ function ProfileContent() {
           />
           <Button
             type="submit"
-            className="bg-cordova-green hover:bg-cordova-greenHover text-white px-6 py-2.5 rounded-xl font-bold text-xs uppercase tracking-wider"
+            className="bg-cordova-green hover:bg-cordova-greenHover dark:bg-emerald-700 dark:hover:bg-emerald-600 text-white px-6 py-2.5 rounded-xl font-bold text-xs uppercase tracking-wider shadow-spatial-sm active:scale-95"
             loading={profileSaving}
           >
             Save Changes
@@ -376,15 +380,15 @@ function ProfileContent() {
       {/* Taste & Dining Preferences Section */}
       <div
         id="taste-preferences"
-        className="bg-white dark:bg-[#1a211c] rounded-2xl border border-stone-200 dark:border-stone-800 shadow p-6 sm:p-8 mb-6 scroll-mt-24"
+        className="spatial-card p-6 sm:p-8 mb-6 scroll-mt-24"
       >
         <div className="flex items-center justify-between mb-2">
           <h3 className="text-base font-bold text-stone-900 dark:text-white flex items-center gap-2">
             <Utensils size={17} className="text-cordova-gold" />
             Taste & Dining Preferences
           </h3>
-          <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-cordova-green bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800/60 px-2.5 py-0.5 rounded-full">
-            <Sparkles size={11} />
+          <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-cordova-green dark:text-emerald-400 bg-emerald-500/10 border border-emerald-500/25 px-3 py-1 rounded-full backdrop-blur-md">
+            <Sparkles size={11} className="text-emerald-500 animate-pulse" />
             Powers AI Recommendations
           </span>
         </div>
@@ -403,7 +407,7 @@ function ProfileContent() {
                   Favorite Cuisines & Food Types
                 </label>
                 {prefCuisines.length > 0 && (
-                  <span className="text-[11px] text-cordova-green font-semibold">
+                  <span className="text-[11px] text-cordova-green dark:text-emerald-400 font-semibold">
                     {prefCuisines.length} selected
                   </span>
                 )}
@@ -416,10 +420,10 @@ function ProfileContent() {
                       key={type}
                       type="button"
                       onClick={() => togglePreferenceItem(prefCuisines, setPrefCuisines, type)}
-                      className={`py-2 px-3.5 rounded-full border text-xs font-medium transition-all ${
+                      className={`py-2 px-3.5 rounded-full border text-xs font-medium transition-all duration-200 ${
                         selected
-                          ? 'border-cordova-green bg-cordova-green text-white shadow-sm font-bold scale-105'
-                          : 'border-stone-300 dark:border-stone-700 bg-white dark:bg-stone-800 text-stone-800 dark:text-stone-200 hover:border-cordova-green'
+                          ? 'border-cordova-green dark:border-emerald-500 bg-cordova-green dark:bg-emerald-600 text-white shadow-spatial-sm font-bold scale-105'
+                          : 'border-stone-200 dark:border-white/10 bg-white/70 dark:bg-white/5 text-stone-800 dark:text-stone-200 hover:border-cordova-green/50 dark:hover:border-emerald-400/50'
                       }`}
                     >
                       {type}
@@ -442,10 +446,10 @@ function ProfileContent() {
                       key={item.id}
                       type="button"
                       onClick={() => togglePreferenceItem(prefDietary, setPrefDietary, item.id)}
-                      className={`py-2 px-3.5 rounded-full border text-xs font-semibold tracking-wider transition-all ${
+                      className={`py-2 px-3.5 rounded-full border text-xs font-semibold tracking-wider transition-all duration-200 ${
                         selected
-                          ? 'border-cordova-gold bg-cordova-gold text-white shadow-sm font-bold scale-105'
-                          : 'border-stone-300 dark:border-stone-700 bg-white dark:bg-stone-800 text-stone-800 dark:text-stone-200 hover:border-cordova-gold'
+                          ? 'border-cordova-gold bg-gradient-to-r from-cordova-gold to-amber-600 text-white shadow-spatial-sm font-bold scale-105'
+                          : 'border-stone-200 dark:border-white/10 bg-white/70 dark:bg-white/5 text-stone-800 dark:text-stone-200 hover:border-cordova-gold/50'
                       }`}
                     >
                       {item.label}
@@ -468,10 +472,10 @@ function ProfileContent() {
                       key={service.id}
                       type="button"
                       onClick={() => togglePreferenceItem(prefServices, setPrefServices, service.id)}
-                      className={`py-2 px-3.5 rounded-full border text-xs font-medium transition-all ${
+                      className={`py-2 px-3.5 rounded-full border text-xs font-medium transition-all duration-200 ${
                         selected
-                          ? 'border-stone-800 dark:border-stone-200 bg-stone-800 dark:bg-stone-200 text-white dark:text-stone-900 shadow-sm font-bold scale-105'
-                          : 'border-stone-300 dark:border-stone-700 bg-white dark:bg-stone-800 text-stone-700 dark:text-stone-300 hover:border-stone-400'
+                          ? 'border-stone-900 dark:border-white bg-stone-900 dark:bg-white text-white dark:text-stone-900 shadow-spatial-sm font-bold scale-105'
+                          : 'border-stone-200 dark:border-white/10 bg-white/70 dark:bg-white/5 text-stone-700 dark:text-stone-300 hover:border-stone-400 dark:hover:border-white/30'
                       }`}
                     >
                       {service.label}
@@ -495,10 +499,10 @@ function ProfileContent() {
                         key={pr.value}
                         type="button"
                         onClick={() => setPrefBudget(pr.value)}
-                        className={`py-2.5 px-2 rounded-xl border text-xs text-center transition-all ${
+                        className={`py-2.5 px-2 rounded-xl border text-xs text-center transition-all duration-200 ${
                           selected
-                            ? 'border-amber-500 bg-amber-500/10 text-amber-600 dark:text-amber-400 font-bold shadow-sm'
-                            : 'border-stone-300 dark:border-stone-700 bg-white dark:bg-stone-800 text-stone-700 dark:text-stone-300 hover:border-amber-400'
+                            ? 'border-amber-500 bg-amber-500/15 text-amber-600 dark:text-amber-400 font-bold shadow-spatial-sm scale-[1.02]'
+                            : 'border-stone-200 dark:border-white/10 bg-white/70 dark:bg-white/5 text-stone-700 dark:text-stone-300 hover:border-amber-400/50'
                         }`}
                       >
                         <span className="block font-bold">{pr.symbol}</span>
@@ -514,7 +518,7 @@ function ProfileContent() {
                   <label htmlFor="pref-distance-slider" className="text-xs font-bold uppercase tracking-wider text-stone-700 dark:text-stone-300">
                     Max Distance Radius
                   </label>
-                  <span className="text-xs font-bold text-cordova-green">{prefDistance} km</span>
+                  <span className="text-xs font-bold text-cordova-green dark:text-emerald-400 px-2 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20">{prefDistance} km</span>
                 </div>
                 <input
                   id="pref-distance-slider"
@@ -536,7 +540,7 @@ function ProfileContent() {
             <div className="pt-2">
               <Button
                 type="submit"
-                className="bg-cordova-gold hover:bg-cordova-goldHover text-white px-6 py-2.5 rounded-xl font-bold text-xs uppercase tracking-wider"
+                className="bg-gradient-to-r from-cordova-gold to-amber-600 hover:from-cordova-goldHover hover:to-amber-700 text-white px-6 py-2.5 rounded-xl font-bold text-xs uppercase tracking-wider shadow-spatial-sm hover:shadow-spatial-gold-glow active:scale-95 border border-white/20"
                 loading={prefSaving}
               >
                 Save Taste Preferences
@@ -548,7 +552,7 @@ function ProfileContent() {
 
       {/* Change Password — only for email/password accounts */}
       {!isOAuthOnly && (
-        <div className="bg-white dark:bg-[#1a211c] rounded-2xl border border-stone-200 dark:border-stone-800 shadow p-6 sm:p-8">
+        <div className="spatial-card p-6 sm:p-8">
           <h3 className="text-base font-bold text-stone-900 dark:text-white mb-5 flex items-center gap-2">
             <Lock size={16} className="text-cordova-gold" />
             Change Password

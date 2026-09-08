@@ -224,7 +224,12 @@ export default function HomePage() {
   };
 
   return (
-    <div className="min-h-screen bg-cordova-cream dark:bg-[#121614] pb-16 relative">
+    <div className="min-h-screen bg-cordova-cream dark:bg-[#121614] pb-20 relative overflow-hidden">
+      {/* AMBIENT SPATIAL LIGHTING ACCENTS */}
+      <div className="absolute top-[20%] left-[-10%] w-[500px] h-[500px] rounded-full bg-emerald-500/10 dark:bg-emerald-500/15 blur-[120px] pointer-events-none -z-0" />
+      <div className="absolute top-[45%] right-[-10%] w-[550px] h-[550px] rounded-full bg-amber-500/10 dark:bg-amber-500/15 blur-[130px] pointer-events-none -z-0" />
+      <div className="absolute top-[75%] left-[10%] w-[600px] h-[600px] rounded-full bg-emerald-600/8 dark:bg-emerald-600/10 blur-[140px] pointer-events-none -z-0" />
+
       {/* HERO SECTION */}
       <section className="relative w-full h-[520px] sm:h-[600px] flex items-center justify-center overflow-hidden">
         {/* Background Image */}
@@ -237,7 +242,7 @@ export default function HomePage() {
         />
 
         {/* Dark Gradient Overlay */}
-        <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-black/45 to-black/75" />
+        <div className="absolute inset-0 bg-gradient-to-b from-black/65 via-black/45 to-black/80 backdrop-blur-[1px]" />
 
         {/* Hero Content */}
         <div className="relative z-10 text-center px-4 max-w-4xl mx-auto flex flex-col items-center">
@@ -294,17 +299,17 @@ export default function HomePage() {
         </div>
 
         {/* Bottom Fade Gradient into page background */}
-        <div className="absolute bottom-0 left-0 right-0 h-24 bg-gradient-to-t from-cordova-cream dark:from-[#121614] to-transparent pointer-events-none" />
+        <div className="absolute bottom-0 left-0 right-0 h-28 bg-gradient-to-t from-cordova-cream dark:from-[#121614] to-transparent pointer-events-none" />
       </section>
 
-      {/* SEARCH BAR SECTION WITH INTEGRATED AI MODE */}
-      <section className="relative z-20 -mt-10 px-4 max-w-3xl mx-auto">
+      {/* FLOATING SPATIAL SEARCH BAR SECTION */}
+      <section className="relative z-20 -mt-12 px-4 max-w-3xl mx-auto">
         <form
           onSubmit={handleSearchSubmit}
-          className={`rounded-2xl transition-all duration-300 shadow-xl p-2 flex items-center gap-2 ${
+          className={`rounded-2xl transition-all duration-300 p-2 flex items-center gap-2 backdrop-blur-2xl ${
             aiMode
-              ? 'bg-[#181524] dark:bg-[#151221] border-2 border-purple-400/80 shadow-purple-950/20 ring-2 ring-purple-500/20'
-              : 'bg-white dark:bg-[#1a211c] border border-stone-200 dark:border-stone-800'
+              ? 'bg-[#181524]/90 dark:bg-[#151221]/90 border-2 border-purple-400/80 shadow-spatial-float ring-2 ring-purple-500/20 shadow-purple-950/20'
+              : 'bg-white/85 dark:bg-[#1a221d]/85 border border-white/60 dark:border-white/10 shadow-spatial-float ring-1 ring-black/[0.04] dark:ring-white/[0.05]'
           }`}
         >
           <div className="flex items-center pl-3 text-stone-400">
@@ -356,7 +361,7 @@ export default function HomePage() {
             className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold tracking-wide transition-all duration-200 shrink-0 select-none ${
               aiMode
                 ? 'bg-purple-700 hover:bg-purple-600 text-white shadow-md shadow-purple-900/40 border border-purple-400/50 ring-1 ring-purple-400/40 scale-105'
-                : 'bg-stone-100 dark:bg-stone-800 hover:bg-stone-200 dark:hover:bg-stone-700 text-stone-600 dark:text-stone-300 border border-stone-300 dark:border-stone-700 opacity-80'
+                : 'bg-stone-100/80 dark:bg-white/10 hover:bg-stone-200 dark:hover:bg-white/15 text-stone-700 dark:text-stone-200 border border-stone-200 dark:border-white/10'
             }`}
             title="Toggle AI Search Mode"
           >
@@ -367,7 +372,7 @@ export default function HomePage() {
           {/* Search Action Button */}
           <button
             type="submit"
-            className="bg-cordova-gold hover:bg-cordova-goldHover text-white p-3 rounded-xl transition-colors duration-200 shrink-0 shadow-sm"
+            className="bg-gradient-to-r from-cordova-gold to-amber-600 hover:from-cordova-goldHover hover:to-amber-700 text-white p-3 rounded-xl transition-all duration-200 shrink-0 shadow-spatial-sm hover:shadow-spatial-gold-glow active:scale-95 border border-white/20"
             aria-label="Search"
           >
             <Search size={17} />
@@ -376,7 +381,7 @@ export default function HomePage() {
 
         {/* Quick Suggestion Chips */}
         {aiMode && (
-          <div className="flex flex-wrap items-center justify-center gap-2 mt-3 text-xs">
+          <div className="flex flex-wrap items-center justify-center gap-2 mt-4 text-xs">
             <span className="text-stone-500 dark:text-stone-400 font-medium text-[11px]">Popular AI Searches:</span>
             {['Sunset View', 'Bakasi & Shellfish', 'Resort Dining', 'Budget-Friendly Grill', 'Acoustic / Live Music'].map((chip) => (
               <button
@@ -386,7 +391,7 @@ export default function HomePage() {
                   setSearchQuery(chip);
                   setPage(1);
                 }}
-                className="px-2.5 py-1 rounded-full bg-white/80 dark:bg-purple-950/40 hover:bg-purple-50 dark:hover:bg-purple-900/50 border border-purple-200/60 dark:border-purple-800/60 text-purple-700 dark:text-purple-300 font-medium transition-all text-[11px] shadow-2xs hover:scale-105"
+                className="px-3 py-1.5 rounded-full bg-white/75 dark:bg-purple-950/40 hover:bg-purple-50 dark:hover:bg-purple-900/50 border border-purple-200/60 dark:border-purple-800/60 text-purple-700 dark:text-purple-300 font-medium transition-all text-[11px] shadow-spatial-sm hover:scale-105 backdrop-blur-md"
               >
                 ✨ {chip}
               </button>
@@ -396,12 +401,12 @@ export default function HomePage() {
       </section>
 
       {/* EXPLORE BY CATEGORY SECTION */}
-      <section className="max-w-6xl mx-auto px-4 mt-20">
+      <section className="max-w-6xl mx-auto px-4 mt-20 relative z-10">
         <div className="text-center mb-10">
           <h2 className="font-serif text-3xl sm:text-4xl font-bold text-stone-900 dark:text-white">
             Explore by Category
           </h2>
-          <div className="h-0.5 w-16 bg-cordova-gold mx-auto mt-3" />
+          <div className="h-0.5 w-16 bg-cordova-gold mx-auto mt-3 rounded-full" />
         </div>
 
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4 max-w-6xl mx-auto">
@@ -419,16 +424,16 @@ export default function HomePage() {
               <button
                 key={cat.id}
                 onClick={() => handleCategoryClick(cat.cuisine)}
-                className={`bg-white dark:bg-[#1a211c] border rounded-lg p-5 flex flex-col items-center justify-center gap-3 transition-all duration-300 group shadow-sm hover:shadow-md ${
+                className={`spatial-card p-5 flex flex-col items-center justify-center gap-3 transition-all duration-300 group ${
                   isSelected
-                    ? 'border-cordova-gold ring-2 ring-cordova-gold/30 bg-amber-50/40 dark:bg-amber-950/20'
-                    : 'border-stone-200/80 dark:border-stone-800/80 hover:border-cordova-gold'
+                    ? 'border-cordova-gold dark:border-cordova-gold ring-2 ring-cordova-gold/30 bg-amber-500/10 dark:bg-amber-500/15 shadow-spatial-md scale-[1.03]'
+                    : 'hover:border-cordova-gold/60 dark:hover:border-cordova-gold/60'
                 }`}
               >
-                <div className="text-cordova-gold group-hover:scale-110 transition-transform duration-300">
+                <div className="text-cordova-gold group-hover:scale-110 transition-transform duration-300 drop-shadow-sm">
                   <IconComp size={28} strokeWidth={1.75} />
                 </div>
-                <span className="font-serif text-xs sm:text-sm font-bold text-center text-stone-800 dark:text-stone-200 group-hover:text-cordova-green transition-colors">
+                <span className="font-serif text-xs sm:text-sm font-bold text-center text-stone-800 dark:text-stone-200 group-hover:text-cordova-green dark:group-hover:text-emerald-400 transition-colors">
                   {cat.label}
                 </span>
               </button>
@@ -438,11 +443,11 @@ export default function HomePage() {
       </section>
 
       {/* RECOMMENDED FOR YOU SWIPEABLE CAROUSEL SECTION */}
-      <section className="max-w-6xl mx-auto px-4 mt-20">
+      <section className="max-w-6xl mx-auto px-4 mt-20 relative z-10">
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-8">
           <div>
             <div className="flex items-center gap-2">
-              <Sparkles size={20} className="text-cordova-gold animate-pulse" />
+              <Sparkles size={20} className="text-cordova-gold animate-pulse drop-shadow-sm" />
               <h2 className="font-serif text-3xl sm:text-4xl font-bold text-stone-900 dark:text-white">
                 Recommended For You
               </h2>
@@ -452,21 +457,21 @@ export default function HomePage() {
                 ? 'Handpicked recommendations curated for your taste preferences.'
                 : 'Top-rated culinary hotspots and local favorites in Cordova.'}
             </p>
-            <div className="h-0.5 w-16 bg-cordova-gold mt-3" />
+            <div className="h-0.5 w-16 bg-cordova-gold mt-3 rounded-full" />
           </div>
 
           <div className="flex items-center gap-3 self-end sm:self-center">
             {user ? (
               <button
                 onClick={() => router.push('/profile#taste-preferences')}
-                className="text-xs font-semibold text-cordova-green dark:text-emerald-400 hover:underline px-2 py-1"
+                className="text-xs font-semibold text-cordova-green dark:text-emerald-400 hover:text-emerald-600 transition-colors px-3 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 backdrop-blur-sm shadow-spatial-sm hover:scale-105 active:scale-95"
               >
                 Adjust Preferences
               </button>
             ) : (
               <button
                 onClick={() => router.push('/login')}
-                className="text-xs font-semibold text-cordova-gold hover:underline px-2 py-1"
+                className="text-xs font-semibold text-cordova-gold hover:text-amber-500 transition-colors px-3 py-1.5 rounded-full bg-amber-500/10 border border-amber-500/20 backdrop-blur-sm shadow-spatial-sm hover:scale-105 active:scale-95"
               >
                 Personalize Tastes
               </button>
@@ -477,14 +482,14 @@ export default function HomePage() {
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => scrollRec('left')}
-                  className="p-2.5 rounded-full bg-white dark:bg-[#1a211c] border border-stone-200 dark:border-stone-800 shadow-sm hover:bg-cordova-green hover:text-white dark:hover:bg-cordova-green transition-colors text-stone-700 dark:text-stone-300"
+                  className="p-2.5 rounded-full bg-white/80 dark:bg-[#1a221d]/80 backdrop-blur-md border border-stone-200/80 dark:border-white/10 shadow-spatial-sm hover:bg-cordova-green hover:text-white dark:hover:bg-emerald-700 dark:hover:text-white transition-all text-stone-700 dark:text-stone-300 active:scale-90"
                   aria-label="Scroll left"
                 >
                   <ChevronLeft size={20} />
                 </button>
                 <button
                   onClick={() => scrollRec('right')}
-                  className="p-2.5 rounded-full bg-white dark:bg-[#1a211c] border border-stone-200 dark:border-stone-800 shadow-sm hover:bg-cordova-green hover:text-white dark:hover:bg-cordova-green transition-colors text-stone-700 dark:text-stone-300"
+                  className="p-2.5 rounded-full bg-white/80 dark:bg-[#1a221d]/80 backdrop-blur-md border border-stone-200/80 dark:border-white/10 shadow-spatial-sm hover:bg-cordova-green hover:text-white dark:hover:bg-emerald-700 dark:hover:text-white transition-all text-stone-700 dark:text-stone-300 active:scale-90"
                   aria-label="Scroll right"
                 >
                   <ChevronRight size={20} />
@@ -515,7 +520,7 @@ export default function HomePage() {
             ))}
           </div>
         ) : (
-          <div className="bg-white dark:bg-[#1a211c] rounded-lg border border-stone-200 dark:border-stone-800 p-8 text-center text-stone-500 max-w-md mx-auto">
+          <div className="spatial-card p-8 text-center text-stone-500 max-w-md mx-auto">
             <p className="text-2xl mb-2">✨</p>
             <p className="font-serif font-medium text-stone-800 dark:text-stone-200 mb-1">
               Personalize Your Experience
@@ -525,7 +530,7 @@ export default function HomePage() {
             </p>
             <button
               onClick={() => router.push(user ? '/profile#taste-preferences' : '/login')}
-              className="bg-cordova-green hover:bg-cordova-greenHover text-white text-xs font-semibold px-5 py-2.5 rounded shadow"
+              className="bg-cordova-green hover:bg-cordova-greenHover text-white text-xs font-semibold px-5 py-2.5 rounded-xl shadow-spatial-sm active:scale-95"
             >
               Set Preferences
             </button>
@@ -534,13 +539,13 @@ export default function HomePage() {
       </section>
 
       {/* ALL ESTABLISHMENTS SECTION */}
-      <section ref={establishmentsRef} className="max-w-6xl mx-auto px-4 mt-20 scroll-mt-6">
+      <section ref={establishmentsRef} className="max-w-6xl mx-auto px-4 mt-24 scroll-mt-6 relative z-10">
         <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-10">
           <div>
             <h2 className="font-serif text-3xl sm:text-4xl font-bold text-stone-900 dark:text-white capitalize">
               {activeCategory ? `${activeCategory} Establishments` : 'All Establishments'}
             </h2>
-            <div className="h-0.5 w-16 bg-cordova-gold mt-3" />
+            <div className="h-0.5 w-16 bg-cordova-gold mt-3 rounded-full" />
           </div>
 
           {meta && meta.totalCount > 0 && (
@@ -553,7 +558,7 @@ export default function HomePage() {
         {loading ? (
           <RestaurantGridSkeleton count={6} />
         ) : restaurants.length === 0 ? (
-          <div className="bg-white dark:bg-[#1a211c] rounded-lg border border-stone-200 dark:border-stone-800 p-12 text-center text-stone-500 max-w-md mx-auto">
+          <div className="spatial-card p-12 text-center text-stone-500 max-w-md mx-auto">
             <p className="text-3xl mb-3">🍽️</p>
             <p className="font-serif text-lg font-medium text-stone-800 dark:text-stone-200 mb-1">
               No establishments found
@@ -568,7 +573,7 @@ export default function HomePage() {
                   setSearchQuery('');
                   setPage(1);
                 }}
-                className="mt-4 text-xs font-semibold text-cordova-green hover:underline"
+                className="mt-4 text-xs font-semibold text-cordova-green dark:text-emerald-400 hover:underline"
               >
                 Clear filters
               </button>

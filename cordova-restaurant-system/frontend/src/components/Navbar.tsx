@@ -41,14 +41,16 @@ export function Navbar() {
 
   return (
     <header
-      className={`sticky top-0 z-50 bg-white/95 dark:bg-[#141815]/95 backdrop-blur-md transition-all duration-200 border-b ${
-        scrolled ? 'border-gray-200 dark:border-gray-800 shadow-sm' : 'border-gray-100 dark:border-gray-800/60'
+      className={`sticky top-0 z-50 transition-all duration-300 ${
+        scrolled
+          ? 'bg-white/80 dark:bg-[#141815]/85 backdrop-blur-2xl border-b border-white/60 dark:border-white/10 shadow-spatial-md ring-1 ring-black/[0.03] dark:ring-white/[0.05]'
+          : 'bg-white/60 dark:bg-[#141815]/60 backdrop-blur-xl border-b border-stone-200/40 dark:border-white/5'
       }`}
     >
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-24 flex items-center justify-between">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 sm:h-24 flex items-center justify-between">
         {/* Brand Logo & Name */}
         <Link href="/" className="flex items-center gap-3.5 group py-1">
-          <div className="relative h-16 w-16 sm:h-20 sm:w-20 shrink-0 transition-transform duration-300 group-hover:scale-105 filter drop-shadow-sm">
+          <div className="relative h-14 w-14 sm:h-18 sm:w-18 shrink-0 transition-transform duration-300 group-hover:scale-105 filter drop-shadow-md">
             <Image
               src="/cordova_eats_logo.png"
               alt="CordovaEats Logo"
@@ -57,56 +59,61 @@ export function Navbar() {
               priority
             />
           </div>
-          <span className="font-serif text-2xl sm:text-3xl font-bold text-[#1b241f] dark:text-white tracking-tight group-hover:text-cordova-green transition-colors">
+          <span className="font-serif text-2xl sm:text-3xl font-bold text-[#1b241f] dark:text-white tracking-tight group-hover:text-cordova-green dark:group-hover:text-emerald-400 transition-colors drop-shadow-sm">
             CordovaEats
           </span>
         </Link>
 
         {/* Center / Right Links */}
         <div className="hidden md:flex items-center gap-6">
-          <nav className="flex items-center gap-5 mr-2">
-            {navLinks.map((link) => (
-              <Link
-                key={link.href}
-                href={link.href}
-                className={`text-sm font-medium transition-colors ${
-                  pathname === link.href
-                    ? 'text-cordova-green dark:text-emerald-400 font-semibold'
-                    : 'text-stone-600 dark:text-stone-300 hover:text-cordova-green'
-                }`}
-              >
-                {link.label}
-              </Link>
-            ))}
+          <nav className="flex items-center gap-1.5 p-1 rounded-full bg-stone-100/70 dark:bg-[#1a221d]/70 backdrop-blur-md border border-stone-200/50 dark:border-white/5 shadow-inner mr-2">
+            {navLinks.map((link) => {
+              const isActive = pathname === link.href;
+              return (
+                <Link
+                  key={link.href}
+                  href={link.href}
+                  className={`relative text-xs font-semibold px-4 py-2 rounded-full transition-all duration-200 ${
+                    isActive
+                      ? 'bg-white dark:bg-[#253028] text-cordova-green dark:text-emerald-400 shadow-spatial-sm border border-black/[0.04] dark:border-white/10'
+                      : 'text-stone-600 dark:text-stone-300 hover:text-stone-900 dark:hover:text-white hover:bg-white/50 dark:hover:bg-white/5'
+                  }`}
+                >
+                  {link.label}
+                </Link>
+              );
+            })}
           </nav>
 
-          <ThemeToggle />
+          <div className="flex items-center gap-3 pl-2 border-l border-stone-200/60 dark:border-white/10">
+            <ThemeToggle />
 
-          {user ? (
-            <ProfileDropdown />
-          ) : (
-            <div className="flex items-center gap-4">
-              <Link
-                href="/login"
-                className="text-xs font-semibold text-stone-700 dark:text-stone-200 hover:text-cordova-green transition-colors px-2 py-1"
-              >
-                Sign In
-              </Link>
-              <Link
-                href="/register"
-                className="bg-cordova-gold hover:bg-cordova-goldHover text-white text-xs font-semibold px-5 py-2.5 rounded shadow-sm transition-colors duration-200 tracking-wide uppercase"
-              >
-                Sign Up
-              </Link>
-            </div>
-          )}
+            {user ? (
+              <ProfileDropdown />
+            ) : (
+              <div className="flex items-center gap-3">
+                <Link
+                  href="/login"
+                  className="text-xs font-semibold text-stone-700 dark:text-stone-200 hover:text-cordova-green dark:hover:text-emerald-400 transition-colors px-3 py-2 rounded-full hover:bg-black/5 dark:hover:bg-white/5"
+                >
+                  Sign In
+                </Link>
+                <Link
+                  href="/register"
+                  className="bg-gradient-to-r from-cordova-gold to-amber-600 hover:from-cordova-goldHover hover:to-amber-700 text-white text-xs font-bold px-5 py-2.5 rounded-full shadow-spatial-sm hover:shadow-spatial-gold-glow transition-all duration-200 tracking-wide uppercase active:scale-95 border border-white/20"
+                >
+                  Sign Up
+                </Link>
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Mobile menu trigger */}
         <div className="flex items-center gap-2 md:hidden">
           <ThemeToggle />
           <button
-            className="p-2 rounded-lg text-stone-700 dark:text-stone-200 hover:bg-black/5 dark:hover:bg-white/5 transition-colors"
+            className="p-2 rounded-xl text-stone-700 dark:text-stone-200 hover:bg-black/5 dark:hover:bg-white/5 transition-colors border border-transparent hover:border-stone-200/50"
             onClick={() => setMenuOpen((o) => !o)}
             aria-label="Toggle menu"
           >
@@ -117,40 +124,50 @@ export function Navbar() {
 
       {/* Mobile Drawer */}
       {menuOpen && (
-        <div className="md:hidden border-t border-gray-200 dark:border-gray-800 bg-white dark:bg-[#141815] px-6 py-4 space-y-3">
-          {[...navLinks, ...roleLinks].map((link) => (
-            <Link
-              key={link.href}
-              href={link.href}
-              className="block py-2 text-sm font-medium text-stone-700 dark:text-stone-200 hover:text-cordova-green"
-              onClick={() => setMenuOpen(false)}
-            >
-              {link.label}
-            </Link>
-          ))}
-          <div className="pt-3 border-t border-gray-100 dark:border-gray-800">
+        <div className="md:hidden border-t border-stone-200/60 dark:border-white/10 bg-white/95 dark:bg-[#141815]/95 backdrop-blur-2xl px-6 py-5 space-y-3 shadow-spatial-lg animate-fadeIn">
+          <div className="space-y-1">
+            {[...navLinks, ...roleLinks].map((link) => {
+              const isActive = pathname === link.href;
+              return (
+                <Link
+                  key={link.href}
+                  href={link.href}
+                  className={`block px-3 py-2.5 rounded-xl text-sm font-medium transition-colors ${
+                    isActive
+                      ? 'bg-stone-100 dark:bg-[#1f2821] text-cordova-green dark:text-emerald-400 font-semibold'
+                      : 'text-stone-700 dark:text-stone-200 hover:bg-stone-50 dark:hover:bg-white/5'
+                  }`}
+                  onClick={() => setMenuOpen(false)}
+                >
+                  {link.label}
+                </Link>
+              );
+            })}
+          </div>
+
+          <div className="pt-3 border-t border-stone-200/60 dark:border-white/10">
             {user ? (
               <button
                 onClick={() => {
                   setMenuOpen(false);
                   logout();
                 }}
-                className="w-full text-left py-2 text-sm font-medium text-red-600"
+                className="w-full text-left px-3 py-2 text-sm font-semibold text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/30 rounded-xl transition-colors"
               >
                 Log out
               </button>
             ) : (
-              <div className="flex flex-col gap-2 pt-1">
+              <div className="flex flex-col gap-2.5 pt-1">
                 <Link
                   href="/login"
-                  className="w-full text-center py-2 text-sm font-medium text-stone-700 dark:text-stone-200 border border-stone-200 rounded"
+                  className="w-full text-center py-2.5 text-sm font-semibold text-stone-700 dark:text-stone-200 border border-stone-200 dark:border-white/10 rounded-xl hover:bg-stone-50 dark:hover:bg-white/5 transition-colors"
                   onClick={() => setMenuOpen(false)}
                 >
                   Sign In
                 </Link>
                 <Link
                   href="/register"
-                  className="w-full text-center py-2 text-sm font-semibold text-white bg-cordova-gold hover:bg-cordova-goldHover rounded"
+                  className="w-full text-center py-2.5 text-sm font-bold text-white bg-gradient-to-r from-cordova-gold to-amber-600 hover:from-cordova-goldHover hover:to-amber-700 rounded-xl shadow-spatial-sm transition-all uppercase tracking-wide"
                   onClick={() => setMenuOpen(false)}
                 >
                   Sign Up
