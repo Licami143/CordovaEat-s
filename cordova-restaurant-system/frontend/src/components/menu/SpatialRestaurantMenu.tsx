@@ -5,21 +5,13 @@ import Image from 'next/image';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Sparkles,
-  ShoppingBag,
-  Flame,
   Star,
   Info,
-  Check,
-  Phone,
-  Plus,
-  Minus,
   X,
   Search,
   Utensils,
-  Award,
 } from 'lucide-react';
 import type { Restaurant, MenuItem, MenuCategory } from '@/lib/types';
-import { useToast } from '@/lib/toast-context';
 
 interface SpatialRestaurantMenuProps {
   restaurant: Restaurant;
@@ -345,7 +337,6 @@ const CATEGORY_DEFAULT_MENUS: Record<
 };
 
 export function SpatialRestaurantMenu({ restaurant, items = [], categories = [] }: SpatialRestaurantMenuProps) {
-  const { toast } = useToast();
   const categoryKey = restaurant.category || 'Restaurant';
   const defaultData = CATEGORY_DEFAULT_MENUS[categoryKey] || CATEGORY_DEFAULT_MENUS.Restaurant;
 
@@ -353,17 +344,6 @@ export function SpatialRestaurantMenu({ restaurant, items = [], categories = [] 
   const [activeCategory, setActiveCategory] = useState<string>('All');
   const [searchQuery, setSearchQuery] = useState('');
   const [activeHotspot, setActiveHotspot] = useState<number | null>(null);
-
-  // Quick Order Modal State
-  const [modalItem, setModalItem] = useState<{
-    name: string;
-    price: number;
-    description: string;
-    image: string;
-    tag?: string;
-  } | null>(null);
-  const [quantity, setQuantity] = useState(1);
-  const [specialNotes, setSpecialNotes] = useState('');
 
   // Merge API items with curated default items if API items are sparse
   const allMenuItems = useMemo(() => {
@@ -424,24 +404,6 @@ export function SpatialRestaurantMenu({ restaurant, items = [], categories = [] 
 
   const hero = defaultData.heroDish;
 
-  const handleOpenOrder = (item: {
-    name: string;
-    price: number;
-    description: string;
-    image: string;
-    tag?: string;
-  }) => {
-    setModalItem(item);
-    setQuantity(1);
-    setSpecialNotes('');
-  };
-
-  const handleConfirmOrder = () => {
-    if (!modalItem) return;
-    toast(`Added ${quantity}x "${modalItem.name}" to order inquiry!`, 'success');
-    setModalItem(null);
-  };
-
   return (
     <div className="space-y-16">
       {/* ========================================================================= */}
@@ -479,56 +441,13 @@ export function SpatialRestaurantMenu({ restaurant, items = [], categories = [] 
           </div>
         </div>
 
-        {/* Center Grid: Floating Dish + Interactive Hotspots + Floating Cards */}
-        <div className="relative z-10 grid grid-cols-1 lg:grid-cols-12 gap-8 items-center mt-8">
-          {/* Left Column: Floating Order Notepad Card */}
-          <motion.div
-            initial={{ opacity: 0, x: -30 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.6 }}
-            className="lg:col-span-3 flex flex-col gap-4"
-          >
-            {/* Notepad Card */}
-            <div className="bg-white/10 dark:bg-black/40 backdrop-blur-2xl border border-white/20 rounded-2xl p-4 sm:p-5 shadow-spatial-float text-white">
-              <div className="flex items-center gap-2 text-xs font-bold text-cordova-gold uppercase tracking-wider mb-2">
-                <Utensils size={14} />
-                <span>Place your order</span>
-              </div>
-              <h4 className="font-serif text-lg font-bold text-white line-clamp-1">{hero.name}</h4>
-              <p className="text-xs text-stone-300 line-clamp-2 mt-1">{hero.description}</p>
-              <div className="flex items-center justify-between mt-4 pt-3 border-t border-white/10">
-                <span className="font-bold text-base text-amber-400">₱{hero.price}</span>
-                <button
-                  onClick={() =>
-                    handleOpenOrder({
-                      name: hero.name,
-                      price: hero.price,
-                      description: hero.description,
-                      image: hero.image,
-                      tag: '🏆 Signature Highlight',
-                    })
-                  }
-                  className="px-3 py-1.5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-white text-xs font-bold uppercase tracking-wider shadow-sm transition-all active:scale-95 flex items-center gap-1"
-                >
-                  <ShoppingBag size={12} />
-                  <span>Order</span>
-                </button>
-              </div>
-            </div>
-
-            {/* Quick Chef Badge */}
-            <div className="flex items-center gap-3 px-4 py-3 rounded-2xl bg-white/5 border border-white/10 text-stone-300 text-xs">
-              <Award size={18} className="text-emerald-400 shrink-0" />
-              <span>Prepared fresh daily with authentic local spices and ingredients.</span>
-            </div>
-          </motion.div>
-
-          {/* Center Column: Big 3D Floating Dish with Interactive Hotspots */}
+        {/* Center: Big 3D Floating Dish with Interactive Hotspots */}
+        <div className="relative z-10 flex flex-col items-center justify-center mt-8">
           <motion.div
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ duration: 0.7, delay: 0.1 }}
-            className="lg:col-span-6 relative flex flex-col items-center justify-center py-4"
+            className="relative flex flex-col items-center justify-center py-4"
           >
             {/* Main Floating Dish Presentation */}
             <motion.div
@@ -588,72 +507,23 @@ export function SpatialRestaurantMenu({ restaurant, items = [], categories = [] 
               })}
             </motion.div>
 
+            {/* Signature Dish Details */}
+            <div className="text-center mt-6 max-w-lg">
+              <h4 className="font-serif text-2xl sm:text-3xl font-bold text-white drop-shadow-md">
+                {hero.name}
+              </h4>
+              <p className="text-xs sm:text-sm text-stone-300 mt-2 leading-relaxed font-sans">
+                {hero.description}
+              </p>
+              <div className="mt-3 inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-amber-500/20 border border-amber-400/40 text-amber-300 font-bold text-base">
+                <span>₱{hero.price}</span>
+              </div>
+            </div>
+
             {/* Hotspot helper text */}
             <p className="text-[11px] text-emerald-300/80 mt-4 flex items-center gap-1.5 font-medium tracking-wide">
               <Info size={12} /> Tap numbers on the dish to discover ingredient secrets
             </p>
-          </motion.div>
-
-          {/* Right Column: Social Proof & Order CTA */}
-          <motion.div
-            initial={{ opacity: 0, x: 30 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.6 }}
-            className="lg:col-span-3 flex flex-col gap-5 text-white"
-          >
-            {/* 100K+ Bites Stat Card */}
-            <div className="bg-white/10 dark:bg-black/40 backdrop-blur-2xl border border-white/20 rounded-2xl p-5 shadow-spatial-float">
-              <div className="text-3xl font-black font-serif text-white tracking-tight">10K+</div>
-              <p className="text-xs font-semibold text-emerald-300 mt-0.5">Happy bites delivered</p>
-
-              {/* Avatar Pile */}
-              <div className="flex items-center gap-2 mt-4">
-                <div className="flex -space-x-2">
-                  <div className="h-8 w-8 rounded-full border-2 border-white overflow-hidden relative">
-                    <Image
-                      src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80"
-                      alt="Reviewer"
-                      fill
-                      className="object-cover"
-                    />
-                  </div>
-                  <div className="h-8 w-8 rounded-full border-2 border-white overflow-hidden relative">
-                    <Image
-                      src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&auto=format&fit=crop&q=80"
-                      alt="Reviewer"
-                      fill
-                      className="object-cover"
-                    />
-                  </div>
-                  <div className="h-8 w-8 rounded-full border-2 border-white overflow-hidden relative">
-                    <Image
-                      src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&auto=format&fit=crop&q=80"
-                      alt="Reviewer"
-                      fill
-                      className="object-cover"
-                    />
-                  </div>
-                </div>
-                <span className="text-[11px] text-stone-300 font-medium">Loved by locals</span>
-              </div>
-            </div>
-
-            {/* Main Order CTA Button */}
-            <button
-              onClick={() =>
-                handleOpenOrder({
-                  name: hero.name,
-                  price: hero.price,
-                  description: hero.description,
-                  image: hero.image,
-                  tag: '⭐ Signature Experience',
-                })
-              }
-              className="w-full py-4 rounded-2xl bg-gradient-to-r from-emerald-500 via-emerald-600 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-white font-bold text-sm tracking-wider uppercase shadow-[0_8px_25px_rgba(16,185,129,0.35),inset_0_1px_1px_rgba(255,255,255,0.4)] active:scale-95 transition-all flex items-center justify-center gap-2 border border-emerald-300/40"
-            >
-              <ShoppingBag size={18} />
-              <span>ORDER NOW &bull; ₱{hero.price}</span>
-            </button>
           </motion.div>
         </div>
       </section>
@@ -779,128 +649,11 @@ export function SpatialRestaurantMenu({ restaurant, items = [], categories = [] 
                     </p>
                   </div>
                 </div>
-
-                {/* Card Action Footer */}
-                <div className="p-4 sm:p-5 pt-0 mt-auto">
-                  <button
-                    onClick={() => handleOpenOrder(item)}
-                    className="w-full py-2.5 px-4 rounded-xl bg-stone-100 dark:bg-white/10 hover:bg-cordova-green hover:text-white dark:hover:bg-emerald-600 dark:hover:text-white text-stone-800 dark:text-stone-200 text-xs font-bold uppercase tracking-wider transition-all duration-200 flex items-center justify-center gap-1.5 active:scale-95 border border-stone-200/60 dark:border-white/10 group-hover:border-cordova-green/50"
-                  >
-                    <ShoppingBag size={14} />
-                    <span>Quick Order / Details</span>
-                  </button>
-                </div>
               </motion.div>
             ))}
           </div>
         )}
       </section>
-
-      {/* ========================================================================= */}
-      {/* 🛍️ 3. SPATIAL QUICK ORDER & DISH DETAIL MODAL */}
-      {/* ========================================================================= */}
-      <AnimatePresence>
-        {modalItem && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-md">
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95, y: 20 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              className="relative w-full max-w-lg bg-white/95 dark:bg-[#151c17]/95 backdrop-blur-2xl border border-white/60 dark:border-white/15 rounded-3xl shadow-[0_24px_64px_rgba(0,0,0,0.5)] overflow-hidden text-stone-900 dark:text-white"
-            >
-              {/* Close Button */}
-              <button
-                onClick={() => setModalItem(null)}
-                className="absolute top-4 right-4 z-10 p-2 rounded-full bg-black/40 text-white hover:bg-black/60 transition-colors"
-                title="Close"
-              >
-                <X size={18} />
-              </button>
-
-              {/* Modal Dish Header Photo */}
-              <div className="relative h-56 w-full overflow-hidden bg-stone-100 dark:bg-stone-800">
-                <Image src={modalItem.image} alt={modalItem.name} fill className="object-cover" />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
-                <div className="absolute bottom-4 left-6 right-6 flex items-end justify-between">
-                  <div>
-                    {modalItem.tag && (
-                      <span className="text-[10px] font-bold uppercase tracking-wider text-cordova-gold bg-black/50 px-2 py-0.5 rounded-md backdrop-blur-sm">
-                        {modalItem.tag}
-                      </span>
-                    )}
-                    <h3 className="font-serif text-2xl font-bold text-white mt-1">{modalItem.name}</h3>
-                  </div>
-                  <span className="text-xl font-bold text-amber-400">₱{modalItem.price}</span>
-                </div>
-              </div>
-
-              {/* Modal Body */}
-              <div className="p-6 space-y-5">
-                <p className="text-xs sm:text-sm text-stone-600 dark:text-stone-300 leading-relaxed">
-                  {modalItem.description}
-                </p>
-
-                {/* Quantity Selector */}
-                <div className="flex items-center justify-between p-3 rounded-2xl bg-stone-100/80 dark:bg-white/5 border border-stone-200/80 dark:border-white/10">
-                  <span className="text-xs font-bold uppercase tracking-wider text-stone-600 dark:text-stone-300">
-                    Select Quantity
-                  </span>
-                  <div className="flex items-center gap-3">
-                    <button
-                      onClick={() => setQuantity((q) => Math.max(1, q - 1))}
-                      className="p-1.5 rounded-lg bg-white dark:bg-stone-800 border border-stone-200 dark:border-white/10 text-stone-700 dark:text-stone-200 hover:bg-stone-200 active:scale-95"
-                    >
-                      <Minus size={14} />
-                    </button>
-                    <span className="font-bold text-sm min-w-[20px] text-center">{quantity}</span>
-                    <button
-                      onClick={() => setQuantity((q) => q + 1)}
-                      className="p-1.5 rounded-lg bg-white dark:bg-stone-800 border border-stone-200 dark:border-white/10 text-stone-700 dark:text-stone-200 hover:bg-stone-200 active:scale-95"
-                    >
-                      <Plus size={14} />
-                    </button>
-                  </div>
-                </div>
-
-                {/* Special Instructions */}
-                <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-stone-600 dark:text-stone-300 mb-1.5">
-                    Special Preparation Notes (Optional)
-                  </label>
-                  <input
-                    type="text"
-                    value={specialNotes}
-                    onChange={(e) => setSpecialNotes(e.target.value)}
-                    placeholder="e.g. Less spicy, extra sauce, separate dressing..."
-                    className="w-full px-3.5 py-2.5 text-xs bg-stone-50 dark:bg-black/30 border border-stone-200 dark:border-white/10 rounded-xl text-stone-900 dark:text-white placeholder:text-stone-400 focus:outline-none focus:ring-2 focus:ring-cordova-green/50"
-                  />
-                </div>
-
-                {/* Action Buttons: Direct Call & Confirm Order */}
-                <div className="flex flex-col sm:flex-row items-center gap-3 pt-2">
-                  {restaurant.phone && (
-                    <a
-                      href={`tel:${restaurant.phone.replace(/\s+/g, '')}`}
-                      className="w-full sm:w-auto flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-stone-100 dark:bg-white/10 hover:bg-stone-200 dark:hover:bg-white/15 text-stone-800 dark:text-stone-200 text-xs font-bold uppercase tracking-wider border border-stone-200 dark:border-white/10 transition-all shrink-0"
-                    >
-                      <Phone size={15} className="text-emerald-500" />
-                      <span>Call {restaurant.phone}</span>
-                    </a>
-                  )}
-
-                  <button
-                    onClick={handleConfirmOrder}
-                    className="w-full flex-1 flex items-center justify-center gap-2 py-3 px-6 rounded-xl bg-gradient-to-r from-cordova-green to-emerald-700 hover:from-emerald-700 hover:to-emerald-800 text-white text-xs font-bold uppercase tracking-wider shadow-spatial-sm active:scale-95 transition-all"
-                  >
-                    <Check size={16} />
-                    <span>Confirm Selection &bull; ₱{(modalItem.price * quantity).toFixed(0)}</span>
-                  </button>
-                </div>
-              </div>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
     </div>
   );
 }

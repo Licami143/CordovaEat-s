@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, FormEvent } from 'react';
+import { useState, useEffect, useRef, FormEvent } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -33,18 +33,27 @@ export default function LoginPage() {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(false);
   const [oauthLoading, setOauthLoading] = useState<'google' | 'facebook' | null>(null);
+  const redirectedRef = useRef(false);
 
   const handleSuccessfulAuth = (authUserData?: any) => {
+    if (redirectedRef.current) return;
+    redirectedRef.current = true;
+
     const targetUser = authUserData || user;
     if (REQUIRE_EMAIL_VERIFICATION && targetUser && !targetUser.email_verified) {
       showToast('Please verify your email address to unlock all features.', 'warning');
       router.replace('/verify-email-required');
       return;
     }
-    // Honour ?redirect= param from protected-route redirects (e.g. /dashboard/new)
+    // Honour ?redirect= param from protected-route redirects (e.g. /dashboard/new) if role is authorized
     if (redirectTo && redirectTo !== '/' && redirectTo.startsWith('/')) {
-      router.replace(redirectTo);
-      return;
+      const isRestrictedAdmin = redirectTo.startsWith('/admin') && targetUser?.role !== 'admin';
+      const isRestrictedDashboard = redirectTo.startsWith('/dashboard') && targetUser?.role !== 'owner' && targetUser?.role !== 'admin';
+
+      if (!isRestrictedAdmin && !isRestrictedDashboard) {
+        router.replace(redirectTo);
+        return;
+      }
     }
     if (targetUser?.role === 'admin') {
       router.replace('/admin');
@@ -59,7 +68,7 @@ export default function LoginPage() {
 
   // If user is already authenticated, immediately navigate away from login
   useEffect(() => {
-    if (user && !loading && !oauthLoading) {
+    if (user && !loading && !oauthLoading && !redirectedRef.current) {
       handleSuccessfulAuth(user);
     }
   }, [user, loading, oauthLoading]);

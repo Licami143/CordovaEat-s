@@ -16,11 +16,17 @@ async function listForRestaurant(restaurantId) {
 async function replaceWeek(restaurantId, days) {
   return withTransaction(async (client) => {
     await client.query(`DELETE FROM operating_hours WHERE restaurant_id = $1`, [restaurantId]);
-    for (const d of days) {
+    for (let i = 0; i < days.length; i++) {
+      const d = days[i];
+      const dayOfWeek = d.day_of_week !== undefined ? Number(d.day_of_week) : (d.dayOfWeek !== undefined ? Number(d.dayOfWeek) : i);
+      const openTime = d.open_time || d.openTime || '09:00';
+      const closeTime = d.close_time || d.closeTime || '21:00';
+      const isClosed = Boolean(d.is_closed !== undefined ? d.is_closed : d.isClosed);
+
       await client.query(
         `INSERT INTO operating_hours (restaurant_id, day_of_week, open_time, close_time, is_closed)
          VALUES ($1,$2,$3,$4,$5)`,
-        [restaurantId, d.dayOfWeek, d.openTime, d.closeTime, d.isClosed || false]
+        [restaurantId, dayOfWeek, openTime, closeTime, isClosed]
       );
     }
     const { rows } = await client.query(

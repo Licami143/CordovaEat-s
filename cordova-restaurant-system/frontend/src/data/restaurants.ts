@@ -338,6 +338,17 @@ export const RESTAURANT_CUSTOMIZATIONS: Record<string, RestaurantCustomConfig> =
     phone: '0927 296 4811',
     hours: '9:00 AM – 9:00 PM (Daily)',
   },
+
+  // The Latte Cafe
+  'the-latte-cafe-mtvn5h2j': {
+    name: 'The Latte Cafe',
+    category: 'Cafe',
+    coverImage: '/uploads/restaurant-images/1789051635858-84ac1f64fd21d402.jpg',
+    barangay: 'Gabi',
+    description: 'an aesthetic, pet-friendly neighborhood coffee shop',
+    address: 'Gabi, Cordova, Cebu',
+    phone: '0910 618 1758',
+  },
 };
 
 export function normalizeKey(str?: string): string {

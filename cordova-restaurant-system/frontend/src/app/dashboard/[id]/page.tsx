@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
-import { useParams } from 'next/navigation';
+import { useParams, useSearchParams } from 'next/navigation';
 import Image from 'next/image';
 import { api, ApiClientError } from '@/lib/api';
 import { useToast } from '@/lib/toast-context';
@@ -20,8 +20,10 @@ type Tab = (typeof TABS)[number];
 
 export default function ManageBusinessPage() {
   const { id } = useParams<{ id: string }>();
+  const searchParams = useSearchParams();
+  const initialTab = searchParams.get('tab') as Tab;
   const { toast } = useToast();
-  const [tab, setTab] = useState<Tab>('overview');
+  const [tab, setTab] = useState<Tab>(TABS.includes(initialTab) ? initialTab : 'overview');
   const [restaurant, setRestaurant] = useState<Restaurant | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -64,7 +66,7 @@ export default function ManageBusinessPage() {
             <p className="text-sm text-red-500 mb-4">Rejection reason: {restaurant.rejection_reason}</p>
           )}
           {restaurant.status === 'pending' && (
-            <p className="text-sm text-gold-500 mb-4">⏳ Awaiting admin verification. Your listing is not yet public.</p>
+            <p className="text-sm text-amber-600 dark:text-amber-400 mb-4">⏳ Awaiting admin verification. Your listing is not yet public.</p>
           )}
 
           <div className="flex gap-1 border-b border-[var(--border)] mb-6 overflow-x-auto">
@@ -82,7 +84,7 @@ export default function ManageBusinessPage() {
           </div>
 
           {tab === 'overview' && <OverviewTab restaurant={restaurant} onUpdated={load} />}
-          {tab === 'menu' && <MenuTab restaurantId={restaurant.id} />}
+          {tab === 'menu' && <MenuTab restaurant={restaurant} />}
           {tab === 'hours' && <HoursTab restaurantId={restaurant.id} />}
           {tab === 'promotions' && <PromotionsTab restaurantId={restaurant.id} />}
           {tab === 'subscription' && <SubscriptionTab restaurant={restaurant} onUpdated={load} />}
@@ -234,20 +236,31 @@ function OverviewTab({ restaurant, onUpdated }: { restaurant: Restaurant; onUpda
 }
 
 // ---------------- Menu tab ----------------
-function MenuTab({ restaurantId }: { restaurantId: string }) {
+function MenuTab({ restaurant }: { restaurant: Restaurant }) {
   const { toast } = useToast();
+  const restaurantId = restaurant.id;
+  const isVerified = restaurant.status === 'verified';
   const [categories, setCategories] = useState<MenuCategory[]>([]);
   const [items, setItems] = useState<MenuItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
-  const [newItem, setNewItem] = useState({ name: '', price: '', description: '' });
+  const [categoryModalOpen, setCategoryModalOpen] = useState(false);
+  const [newCategoryName, setNewCategoryName] = useState('');
+  const [newItem, setNewItem] = useState({
+    name: '',
+    price: '',
+    description: '',
+    categoryId: '',
+  });
+  const [itemImageFile, setItemImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
   const load = useCallback(async () => {
     try {
       const res = await api.get(`/api/restaurants/${restaurantId}/menu`, { auth: false });
-      setCategories(res.data.categories);
-      setItems(res.data.items);
+      setCategories(res.data.categories || []);
+      setItems(res.data.items || []);
     } catch (err) {
       toast('Failed to load menu', 'error');
     } finally {
@@ -259,18 +272,67 @@ function MenuTab({ restaurantId }: { restaurantId: string }) {
     load();
   }, [load]);
 
-  const addItem = async () => {
-    if (!newItem.name || !newItem.price) return;
+  const handleImageChange = (file: File | null) => {
+    setItemImageFile(file);
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => setImagePreview(reader.result as string);
+      reader.readAsDataURL(file);
+    } else {
+      setImagePreview(null);
+    }
+  };
+
+  const addCategory = async () => {
+    if (!newCategoryName.trim()) return;
     setSaving(true);
     try {
-      await api.post(`/api/restaurants/${restaurantId}/menu/items`, {
-        name: newItem.name,
-        price: parseFloat(newItem.price),
-        description: newItem.description,
+      const res = await api.post(`/api/restaurants/${restaurantId}/menu/categories`, {
+        name: newCategoryName.trim(),
       });
-      toast('Menu item added', 'success');
+      toast('Category added', 'success');
+      setNewCategoryName('');
+      setCategoryModalOpen(false);
+      load();
+      if (res.data?.category?.id) {
+        setNewItem((prev) => ({ ...prev, categoryId: res.data.category.id }));
+      }
+    } catch (err) {
+      toast(err instanceof ApiClientError ? err.message : 'Failed to add category', 'error');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const addItem = async () => {
+    if (!newItem.name.trim() || !newItem.price) {
+      toast('Please provide a name and price for the menu item', 'error');
+      return;
+    }
+    setSaving(true);
+    try {
+      if (itemImageFile) {
+        const formData = new FormData();
+        formData.append('name', newItem.name.trim());
+        formData.append('price', String(parseFloat(newItem.price)));
+        if (newItem.description) formData.append('description', newItem.description.trim());
+        if (newItem.categoryId) formData.append('categoryId', newItem.categoryId);
+        formData.append('image', itemImageFile);
+
+        await api.post(`/api/restaurants/${restaurantId}/menu/items`, formData, { isFormData: true });
+      } else {
+        await api.post(`/api/restaurants/${restaurantId}/menu/items`, {
+          name: newItem.name.trim(),
+          price: parseFloat(newItem.price),
+          description: newItem.description.trim() || undefined,
+          categoryId: newItem.categoryId || undefined,
+        });
+      }
+      toast('Menu item added successfully!', 'success');
       setModalOpen(false);
-      setNewItem({ name: '', price: '', description: '' });
+      setNewItem({ name: '', price: '', description: '', categoryId: '' });
+      setItemImageFile(null);
+      setImagePreview(null);
       load();
     } catch (err) {
       toast(err instanceof ApiClientError ? err.message : 'Failed to add item', 'error');
@@ -280,49 +342,182 @@ function MenuTab({ restaurantId }: { restaurantId: string }) {
   };
 
   const deleteItem = async (itemId: string) => {
-    await api.delete(`/api/restaurants/${restaurantId}/menu/items/${itemId}`);
-    toast('Item removed', 'info');
-    load();
+    try {
+      await api.delete(`/api/restaurants/${restaurantId}/menu/items/${itemId}`);
+      toast('Item removed', 'info');
+      load();
+    } catch (err) {
+      toast(err instanceof ApiClientError ? err.message : 'Failed to remove item', 'error');
+    }
   };
 
   if (loading) return <Skeleton className="h-40 w-full" />;
 
   return (
-    <div>
-      <Button onClick={() => setModalOpen(true)} className="mb-4">
-        + Add menu item
-      </Button>
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+    <div className="space-y-6">
+      {!isVerified && (
+        <div className="flex items-start gap-3 bg-amber-500/10 border border-amber-500/20 rounded-2xl p-4 text-xs text-amber-800 dark:text-amber-300">
+          <div className="text-2xl shrink-0">📝</div>
+          <div>
+            <p className="font-semibold text-sm text-stone-900 dark:text-white">
+              Menu Setup (Draft Mode)
+            </p>
+            <p className="mt-0.5 text-stone-600 dark:text-stone-300 leading-relaxed">
+              Your establishment is currently <strong>{restaurant.status}</strong>. You can prepare and organize all your dishes, prices, descriptions, and food photos now. Your completed menu will be published automatically the moment municipal admin verification is approved!
+            </p>
+          </div>
+        </div>
+      )}
+
+      <div className="flex items-center justify-between gap-3 flex-wrap bg-stone-50 dark:bg-stone-800/40 p-4 rounded-xl border border-stone-200 dark:border-stone-800">
+        <div>
+          <h3 className="font-serif font-bold text-lg text-stone-900 dark:text-white">Establishment Menu</h3>
+          <p className="text-xs text-stone-500 dark:text-stone-400">
+            Add dishes, manage prices, and showcase mouthwatering food photos.
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          <Button variant="secondary" onClick={() => setCategoryModalOpen(true)} className="text-xs">
+            + Add Category
+          </Button>
+          <Button onClick={() => setModalOpen(true)} className="bg-cordova-green hover:bg-cordova-greenHover text-white text-xs">
+            + Add Menu Item
+          </Button>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         {items.map((item) => (
-          <div key={item.id} className="card p-4 flex justify-between items-start">
-            <div>
-              <p className="font-medium">{item.name}</p>
-              <p className="text-sm text-[var(--text-muted)]">₱{Number(item.price).toFixed(0)}</p>
+          <div key={item.id} className="bg-white dark:bg-[#1a211c] border border-stone-200 dark:border-stone-800 rounded-2xl p-4 shadow-sm flex gap-4 items-start justify-between">
+            <div className="flex gap-3 items-start">
+              {item.image_url ? (
+                <div className="relative w-20 h-20 rounded-xl overflow-hidden bg-stone-100 dark:bg-stone-800 shrink-0 border border-stone-200 dark:border-stone-700">
+                  <Image src={item.image_url} alt={item.name} fill className="object-cover" />
+                </div>
+              ) : (
+                <div className="w-20 h-20 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center text-2xl shrink-0 border border-amber-500/20">
+                  🍽️
+                </div>
+              )}
+              <div>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <h4 className="font-serif font-bold text-sm text-stone-900 dark:text-white">{item.name}</h4>
+                  {(item as any).category_name && (
+                    <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-stone-100 dark:bg-stone-800 text-stone-600 dark:text-stone-300">
+                      {(item as any).category_name}
+                    </span>
+                  )}
+                </div>
+                <p className="text-sm text-emerald-600 dark:text-emerald-400 font-bold mt-0.5">₱{Number(item.price).toFixed(0)}</p>
+                {item.description && (
+                  <p className="text-xs text-stone-500 dark:text-stone-400 mt-1 line-clamp-2">{item.description}</p>
+                )}
+              </div>
             </div>
-            <button onClick={() => deleteItem(item.id)} className="text-red-500 text-sm hover:underline">
-              Remove
+
+            <button
+              onClick={() => deleteItem(item.id)}
+              className="text-xs text-red-500 hover:text-red-700 hover:underline shrink-0 p-1 font-medium"
+            >
+              Delete
             </button>
           </div>
         ))}
-        {items.length === 0 && <p className="text-[var(--text-muted)]">No menu items yet.</p>}
+
+        {items.length === 0 && (
+          <div className="col-span-full py-12 text-center text-stone-500 bg-white dark:bg-[#1a211c] border border-stone-200 dark:border-stone-800 rounded-2xl">
+            <p className="text-4xl mb-2">🍽️</p>
+            <p className="font-serif font-medium text-stone-800 dark:text-stone-200">No menu items added yet</p>
+            <p className="text-xs text-stone-400 mt-1 mb-4">Start creating your menu to attract local diners!</p>
+            <Button onClick={() => setModalOpen(true)} className="bg-cordova-green hover:bg-cordova-greenHover text-white text-xs">
+              + Add First Menu Item
+            </Button>
+          </div>
+        )}
       </div>
 
-      <Modal open={modalOpen} onClose={() => setModalOpen(false)} title="Add menu item">
-        <div className="space-y-3">
-          <Input label="Item name" value={newItem.name} onChange={(e) => setNewItem({ ...newItem, name: e.target.value })} />
+      {/* Add Item Modal */}
+      <Modal open={modalOpen} onClose={() => setModalOpen(false)} title="Add Menu Item">
+        <div className="space-y-4">
           <Input
-            label="Price (₱)"
-            type="number"
-            value={newItem.price}
-            onChange={(e) => setNewItem({ ...newItem, price: e.target.value })}
+            label="Item name"
+            placeholder="e.g. Grilled Seafood Platter"
+            value={newItem.name}
+            onChange={(e) => setNewItem({ ...newItem, name: e.target.value })}
+            required
           />
+
+          <div className="grid grid-cols-2 gap-3">
+            <Input
+              label="Price (₱)"
+              type="number"
+              placeholder="e.g. 250"
+              value={newItem.price}
+              onChange={(e) => setNewItem({ ...newItem, price: e.target.value })}
+              required
+            />
+
+            <div>
+              <label className="block text-xs font-semibold text-stone-700 dark:text-stone-300 mb-1">
+                Category (Optional)
+              </label>
+              <select
+                value={newItem.categoryId}
+                onChange={(e) => setNewItem({ ...newItem, categoryId: e.target.value })}
+                className="input text-xs w-full py-2.5"
+              >
+                <option value="">-- Select Category --</option>
+                {categories.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+
           <Textarea
             label="Description"
+            placeholder="Describe ingredients, flavor profile, or portion size..."
             value={newItem.description}
             onChange={(e) => setNewItem({ ...newItem, description: e.target.value })}
           />
-          <Button onClick={addItem} loading={saving} className="w-full">
-            Add item
+
+          <div>
+            <label className="block text-xs font-semibold text-stone-700 dark:text-stone-300 mb-1">
+              Food Photo (Optional)
+            </label>
+            <input
+              type="file"
+              accept="image/*"
+              onChange={(e) => handleImageChange(e.target.files?.[0] || null)}
+              className="w-full text-xs text-stone-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-stone-100 file:text-stone-700 hover:file:bg-stone-200 cursor-pointer"
+            />
+            {imagePreview && (
+              <div className="relative w-20 h-20 mt-2 rounded-xl overflow-hidden border border-stone-200 dark:border-stone-700">
+                <Image src={imagePreview} alt="Preview" fill className="object-cover" />
+              </div>
+            )}
+          </div>
+
+          <Button onClick={addItem} loading={saving} className="w-full bg-cordova-green hover:bg-cordova-greenHover text-white">
+            Add Menu Item
+          </Button>
+        </div>
+      </Modal>
+
+      {/* Add Category Modal */}
+      <Modal open={categoryModalOpen} onClose={() => setCategoryModalOpen(false)} title="Create Menu Category">
+        <div className="space-y-4">
+          <Input
+            label="Category Name"
+            placeholder="e.g. Appetizers, Seafood Specials, Beverages"
+            value={newCategoryName}
+            onChange={(e) => setNewCategoryName(e.target.value)}
+            required
+          />
+          <Button onClick={addCategory} loading={saving} className="w-full bg-cordova-green hover:bg-cordova-greenHover text-white">
+            Create Category
           </Button>
         </div>
       </Modal>
@@ -340,7 +535,9 @@ function HoursTab({ restaurantId }: { restaurantId: string }) {
 
   useEffect(() => {
     api.get(`/api/restaurants/${restaurantId}/hours`, { auth: false }).then((res) => {
-      if (res.data.length === 7) setDays(res.data);
+      if (Array.isArray(res.data) && res.data.length === 7) {
+        setDays(res.data);
+      }
     }).catch(() => {});
   }, [restaurantId]);
 
@@ -351,8 +548,15 @@ function HoursTab({ restaurantId }: { restaurantId: string }) {
   const save = async () => {
     setSaving(true);
     try {
-      await api.put(`/api/restaurants/${restaurantId}/hours`, { days });
-      toast('Operating hours updated', 'success');
+      await api.put(`/api/restaurants/${restaurantId}/hours`, {
+        days: days.map((d, idx) => ({
+          day_of_week: d.day_of_week !== undefined ? d.day_of_week : idx,
+          open_time: d.open_time || '09:00',
+          close_time: d.close_time || '21:00',
+          is_closed: Boolean(d.is_closed),
+        })),
+      });
+      toast('Operating hours updated successfully!', 'success');
     } catch (err) {
       toast(err instanceof ApiClientError ? err.message : 'Update failed', 'error');
     } finally {
@@ -361,34 +565,41 @@ function HoursTab({ restaurantId }: { restaurantId: string }) {
   };
 
   return (
-    <div className="card p-5 max-w-xl space-y-3">
-      {days.map((d, idx) => (
-        <div key={idx} className="flex items-center gap-3 flex-wrap">
-          <span className="w-24 text-sm">{DAY_NAMES[idx]}</span>
-          <label className="flex items-center gap-1.5 text-xs">
-            <input type="checkbox" checked={d.is_closed} onChange={(e) => update(idx, { is_closed: e.target.checked })} />
-            Closed
-          </label>
-          {!d.is_closed && (
-            <>
+    <div className="card p-5 max-w-xl space-y-4">
+      <div className="space-y-3">
+        {days.map((d, idx) => (
+          <div key={idx} className="flex items-center gap-3 flex-wrap">
+            <span className="w-24 text-sm font-medium text-stone-900 dark:text-white">{DAY_NAMES[idx]}</span>
+            <label className="flex items-center gap-1.5 text-xs font-semibold cursor-pointer">
               <input
-                type="time"
-                value={d.open_time.slice(0, 5)}
-                onChange={(e) => update(idx, { open_time: e.target.value })}
-                className="input !py-1.5 !px-2 w-28"
+                type="checkbox"
+                checked={Boolean(d.is_closed)}
+                onChange={(e) => update(idx, { is_closed: e.target.checked })}
+                className="rounded border-stone-300 text-cordova-green focus:ring-cordova-green"
               />
-              <span className="text-[var(--text-muted)]">–</span>
-              <input
-                type="time"
-                value={d.close_time.slice(0, 5)}
-                onChange={(e) => update(idx, { close_time: e.target.value })}
-                className="input !py-1.5 !px-2 w-28"
-              />
-            </>
-          )}
-        </div>
-      ))}
-      <Button onClick={save} loading={saving}>
+              Closed
+            </label>
+            {!d.is_closed && (
+              <>
+                <input
+                  type="time"
+                  value={(d.open_time || '09:00').slice(0, 5)}
+                  onChange={(e) => update(idx, { open_time: e.target.value })}
+                  className="input !py-1.5 !px-2 w-28 text-xs"
+                />
+                <span className="text-[var(--text-muted)]">–</span>
+                <input
+                  type="time"
+                  value={(d.close_time || '21:00').slice(0, 5)}
+                  onChange={(e) => update(idx, { close_time: e.target.value })}
+                  className="input !py-1.5 !px-2 w-28 text-xs"
+                />
+              </>
+            )}
+          </div>
+        ))}
+      </div>
+      <Button onClick={save} loading={saving} className="bg-cordova-green hover:bg-cordova-greenHover text-white">
         Save hours
       </Button>
     </div>

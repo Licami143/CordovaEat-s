@@ -65,8 +65,14 @@ export default function RegisterPage() {
   useEffect(() => {
     if (user && !loading && !oauthLoading && !hasRegistered) {
       if (redirectTo && redirectTo !== '/' && redirectTo.startsWith('/')) {
-        router.replace(redirectTo);
-      } else if (user.role === 'owner') {
+        const isRestrictedAdmin = redirectTo.startsWith('/admin') && user.role !== 'admin';
+        const isRestrictedDashboard = redirectTo.startsWith('/dashboard') && user.role !== 'owner' && user.role !== 'admin';
+        if (!isRestrictedAdmin && !isRestrictedDashboard) {
+          router.replace(redirectTo);
+          return;
+        }
+      }
+      if (user.role === 'owner') {
         router.replace('/dashboard');
       } else if (user.role === 'admin') {
         router.replace('/admin');

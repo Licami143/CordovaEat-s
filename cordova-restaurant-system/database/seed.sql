@@ -6,13 +6,36 @@
 -- Users ----------------------------------------------------------------------
 -- password is 'Password123!' hashed with bcrypt (cost factor 10)
 -- $2b$10$64m6JYqwt4wOGjJW1eQSfu5ep9BUaRwr7rnsanKIP30DqmEKw9Zjm
-INSERT INTO users (id, email, password_hash, full_name, role, phone_number, email_verified, created_at) VALUES
-('11111111-1111-1111-a111-111111111111', 'admin@cordovateats.ph',   '$2b$10$64m6JYqwt4wOGjJW1eQSfu5ep9BUaRwr7rnsanKIP30DqmEKw9Zjm', 'System Administrator', 'admin',  '+639171234560', TRUE, now()),
-('22222222-2222-2222-a222-222222222221', 'owner.lantaw@example.com',  '$2b$10$64m6JYqwt4wOGjJW1eQSfu5ep9BUaRwr7rnsanKIP30DqmEKw9Zjm', 'Juan dela Cruz',       'owner',  '+639171234561', TRUE, now()),
-('22222222-2222-2222-a222-222222222222', 'owner.roses@example.com',   '$2b$10$64m6JYqwt4wOGjJW1eQSfu5ep9BUaRwr7rnsanKIP30DqmEKw9Zjm', 'Maria Santos',         'owner',  '+639171234562', TRUE, now()),
-('22222222-2222-2222-a222-222222222223', 'owner.grillhouse@example.com','$2b$10$64m6JYqwt4wOGjJW1eQSfu5ep9BUaRwr7rnsanKIP30DqmEKw9Zjm', 'Liza Fernandez',     'owner',  '+639171234563', TRUE, now()),
-('33333333-3333-3333-a333-333333333331', 'diner.carlos@example.com',  '$2b$10$64m6JYqwt4wOGjJW1eQSfu5ep9BUaRwr7rnsanKIP30DqmEKw9Zjm', 'Carlos Reyes',         'diner',  '+639171234564', TRUE, now()),
-('33333333-3333-3333-a333-333333333332', 'diner.ana@example.com',     '$2b$10$64m6JYqwt4wOGjJW1eQSfu5ep9BUaRwr7rnsanKIP30DqmEKw9Zjm', 'Ana Lim',              'diner',  '+639171234565', TRUE, now())
+INSERT INTO users (id, email, password_hash, full_name, role, phone, email_verified_at, created_at) VALUES
+('11111111-1111-1111-a111-111111111111', 'admin@cordovateats.ph',            '$2b$10$64m6JYqwt4wOGjJW1eQSfu5ep9BUaRwr7rnsanKIP30DqmEKw9Zjm', 'System Administrator',        'admin',    '+639171234560', now(), now()),
+('20000000-0000-0000-0000-000000000001', 'owner.10000roses@cordovateats.ph',    '$2b$10$64m6JYqwt4wOGjJW1eQSfu5ep9BUaRwr7rnsanKIP30DqmEKw9Zjm', 'Bae Min-jun',                 'owner',    '+639171000001', now(), now()),
+('20000000-0000-0000-0000-000000000002', 'owner.abyroad@cordovateats.ph',       '$2b$10$64m6JYqwt4wOGjJW1eQSfu5ep9BUaRwr7rnsanKIP30DqmEKw9Zjm', 'Abigail Sanchez',            'owner',    '+639171000002', now(), now()),
+('20000000-0000-0000-0000-000000000003', 'owner.albertos@cordovateats.ph',      '$2b$10$64m6JYqwt4wOGjJW1eQSfu5ep9BUaRwr7rnsanKIP30DqmEKw9Zjm', 'Alberto Tan',                 'owner',    '+639171000003', now(), now()),
+('20000000-0000-0000-0000-000000000004', 'owner.barracks@cordovateats.ph',      '$2b$10$64m6JYqwt4wOGjJW1eQSfu5ep9BUaRwr7rnsanKIP30DqmEKw9Zjm', 'Mario Ramos',                 'owner',    '+639171000004', now(), now()),
+('20000000-0000-0000-0000-000000000005', 'owner.bric@cordovateats.ph',          '$2b$10$64m6JYqwt4wOGjJW1eQSfu5ep9BUaRwr7rnsanKIP30DqmEKw9Zjm', 'Brian Richard Castro',         'owner',    '+639171000005', now(), now()),
+('20000000-0000-0000-0000-000000000006', 'owner.burandat@cordovateats.ph',      '$2b$10$64m6JYqwt4wOGjJW1eQSfu5ep9BUaRwr7rnsanKIP30DqmEKw9Zjm', 'Danilo Burandat',             'owner',    '+639171000006', now(), now()),
+('20000000-0000-0000-0000-000000000007', 'owner.cafemafia@cordovateats.ph',      '$2b$10$64m6JYqwt4wOGjJW1eQSfu5ep9BUaRwr7rnsanKIP30DqmEKw9Zjm', 'Marco Rossi',                 'owner',    '+639171000007', now(), now()),
+('20000000-0000-0000-0000-000000000008', 'owner.cascaja@cordovateats.ph',        '$2b$10$64m6JYqwt4wOGjJW1eQSfu5ep9BUaRwr7rnsanKIP30DqmEKw9Zjm', 'Clara Cascaja',               'owner',    '+639171000008', now(), now()),
+('20000000-0000-0000-0000-000000000009', 'owner.csalt@cordovateats.ph',          '$2b$10$64m6JYqwt4wOGjJW1eQSfu5ep9BUaRwr7rnsanKIP30DqmEKw9Zjm', 'Cynthia Salter',             'owner',    '+639171000009', now(), now()),
+('20000000-0000-0000-0000-000000000010', 'owner.donmacchiatos@cordovateats.ph', '$2b$10$64m6JYqwt4wOGjJW1eQSfu5ep9BUaRwr7rnsanKIP30DqmEKw9Zjm', 'Donato Macalinao',          'owner',    '+639171000010', now(), now()),
+('20000000-0000-0000-0000-000000000011', 'owner.eatnrepeat@cordovateats.ph',     '$2b$10$64m6JYqwt4wOGjJW1eQSfu5ep9BUaRwr7rnsanKIP30DqmEKw9Zjm', 'Eleanor Reyes',             'owner',    '+639171000011', now(), now()),
+('20000000-0000-0000-0000-000000000012', 'owner.entoys@cordovateats.ph',        '$2b$10$64m6JYqwt4wOGjJW1eQSfu5ep9BUaRwr7rnsanKIP30DqmEKw9Zjm', 'Florencio ''Entoy'' Escabas',  'owner',    '+639171000012', now(), now()),
+('20000000-0000-0000-0000-000000000013', 'owner.horizon@cordovateats.ph',       '$2b$10$64m6JYqwt4wOGjJW1eQSfu5ep9BUaRwr7rnsanKIP30DqmEKw9Zjm', 'Hazel Joy Ompad',            'owner',    '+639171000013', now(), now()),
+('20000000-0000-0000-0000-000000000014', 'owner.husbys@cordovateats.ph',        '$2b$10$64m6JYqwt4wOGjJW1eQSfu5ep9BUaRwr7rnsanKIP30DqmEKw9Zjm', 'Harold Usbal',               'owner',    '+639171000014', now(), now()),
+('20000000-0000-0000-0000-000000000015', 'owner.lantaw@cordovateats.ph',        '$2b$10$64m6JYqwt4wOGjJW1eQSfu5ep9BUaRwr7rnsanKIP30DqmEKw9Zjm', 'Leonardo Lantaw',            'owner',    '+639171000015', now(), now()),
+('20000000-0000-0000-0000-000000000016', 'owner.mavericks@cordovateats.ph',     '$2b$10$64m6JYqwt4wOGjJW1eQSfu5ep9BUaRwr7rnsanKIP30DqmEKw9Zjm', 'Michael Maverick',           'owner',    '+639171000016', now(), now()),
+('20000000-0000-0000-0000-000000000017', 'owner.mcdonalds@cordovateats.ph',      '$2b$10$64m6JYqwt4wOGjJW1eQSfu5ep9BUaRwr7rnsanKIP30DqmEKw9Zjm', 'Manuel Dy (Franchisee)',     'owner',    '+639171000017', now(), now()),
+('20000000-0000-0000-0000-000000000018', 'owner.papsys@cordovateats.ph',         '$2b$10$64m6JYqwt4wOGjJW1eQSfu5ep9BUaRwr7rnsanKIP30DqmEKw9Zjm', 'Patrick ''Papsy'' Alcordo',   'owner',    '+639171000018', now(), now()),
+('20000000-0000-0000-0000-000000000019', 'owner.parola@cordovateats.ph',         '$2b$10$64m6JYqwt4wOGjJW1eQSfu5ep9BUaRwr7rnsanKIP30DqmEKw9Zjm', 'Roberto Parola',             'owner',    '+639171000019', now(), now()),
+('20000000-0000-0000-0000-000000000020', 'owner.rca@cordovateats.ph',            '$2b$10$64m6JYqwt4wOGjJW1eQSfu5ep9BUaRwr7rnsanKIP30DqmEKw9Zjm', 'Rowena Castillo Alcover',    'owner',    '+639171000020', now(), now()),
+('20000000-0000-0000-0000-000000000021', 'owner.solea@cordovateats.ph',          '$2b$10$64m6JYqwt4wOGjJW1eQSfu5ep9BUaRwr7rnsanKIP30DqmEKw9Zjm', 'Sophia Leano',               'owner',    '+639171000021', now(), now()),
+('20000000-0000-0000-0000-000000000022', 'owner.streetfoodpark@cordovateats.ph', '$2b$10$64m6JYqwt4wOGjJW1eQSfu5ep9BUaRwr7rnsanKIP30DqmEKw9Zjm', 'Sherwin Flores',             'owner',    '+639171000022', now(), now()),
+('20000000-0000-0000-0000-000000000023', 'owner.stuffednfried@cordovateats.ph',  '$2b$10$64m6JYqwt4wOGjJW1eQSfu5ep9BUaRwr7rnsanKIP30DqmEKw9Zjm', 'Stefan Navarro',             'owner',    '+639171000023', now(), now()),
+('20000000-0000-0000-0000-000000000024', 'owner.sungka@cordovateats.ph',         '$2b$10$64m6JYqwt4wOGjJW1eQSfu5ep9BUaRwr7rnsanKIP30DqmEKw9Zjm', 'Salvador Sungka',            'owner',    '+639171000024', now(), now()),
+('20000000-0000-0000-0000-000000000025', 'owner.taytayan@cordovateats.ph',       '$2b$10$64m6JYqwt4wOGjJW1eQSfu5ep9BUaRwr7rnsanKIP30DqmEKw9Zjm', 'Tomas Taytayan',             'owner',    '+639171000025', now(), now()),
+('20000000-0000-0000-0000-000000000026', 'owner.titakims@cordovateats.ph',       '$2b$10$64m6JYqwt4wOGjJW1eQSfu5ep9BUaRwr7rnsanKIP30DqmEKw9Zjm', 'Kimberly ''Tita Kim'' Arong', 'owner',    '+639171000026', now(), now()),
+('33333333-3333-3333-a333-333333333331', 'customer.carlos@example.com',        '$2b$10$64m6JYqwt4wOGjJW1eQSfu5ep9BUaRwr7rnsanKIP30DqmEKw9Zjm', 'Carlos Reyes',               'customer', '+639171234564', now(), now()),
+('33333333-3333-3333-a333-333333333332', 'customer.ana@example.com',           '$2b$10$64m6JYqwt4wOGjJW1eQSfu5ep9BUaRwr7rnsanKIP30DqmEKw9Zjm', 'Ana Lim',                    'customer', '+639171234565', now(), now())
 ON CONFLICT (email) DO NOTHING;
 
 -- Cuisines -------------------------------------------------------------------
@@ -485,4 +508,83 @@ INSERT INTO menu_items (restaurant_id, category_id, name, description, price, im
 ('44444444-4444-4444-a444-444444444459', 'd984b38a-b6e5-4ce2-bf7b-cda91a5f1d7e', 'Traditional Creamy Leche Flan', 'Rich and silky steamed caramel egg custard made with pure egg yolks and condensed milk.', 95.00, 'https://images.unsplash.com/photo-1587314168485-3236d6710814?auto=format&fit=crop&w=600&q=80', true, ARRAY[]::text[]),
 ('44444444-4444-4444-a444-444444444459', 'd984b38a-b6e5-4ce2-bf7b-cda91a5f1d7e', 'House Iced Tea Pitcher (1.5L)', 'Freshly brewed sweet calamansi iced tea served ice-cold in a family sharing pitcher.', 160.00, 'https://images.unsplash.com/photo-1556679343-c7306c1976bc?auto=format&fit=crop&w=600&q=80', true, ARRAY[]::text[]),
 ('44444444-4444-4444-a444-444444444459', 'd984b38a-b6e5-4ce2-bf7b-cda91a5f1d7e', 'San Miguel Pale Pilsen / Light (330ml)', 'Chilled iconic Filipino beer bottle, perfect companion for sunset seaside seafood dining.', 85.00, 'https://images.unsplash.com/photo-1608270119335-59427b03b174?auto=format&fit=crop&w=600&q=80', true, ARRAY[]::text[])
+ON CONFLICT DO NOTHING;
+
+
+-- ============================================================================
+-- The Latte Cafe - Cordova (Categories & Menu Items from Foodpanda)
+-- ============================================================================
+
+-- The Latte Cafe Restaurant
+INSERT INTO restaurants (
+  id, owner_id, name, slug, description, address, barangay,
+  latitude, longitude, phone, price_range, services_offered,
+  status, verified_by, verified_at, avg_rating, review_count
+) VALUES
+('9bd735b4-1ee0-4dd9-a498-157f6007cd80', 'e612bfa3-8ce5-4983-992a-5fac4e874111',
+ 'The Latte Cafe', 'the-latte-cafe-mtvn5h2j',
+ 'An aesthetic, pet-friendly neighborhood coffee shop serving specialty brews, fresh smoothies, pasta, burgers and all-day breakfast.',
+ 'The Latte Cafe, Andalucia Crest, Gabi, Cordova', 'Gabi', 10.26556, 123.96443, '0910 618 1758',
+ 'moderate', ARRAY['dine_in','takeout','delivery']::service_type[], 'verified',
+ '11111111-1111-1111-a111-111111111111', now(), 5.0, 17)
+ON CONFLICT (id) DO UPDATE SET
+  name = EXCLUDED.name,
+  description = EXCLUDED.description,
+  address = EXCLUDED.address,
+  barangay = EXCLUDED.barangay,
+  phone = EXCLUDED.phone;
+
+-- The Latte Cafe Menu Categories
+INSERT INTO menu_categories (id, restaurant_id, name, sort_order) VALUES
+('4a569bf8-034b-454e-a29c-9a45f398f9d3', '9bd735b4-1ee0-4dd9-a498-157f6007cd80', 'Coffee', 1),
+('c52f453a-cc8e-4d5a-bbf5-7f034643928f', '9bd735b4-1ee0-4dd9-a498-157f6007cd80', 'Smoothies', 2),
+('bfe84606-4c58-435a-abf7-8907eed89f35', '9bd735b4-1ee0-4dd9-a498-157f6007cd80', 'Burgers', 3),
+('0f7a8653-d1ef-4231-975a-c20843f714d2', '9bd735b4-1ee0-4dd9-a498-157f6007cd80', 'Pasta', 4),
+('0bc23645-2deb-4495-afa6-8b460f5d862f', '9bd735b4-1ee0-4dd9-a498-157f6007cd80', 'All Day Breakfast', 5),
+('2b924fa7-e12d-4999-8cd1-d8b20501287f', '9bd735b4-1ee0-4dd9-a498-157f6007cd80', 'Sides', 6),
+('f5f5c396-057b-415b-97d4-3aeee964a463', '9bd735b4-1ee0-4dd9-a498-157f6007cd80', 'Sodas', 7),
+('eebb4fa4-0927-42aa-b502-982ec37bad2e', '9bd735b4-1ee0-4dd9-a498-157f6007cd80', 'Fresh Lemonade', 8),
+('8bf4a73a-9dc8-4a28-a3fd-e9858feef2d7', '9bd735b4-1ee0-4dd9-a498-157f6007cd80', 'Matcha Latte', 9),
+('941d3d29-72b6-4c2d-9400-65e07cc463a4', '9bd735b4-1ee0-4dd9-a498-157f6007cd80', 'Non-coffee Ice Blended', 10)
+ON CONFLICT DO NOTHING;
+
+-- The Latte Cafe Menu Items
+INSERT INTO menu_items (restaurant_id, category_id, name, description, price, image_url, is_available, dietary_tags) VALUES
+('9bd735b4-1ee0-4dd9-a498-157f6007cd80', '4a569bf8-034b-454e-a29c-9a45f398f9d3', 'Spanish Latte', 'Espresso, steamed milk sweetened with a touch of condensed milk for a creamy & smooth finish', 195, 'https://images.deliveryhero.io/image/fd-ph/Products/93164950.jpg', true, ARRAY[]::text[]),
+('9bd735b4-1ee0-4dd9-a498-157f6007cd80', '4a569bf8-034b-454e-a29c-9a45f398f9d3', 'Americano', 'A straightforward blended of espresso, hot water, offering a clean & bold coffee flavor', 165, 'https://images.deliveryhero.io/image/fd-ph/Products/93164944.jpg', true, ARRAY[]::text[]),
+('9bd735b4-1ee0-4dd9-a498-157f6007cd80', '4a569bf8-034b-454e-a29c-9a45f398f9d3', 'Cafe Latte', 'Smooth espresso combined with steamed milk & a light layer of foam for a balanced coffee experience', 175, 'https://images.deliveryhero.io/image/fd-ph/Products/93164945.jpg', true, ARRAY[]::text[]),
+('9bd735b4-1ee0-4dd9-a498-157f6007cd80', '4a569bf8-034b-454e-a29c-9a45f398f9d3', 'Caramel Latte', 'A blended of espresso, steamed milk, rich caramel syrup & finished with a creamy texture', 195, 'https://images.deliveryhero.io/image/fd-ph/Products/93164947.jpg', true, ARRAY[]::text[]),
+('9bd735b4-1ee0-4dd9-a498-157f6007cd80', '4a569bf8-034b-454e-a29c-9a45f398f9d3', 'Mocha Latte', 'Espresso, steamed milk meet with decadent chocolate syrup for a rich & coffee-chocolate combination', 195, 'https://images.deliveryhero.io/image/fd-ph/Products/93164948.jpg', true, ARRAY[]::text[]),
+('9bd735b4-1ee0-4dd9-a498-157f6007cd80', '4a569bf8-034b-454e-a29c-9a45f398f9d3', 'White Chocolate Latte', 'A delightful mixed of espresso, steamed milk & sweet white chocolate syrup', 195, NULL, true, ARRAY[]::text[]),
+('9bd735b4-1ee0-4dd9-a498-157f6007cd80', 'c52f453a-cc8e-4d5a-bbf5-7f034643928f', 'Stay Hydrated', 'Mango, Pineapple, Watermelon, Oatginger, Tumeric, Apple, Honey', 170, 'https://images.deliveryhero.io/image/global-menu-service/FP_PH/vendor/nsz5/product/b4ec05ec-d2e5-4528-8c2e-9042f9c23be4.jpg', true, ARRAY[]::text[]),
+('9bd735b4-1ee0-4dd9-a498-157f6007cd80', 'c52f453a-cc8e-4d5a-bbf5-7f034643928f', 'Love Your Heart', 'Banana, Apple, Cucumber, Green Lettuce, Honey, Calamansi', 170, 'https://images.deliveryhero.io/image/global-menu-service/FP_PH/vendor/nsz5/product/109155559/6e62af5a-08ad-4aa9-af56-861e4bf7bc27.jpg', true, ARRAY[]::text[]),
+('9bd735b4-1ee0-4dd9-a498-157f6007cd80', 'c52f453a-cc8e-4d5a-bbf5-7f034643928f', 'Avoid Stress', 'Banana, Pineapple, Pechay, Cucumber, Apple, Mango', 170, 'https://images.deliveryhero.io/image/global-menu-service/FP_PH/vendor/nsz5/product/aeb1eb89-bb66-4065-8bf8-9e80463d3037.jpg', true, ARRAY[]::text[]),
+('9bd735b4-1ee0-4dd9-a498-157f6007cd80', 'c52f453a-cc8e-4d5a-bbf5-7f034643928f', 'Keep Healthy Tummy', 'Banana, Strawberry, Beets, Lemon zest, Lemon juice, Chia Seeds', 179, 'https://images.deliveryhero.io/image/global-menu-service/FP_PH/vendor/nsz5/product/c5b67617-bede-4c88-a130-be563fda10dc.jpg', true, ARRAY[]::text[]),
+('9bd735b4-1ee0-4dd9-a498-157f6007cd80', 'c52f453a-cc8e-4d5a-bbf5-7f034643928f', 'Be Strong', 'Mango, Cucumber, Moringa, Honey, Lemonsito, Apple, Ginger, Lettuce, Pĩna', 170, 'https://images.deliveryhero.io/image/global-menu-service/FP_PH/vendor/nsz5/product/109155591/70d9af1f-7af8-4cdb-b944-d412fa7810e6.jpg', true, ARRAY[]::text[]),
+('9bd735b4-1ee0-4dd9-a498-157f6007cd80', 'bfe84606-4c58-435a-abf7-8907eed89f35', 'Cheeseburger Smash', 'A juicy smash-grilled beef patty topped with melted cheese, caramelized onion and our signature sauce on a toasted bun', 400, 'https://images.deliveryhero.io/image/global-menu-service/FP_PH/vendor/nsz5/product/52f1608c-20c7-4086-a635-3680478a2da1.jpg', true, ARRAY[]::text[]),
+('9bd735b4-1ee0-4dd9-a498-157f6007cd80', 'bfe84606-4c58-435a-abf7-8907eed89f35', 'Fried Chicken Burger', 'Crispy fried chicken fillet, Fresh lettuce, Juicy tomato and our special sauce, all tucked in a soft toasted bun.', 390, 'https://images.deliveryhero.io/image/global-menu-service/FP_PH/vendor/nsz5/product/4d44fd23-380c-45fb-97e8-a958c1c9d510.jpg', true, ARRAY[]::text[]),
+('9bd735b4-1ee0-4dd9-a498-157f6007cd80', '0f7a8653-d1ef-4231-975a-c20843f714d2', 'Aglio Olio with Bacon', 'Al dente pasta tossed in garlic-infused olive oil, topped with crispy bacon and a hint of fresh chopped parsley and chili for perfect flavor kick,', 300, 'https://images.deliveryhero.io/image/global-menu-service/FP_PH/vendor/nsz5/product/109156151/f404876b-f526-4605-a621-9f91e355c366.jpg', true, ARRAY[]::text[]),
+('9bd735b4-1ee0-4dd9-a498-157f6007cd80', '0f7a8653-d1ef-4231-975a-c20843f714d2', 'Penne Carbonara', 'Creamy filipino-style carbonara made with penne pasta, crispy bacon, and a rich savory sauce.', 380, 'https://images.deliveryhero.io/image/global-menu-service/FP_PH/vendor/nsz5/product/5b830c2a-d222-433f-955c-79769dfba833.jpg', true, ARRAY[]::text[]),
+('9bd735b4-1ee0-4dd9-a498-157f6007cd80', '0f7a8653-d1ef-4231-975a-c20843f714d2', 'Spaghetti Bolognese', 'Al dente spaghetti coated in a hearty bolognese sauce made with slow-cooked ground beef, tomatoes, and aromatic herbs.', 330, 'https://images.deliveryhero.io/image/global-menu-service/FP_PH/vendor/nsz5/product/8f43e8cd-07c4-4e50-83a4-d3710a299a08.jpg', true, ARRAY[]::text[]),
+('9bd735b4-1ee0-4dd9-a498-157f6007cd80', '0f7a8653-d1ef-4231-975a-c20843f714d2', 'Spanish Sardines Pasta', 'Spaghetti tossed in olive oil, garlic, fresh basil and premium mild spicy spanish sardines', 380, NULL, true, ARRAY[]::text[]),
+('9bd735b4-1ee0-4dd9-a498-157f6007cd80', '0bc23645-2deb-4495-afa6-8b460f5d862f', 'Beef Tapa', 'Flavorful, marinated beef tapa paired with garlic rice and sunny side up egg', 340, 'https://images.deliveryhero.io/image/global-menu-service/FP_PH/vendor/nsz5/product/4a8a4fa5-95e8-4fe3-90e9-1953a788d2a0.jpg', true, ARRAY[]::text[]),
+('9bd735b4-1ee0-4dd9-a498-157f6007cd80', '0bc23645-2deb-4495-afa6-8b460f5d862f', 'Pork Adobo Flakes', 'Shredded pork adobo fried until crispy, paired with garlic rice and sunny side up egg', 320, 'https://images.deliveryhero.io/image/global-menu-service/FP_PH/vendor/nsz5/product/51ad823f-4c38-404e-ba41-5b3c23c335ad.jpg', true, ARRAY[]::text[]),
+('9bd735b4-1ee0-4dd9-a498-157f6007cd80', '0bc23645-2deb-4495-afa6-8b460f5d862f', 'Lumpia Shanghai', 'Golden, crunchy lumpia shanghai paired with garlic rice and sunny side up egg', 360, NULL, true, ARRAY[]::text[]),
+('9bd735b4-1ee0-4dd9-a498-157f6007cd80', '0bc23645-2deb-4495-afa6-8b460f5d862f', 'Bangus', 'Fried bangus (milkfish), served with garlic fried rice, sunny-side-up egg, sliced tomato, and cucumber. ', 350, 'https://images.deliveryhero.io/image/global-menu-service/FP_PH/vendor/nsz5/product/2e9c310e-72b4-4342-b42e-950d87f0d58d.jpg', true, ARRAY[]::text[]),
+('9bd735b4-1ee0-4dd9-a498-157f6007cd80', '2b924fa7-e12d-4999-8cd1-d8b20501287f', 'Chicken Fingers', 'Juicy chicken strips coated in a crunchy flavorful crust, seasoned with our special mixed spices ', 330, 'https://images.deliveryhero.io/image/global-menu-service/FP_PH/vendor/nsz5/product/7834174e-5eaa-43ec-b2aa-9415a56591e4.jpg', true, ARRAY[]::text[]),
+('9bd735b4-1ee0-4dd9-a498-157f6007cd80', '2b924fa7-e12d-4999-8cd1-d8b20501287f', 'Mozzarella Dice', 'Golden, crispy fried mozzarella cubes with gooey melty center, seasoned with spices, paired with tomato dip', 480, 'https://images.deliveryhero.io/image/global-menu-service/FP_PH/vendor/nsz5/product/4b523405-a6de-4d3a-8978-1182c0999a49.jpg', true, ARRAY[]::text[]),
+('9bd735b4-1ee0-4dd9-a498-157f6007cd80', '2b924fa7-e12d-4999-8cd1-d8b20501287f', 'French Fries', 'Golden, crispy french fries', 170, NULL, true, ARRAY[]::text[]),
+('9bd735b4-1ee0-4dd9-a498-157f6007cd80', 'f5f5c396-057b-415b-97d4-3aeee964a463', 'Passionfruit Soda', 'A zesty fusion of passionfruit and sparkling soda with nata sinker, poured over ice.', 220, 'https://images.deliveryhero.io/image/global-menu-service/FP_PH/vendor/nsz5/product/58d65913-c35a-4f5b-a655-e4953834d9b0.jpg', true, ARRAY[]::text[]),
+('9bd735b4-1ee0-4dd9-a498-157f6007cd80', 'f5f5c396-057b-415b-97d4-3aeee964a463', 'Lychee Soda', 'A light and refreshing blend of sweet lychee syrup, sparkling soda, and nata sinkers, served over ice. ', 220, 'https://images.deliveryhero.io/image/global-menu-service/FP_PH/vendor/nsz5/product/0aec05ab-ec3f-443c-b07a-c8dfe72123a4.jpg', true, ARRAY[]::text[]),
+('9bd735b4-1ee0-4dd9-a498-157f6007cd80', 'f5f5c396-057b-415b-97d4-3aeee964a463', 'Strawberry Soda', 'A refreshing blend of strawberry syrup, sparkling soda, and nata sinkers, served over ice.', 220, 'https://images.deliveryhero.io/image/global-menu-service/FP_PH/vendor/nsz5/product/ff73aa2b-486e-470a-9996-0574b87ca544.jpg', true, ARRAY[]::text[]),
+('9bd735b4-1ee0-4dd9-a498-157f6007cd80', 'eebb4fa4-0927-42aa-b502-982ec37bad2e', 'Fresh Lemonade', 'A classic, thirst-quenching blend of freshly squeezed lemons, cold or hot water, and just right touch of sweetness.', 185, 'https://images.deliveryhero.io/image/global-menu-service/FP_PH/vendor/nsz5/product/be3cd8a2-aa82-43c2-8a34-9c153fc27f9b.jpg', true, ARRAY[]::text[]),
+('9bd735b4-1ee0-4dd9-a498-157f6007cd80', '8bf4a73a-9dc8-4a28-a3fd-e9858feef2d7', 'Matcha Latte (12oz)', 'A smooth creamy blend of matcha and milk, whisked to perfection for a lightly sweet flavor.', 235, 'https://images.deliveryhero.io/image/global-menu-service/FP_PH/vendor/nsz5/product/34e13f4c-eac4-4e6b-973f-9a6483cbfbe9.jpg', true, ARRAY[]::text[]),
+('9bd735b4-1ee0-4dd9-a498-157f6007cd80', '8bf4a73a-9dc8-4a28-a3fd-e9858feef2d7', 'Matcha Latte (16oz)', 'A smooth creamy blend of matcha and milk, whisked to perfection for a lightly sweet flavor', 255, 'https://images.deliveryhero.io/image/global-menu-service/FP_PH/vendor/nsz5/product/c4bfbb85-ef45-4550-a5d0-f295947829bb.jpg', true, ARRAY[]::text[]),
+('9bd735b4-1ee0-4dd9-a498-157f6007cd80', '941d3d29-72b6-4c2d-9400-65e07cc463a4', 'Coffee Jelly Ice Blended', 'coffee blended to icy perfection with soft, chewy coffee jelly and whipped cream', 235, 'https://images.deliveryhero.io/image/global-menu-service/FP_PH/vendor/nsz5/product/64789eac-daf6-463b-9b89-481ac96e2564.jpg', true, ARRAY[]::text[]),
+('9bd735b4-1ee0-4dd9-a498-157f6007cd80', '941d3d29-72b6-4c2d-9400-65e07cc463a4', 'Salted Caramel Ice Blended', 'a blended beverage made with milk, and ice, combined with the sweet and salty flavors of salted caramel syrup, and typically topped with whipped cream and a caramel drizzle.', 235, 'https://images.deliveryhero.io/image/global-menu-service/FP_PH/vendor/nsz5/product/100356740/04674f98-00f3-4d88-8f2e-ecddf6db6f60.jpg', true, ARRAY[]::text[]),
+('9bd735b4-1ee0-4dd9-a498-157f6007cd80', '941d3d29-72b6-4c2d-9400-65e07cc463a4', 'Strawberry Ice Blended', 'a refreshing, icy drink made from blended strawberries, ice, and creamy milk.', 235, 'https://images.deliveryhero.io/image/global-menu-service/FP_PH/vendor/nsz5/product/100356743/d1187533-869e-4180-a445-87d5f32964f7.jpg', true, ARRAY[]::text[]),
+('9bd735b4-1ee0-4dd9-a498-157f6007cd80', '941d3d29-72b6-4c2d-9400-65e07cc463a4', 'Cookies and Cream Ice Blended', 'The combination of sweet, creamy vanilla, coffee, and chocolate cookie pieces', 235, 'https://images.deliveryhero.io/image/global-menu-service/FP_PH/vendor/nsz5/product/8ee7ce6f-a06f-47f3-a507-3a2a32c89030.jpg', true, ARRAY[]::text[]),
+('9bd735b4-1ee0-4dd9-a498-157f6007cd80', '941d3d29-72b6-4c2d-9400-65e07cc463a4', 'Mocha Ice Blended', 'A refreshing blended beverage with rich chocolate, & a creamy texture', 235, 'https://images.deliveryhero.io/image/global-menu-service/FP_PH/vendor/nsz5/product/100233752/57e30eae-2d9b-4c38-b5e8-4fc244400078.jpg', true, ARRAY[]::text[]),
+('9bd735b4-1ee0-4dd9-a498-157f6007cd80', '941d3d29-72b6-4c2d-9400-65e07cc463a4', 'Java Chip Ice Blended', 'A cool, blended beverage featuring, chocolate chips, a smooth & creamy consistency', 235, 'https://images.deliveryhero.io/image/global-menu-service/FP_PH/vendor/nsz5/product/100233753/6e6fc486-7b5b-44f7-ab12-d89a8f2b1ec6.jpg', true, ARRAY[]::text[]),
+('9bd735b4-1ee0-4dd9-a498-157f6007cd80', '941d3d29-72b6-4c2d-9400-65e07cc463a4', 'Pistachio Ice Blended', 'Creamy ice blended drink with rich pistachio flavor topped with whipped cream', 235, 'https://images.deliveryhero.io/image/global-menu-service/FP_PH/vendor/nsz5/product/9aeea749-b755-420f-8700-8bb677e0508e.jpg', true, ARRAY[]::text[])
 ON CONFLICT DO NOTHING;
