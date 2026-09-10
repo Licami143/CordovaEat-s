@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { AnimatePresence, motion } from 'framer-motion';
-import { ChevronDown, Heart, PlusCircle, LayoutDashboard, Shield, History, UserCircle, AlertCircle } from 'lucide-react';
+import { ChevronDown, Heart, PlusCircle, LayoutDashboard, Shield, History, UserCircle, AlertCircle, Sparkles } from 'lucide-react';
 import { useAuth } from '@/lib/auth-context';
 
 export function ProfileDropdown() {
@@ -51,9 +51,10 @@ export function ProfileDropdown() {
     );
   } else {
     menuItems.push(
-      { href: '/dashboard/new', label: 'Add Business', icon: PlusCircle },
+      { href: '/profile#taste-preferences', label: 'Taste Preferences', icon: Sparkles },
       { href: '/favorites', label: 'My Favorites', icon: Heart },
-      { href: '/history', label: 'Search History', icon: History }
+      { href: '/history', label: 'Search History', icon: History },
+      { href: '/dashboard/new', label: 'Add Business', icon: PlusCircle }
     );
   }
 

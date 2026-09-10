@@ -145,6 +145,17 @@ function ProfileContent() {
     loadUserPreferences();
   }, [user?.role]);
 
+  useEffect(() => {
+    if (typeof window !== 'undefined' && window.location.hash === '#taste-preferences') {
+      setTimeout(() => {
+        const el = document.getElementById('taste-preferences');
+        if (el) {
+          el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+      }, 250);
+    }
+  }, []);
+
   const togglePreferenceItem = (
     arr: string[],
     setArr: React.Dispatch<React.SetStateAction<string[]>>,
