@@ -128,6 +128,7 @@ export interface Review {
   created_at: string;
   like_count: number;
   liked_by_me: boolean;
+  visit_type?: string;
 }
 
 export interface Promotion {

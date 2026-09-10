@@ -60,9 +60,10 @@ export default function RegisterPage() {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(false);
   const [oauthLoading, setOauthLoading] = useState<'google' | 'facebook' | null>(null);
+  const [hasRegistered, setHasRegistered] = useState(false);
 
   useEffect(() => {
-    if (user && !loading && !oauthLoading) {
+    if (user && !loading && !oauthLoading && !hasRegistered) {
       if (redirectTo && redirectTo !== '/' && redirectTo.startsWith('/')) {
         router.replace(redirectTo);
       } else if (user.role === 'owner') {
@@ -73,7 +74,7 @@ export default function RegisterPage() {
         router.replace('/');
       }
     }
-  }, [user, loading, oauthLoading, redirectTo, router]);
+  }, [user, loading, oauthLoading, redirectTo, router, hasRegistered]);
 
   const strength = password.length > 0 ? getPasswordStrength(password) : null;
 
@@ -106,12 +107,13 @@ export default function RegisterPage() {
         showToast('Account created! Please check your email to verify your account.', 'success');
         router.push('/verify-email-required');
       } else {
+        setHasRegistered(true);
         try {
-          const user = await login(email, password);
+          const loggedInUser = await login(email, password);
           showToast('Account created successfully! Welcome to CordovaEats.', 'success');
           if (redirectTo && redirectTo !== '/' && redirectTo.startsWith('/')) {
             router.push(redirectTo);
-          } else if (user.role === 'owner') {
+          } else if (loggedInUser.role === 'owner') {
             router.push('/dashboard/new');
           } else {
             router.push('/preferences?firstTime=true');
@@ -132,10 +134,11 @@ export default function RegisterPage() {
     }
   };
 
-  const handleOAuthSuccess = (user: any) => {
+  const handleOAuthSuccess = (authUserData: any) => {
+    setHasRegistered(true);
     if (redirectTo && redirectTo !== '/' && redirectTo.startsWith('/')) {
       router.push(redirectTo);
-    } else if (user.role === 'owner') {
+    } else if (authUserData?.role === 'owner') {
       router.push('/dashboard/new');
     } else {
       router.push('/preferences?firstTime=true');

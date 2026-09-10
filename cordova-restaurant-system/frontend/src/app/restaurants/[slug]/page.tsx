@@ -39,6 +39,11 @@ import type {
   Promotion,
 } from '@/lib/types';
 import { applyRestaurantCustomization, getStaticRestaurantBySlug } from '@/data/restaurants';
+import { MCDONALDS_CATEGORIES, MCDONALDS_MENU_ITEMS } from '@/data/mcdonaldsMenu';
+import { PAPSY_CATEGORIES, PAPSY_MENU_ITEMS } from '@/data/papsyMenu';
+import { PAROLA_CATEGORIES, PAROLA_MENU_ITEMS } from '@/data/parolaMenu';
+import { HORIZON_CATEGORIES, HORIZON_MENU_ITEMS } from '@/data/horizonMenu';
+import { SpatialRestaurantMenu } from '@/components/menu/SpatialRestaurantMenu';
 
 const SPATIAL_EMOJIS = [
   { emoji: '❤️', label: 'Love it' },
@@ -105,42 +110,80 @@ export default function RestaurantDetailPage() {
           api.get(`/api/restaurants/${found.id}/promotions`, { auth: false }).catch(() => ({ data: [] })),
         ]);
 
-        setCategories(menu.data?.categories?.length ? menu.data.categories : [
-          { id: 'cat-1', restaurant_id: found.id, name: 'House Specialties', sort_order: 1 },
-          { id: 'cat-2', restaurant_id: found.id, name: 'Beverages & Desserts', sort_order: 2 },
-        ]);
-        setItems(menu.data?.items?.length ? menu.data.items : [
-          {
-            id: 'item-1',
-            restaurant_id: found.id,
-            category_id: 'cat-1',
-            name: `${customFound.name} Signature Platter`,
-            description: 'Fresh local dish prepared with authentic flavors and traditional island ingredients.',
-            price: 220,
-            is_available: true,
-            dietary_tags: [],
-          },
-          {
-            id: 'item-2',
-            restaurant_id: found.id,
-            category_id: 'cat-1',
-            name: 'Special House Recipe',
-            description: 'Daily selection of grilled or cooked specialty.',
-            price: 180,
-            is_available: true,
-            dietary_tags: [],
-          },
-          {
-            id: 'item-3',
-            restaurant_id: found.id,
-            category_id: 'cat-2',
-            name: 'Iced Island Refreshment',
-            description: 'Chilled signature house beverage.',
-            price: 75,
-            is_available: true,
-            dietary_tags: ['vegetarian'],
-          }
-        ]);
+        const isMcDo =
+          slug === 'mcdonalds-cordova' ||
+          found.slug === 'mcdonalds-cordova' ||
+          customFound.name.toLowerCase().includes('mcdonald');
+
+        const isPapsy =
+          slug === 'papsys-bbq' ||
+          found.slug === 'papsys-bbq' ||
+          customFound.name.toLowerCase() === 'papsys bbq' ||
+          customFound.name.toLowerCase() === "papsy's bbq";
+
+        const isParola =
+          slug === 'parola-seaview-restaurant' ||
+          found.slug === 'parola-seaview-restaurant' ||
+          customFound.name.toLowerCase().includes('parola');
+
+        const isHorizon =
+          slug === 'horizon-bean-cafe' ||
+          found.slug === 'horizon-bean-cafe' ||
+          customFound.name.toLowerCase().includes('horizon');
+
+        if (menu.data?.items?.length) {
+          setCategories(menu.data.categories || []);
+          setItems(menu.data.items);
+        } else if (isMcDo) {
+          setCategories(MCDONALDS_CATEGORIES.map(c => ({ ...c, restaurant_id: found.id })));
+          setItems(MCDONALDS_MENU_ITEMS.map(i => ({ ...i, restaurant_id: found.id })));
+        } else if (isPapsy) {
+          setCategories(PAPSY_CATEGORIES.map(c => ({ ...c, restaurant_id: found.id })));
+          setItems(PAPSY_MENU_ITEMS.map(i => ({ ...i, restaurant_id: found.id })));
+        } else if (isParola) {
+          setCategories(PAROLA_CATEGORIES.map(c => ({ ...c, restaurant_id: found.id })));
+          setItems(PAROLA_MENU_ITEMS.map(i => ({ ...i, restaurant_id: found.id })));
+        } else if (isHorizon) {
+          setCategories(HORIZON_CATEGORIES.map(c => ({ ...c, restaurant_id: found.id })));
+          setItems(HORIZON_MENU_ITEMS.map(i => ({ ...i, restaurant_id: found.id })));
+        } else {
+          setCategories(menu.data?.categories?.length ? menu.data.categories : [
+            { id: 'cat-1', restaurant_id: found.id, name: 'House Specialties', sort_order: 1 },
+            { id: 'cat-2', restaurant_id: found.id, name: 'Beverages & Desserts', sort_order: 2 },
+          ]);
+          setItems(menu.data?.items?.length ? menu.data.items : [
+            {
+              id: 'item-1',
+              restaurant_id: found.id,
+              category_id: 'cat-1',
+              name: `${customFound.name} Signature Platter`,
+              description: 'Fresh local dish prepared with authentic flavors and traditional island ingredients.',
+              price: 220,
+              is_available: true,
+              dietary_tags: [],
+            },
+            {
+              id: 'item-2',
+              restaurant_id: found.id,
+              category_id: 'cat-1',
+              name: 'Special House Recipe',
+              description: 'Daily selection of grilled or cooked specialty.',
+              price: 180,
+              is_available: true,
+              dietary_tags: [],
+            },
+            {
+              id: 'item-3',
+              restaurant_id: found.id,
+              category_id: 'cat-2',
+              name: 'Iced Island Refreshment',
+              description: 'Chilled signature house beverage.',
+              price: 75,
+              is_available: true,
+              dietary_tags: ['vegetarian'],
+            }
+          ]);
+        }
         setReviews(reviewsRes.data?.length ? reviewsRes.data : [
           {
             id: 'rev-1',
@@ -253,7 +296,6 @@ export default function RestaurantDetailPage() {
       toast('Please log in to react to reviews', 'info');
       return;
     }
-    // Optimistic update
     setUserReactions((prev) => ({ ...prev, [reviewId]: emoji }));
     setReviews((prev) =>
       prev.map((r) => {
@@ -303,10 +345,10 @@ export default function RestaurantDetailPage() {
 
   if (loading) {
     return (
-      <div className="max-w-5xl mx-auto px-4 py-8 space-y-6">
-        <Skeleton className="h-80 w-full rounded-xl" />
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
+        <Skeleton className="h-80 w-full rounded-2xl" />
         <Skeleton className="h-12 w-3/4" />
-        <Skeleton className="h-64 w-full" />
+        <Skeleton className="h-64 w-full rounded-2xl" />
       </div>
     );
   }
@@ -393,7 +435,7 @@ export default function RestaurantDetailPage() {
         <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/40 to-black/30 backdrop-blur-[1px]" />
 
         {/* Top Control Buttons */}
-        <div className="absolute top-6 left-6 right-6 z-20 max-w-6xl mx-auto flex justify-between items-center">
+        <div className="absolute top-6 left-6 right-6 z-20 max-w-7xl mx-auto flex justify-between items-center">
           <button
             onClick={() => router.back()}
             className="w-10 h-10 rounded-full bg-white/80 dark:bg-black/60 backdrop-blur-xl flex items-center justify-center text-stone-800 dark:text-white shadow-spatial-sm hover:bg-white dark:hover:bg-black/80 transition-all active:scale-90 border border-white/20"
@@ -411,8 +453,8 @@ export default function RestaurantDetailPage() {
         </div>
 
         {/* Hero Title & Location Overlay */}
-        <div className="absolute bottom-16 left-0 right-0 z-20 px-4">
-          <div className="max-w-4xl mx-auto text-center sm:text-left flex flex-col sm:flex-row items-center justify-between gap-4">
+        <div className="absolute bottom-16 left-0 right-0 z-20 px-4 sm:px-6 lg:px-8">
+          <div className="max-w-7xl mx-auto text-center sm:text-left flex flex-col sm:flex-row items-center justify-between gap-4">
             <div>
               {/* Badge */}
               <div className="inline-flex items-center gap-1.5 text-cordova-gold text-xs font-semibold tracking-widest uppercase mb-2 drop-shadow">
@@ -434,7 +476,7 @@ export default function RestaurantDetailPage() {
       </section>
 
       {/* OVERLAPPING MAIN CONTAINER */}
-      <section className="relative z-30 -mt-10 px-4 max-w-4xl mx-auto">
+      <section className="relative z-30 -mt-10 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
         {/* ACTIVE PROMOTION BANNER IF AVAILABLE */}
         {activePromotions.length > 0 && (
           <div className="mb-4 bg-gradient-to-r from-amber-500 via-cordova-gold to-amber-600 rounded-2xl p-4 sm:p-5 text-white shadow-spatial-lg flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 border border-amber-300/40 backdrop-blur-md">
@@ -536,26 +578,26 @@ export default function RestaurantDetailPage() {
             {activeTab === 'overview' && (
               <div className="space-y-12">
                 {/* Story Grid */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
-                  <div className="space-y-4">
-                    <h2 className="font-serif text-3xl font-bold text-cordova-green dark:text-emerald-400">
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 items-center">
+                  <div className="lg:col-span-7 space-y-4">
+                    <h2 className="font-serif text-3xl sm:text-4xl font-bold text-cordova-green dark:text-emerald-400">
                       Our Story
                     </h2>
-                    <p className="text-stone-600 dark:text-stone-300 text-sm leading-relaxed font-sans">
+                    <p className="text-stone-600 dark:text-stone-300 text-sm sm:text-base leading-relaxed font-sans">
                       {restaurant.description ||
                         `Famous for authentic Cebuano dining and traditional Filipino dishes. Family-owned and dedicated to delivering fresh, local seafood and traditional flavors to every guest.`}
                     </p>
-                    <div className="pt-2 border-t border-stone-200 dark:border-stone-800">
-                      <p className="font-serif italic text-cordova-gold text-sm">
+                    <div className="pt-3 border-t border-stone-200 dark:border-stone-800">
+                      <p className="font-serif italic text-cordova-gold text-sm sm:text-base">
                         &quot;Where tradition meets excellence&quot;
                       </p>
                     </div>
                   </div>
 
                   {/* Story Image with Beige Circular Accent */}
-                  <div className="relative flex justify-center">
-                    <div className="absolute -top-4 -right-4 w-40 h-40 rounded-full bg-amber-100/70 dark:bg-amber-950/30 -z-10" />
-                    <div className="relative h-64 w-full rounded-lg overflow-hidden shadow-md border border-stone-200 dark:border-stone-800">
+                  <div className="lg:col-span-5 relative flex justify-center">
+                    <div className="absolute -top-4 -right-4 w-48 h-48 rounded-full bg-amber-100/70 dark:bg-amber-950/30 -z-10" />
+                    <div className="relative h-72 sm:h-80 w-full rounded-2xl overflow-hidden shadow-spatial-md border border-stone-200 dark:border-stone-800">
                       <Image
                         src={restaurant.cover_image_url || '/hero_background.png'}
                         alt={restaurant.name}
@@ -568,7 +610,7 @@ export default function RestaurantDetailPage() {
 
                 {/* Gallery Section */}
                 <div>
-                  <h3 className="font-serif text-2xl font-bold text-stone-900 dark:text-white mb-6">
+                  <h3 className="font-serif text-2xl sm:text-3xl font-bold text-stone-900 dark:text-white mb-6">
                     Gallery
                   </h3>
                   {allPhotos.length === 0 ? (
@@ -577,17 +619,17 @@ export default function RestaurantDetailPage() {
                       <p className="text-xs">No gallery photos uploaded yet.</p>
                     </div>
                   ) : (
-                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-5">
                       {allPhotos.map((img, i) => (
                         <div
                           key={img.id || i}
-                          className="relative h-44 rounded-lg overflow-hidden bg-stone-100 dark:bg-stone-800 shadow-sm border border-stone-200/60 dark:border-stone-800/60"
+                          className="relative h-48 sm:h-56 rounded-2xl overflow-hidden bg-stone-100 dark:bg-stone-800 shadow-spatial-sm border border-stone-200/60 dark:border-stone-800/60 group"
                         >
                           <Image
                             src={img.image_url}
                             alt={`${restaurant.name} gallery photo`}
                             fill
-                            className="object-cover hover:scale-105 transition-transform duration-300"
+                            className="object-cover group-hover:scale-105 transition-transform duration-300"
                           />
                         </div>
                       ))}
@@ -599,65 +641,17 @@ export default function RestaurantDetailPage() {
 
             {/* MENU TAB */}
             {activeTab === 'menu' && (
-              <div>
-                <h2 className="font-serif text-3xl font-bold text-cordova-green dark:text-emerald-400 text-center mb-8 tracking-wider uppercase">
-                  SIGNATURE DISH
-                </h2>
-
-                {items.length === 0 ? (
-                  <div className="text-center py-12 text-stone-400">
-                    <p className="text-sm">Menu details coming soon.</p>
-                  </div>
-                ) : (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
-                    {items.map((item) => (
-                      <div
-                        key={item.id}
-                        className="bg-stone-50 dark:bg-stone-900 rounded-lg overflow-hidden border border-stone-200 dark:border-stone-800 flex flex-col group shadow-sm"
-                      >
-                        {/* Dish Photo */}
-                        <div className="relative h-44 w-full bg-stone-200 dark:bg-stone-800 overflow-hidden">
-                          {item.image_url ? (
-                            <Image
-                              src={item.image_url}
-                              alt={item.name}
-                              fill
-                              className="object-cover group-hover:scale-105 transition-transform duration-300"
-                            />
-                          ) : (
-                            <div className="h-full w-full flex items-center justify-center text-3xl bg-amber-50 dark:bg-stone-800">
-                              🍲
-                            </div>
-                          )}
-                          <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/80 to-transparent p-3 text-center">
-                            <span className="font-serif text-xs font-bold text-cordova-gold uppercase tracking-wider drop-shadow">
-                              {item.name}
-                            </span>
-                          </div>
-                        </div>
-
-                        {/* Dish Price & Desc */}
-                        <div className="p-3 text-center flex-1 flex flex-col justify-between">
-                          <p className="font-semibold text-sm text-stone-800 dark:text-stone-200">
-                            ₱{Number(item.price).toFixed(0)}
-                          </p>
-                          {item.description && (
-                            <p className="text-xs text-stone-500 dark:text-stone-400 line-clamp-2 mt-1">
-                              {item.description}
-                            </p>
-                          )}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
+              <SpatialRestaurantMenu
+                restaurant={restaurant}
+                items={items}
+                categories={categories}
+              />
             )}
 
             {/* MAP TAB */}
             {activeTab === 'map' && (
               <div className="space-y-6">
-                <div className="rounded-lg overflow-hidden shadow-md border border-stone-200 dark:border-stone-800">
+                <div className="rounded-2xl overflow-hidden shadow-spatial-md border border-stone-200 dark:border-stone-800">
                   <MapViewClient restaurants={[restaurant]} height="450px" />
                 </div>
                 <div className="text-center">
@@ -674,95 +668,69 @@ export default function RestaurantDetailPage() {
               <div className="space-y-8">
                 <div className="flex flex-wrap items-center justify-between gap-4 pb-4 border-b border-stone-200/80 dark:border-stone-800/80">
                   <div>
-                    <h2 className="font-serif text-2xl sm:text-3xl font-bold text-stone-900 dark:text-white tracking-wide">
-                      Community Reviews & Foodie Notes
-                    </h2>
-                    <p className="text-xs sm:text-sm text-stone-500 dark:text-stone-400 mt-1">
-                      Real culinary reviews, dish photos, and taste reactions from diners in Cordova.
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-3 px-4 py-2 rounded-xl bg-amber-500/10 dark:bg-amber-400/10 border border-amber-500/20">
-                    <div className="flex items-center text-amber-500">
-                      <Star size={18} className="fill-amber-400 text-amber-400 mr-1.5" />
-                      <span className="font-bold text-lg text-stone-900 dark:text-white">
-                        {Number(restaurant.avg_rating || 5).toFixed(1)}
+                    <h3 className="font-serif text-2xl font-bold text-stone-900 dark:text-white flex items-center gap-2">
+                      <span>Customer Reviews</span>
+                      <span className="text-xs font-sans font-semibold bg-stone-100 dark:bg-stone-800 px-2.5 py-1 rounded-full text-stone-600 dark:text-stone-300">
+                        {reviews.length} total
                       </span>
-                    </div>
-                    <span className="text-xs text-stone-500 dark:text-stone-400 font-medium">
-                      ({reviews.length} {reviews.length === 1 ? 'review' : 'reviews'})
-                    </span>
+                    </h3>
+                    <p className="text-xs text-stone-500 dark:text-stone-400 mt-0.5">
+                      Verified guest feedback, emoji reactions & foodie badges
+                    </p>
                   </div>
                 </div>
 
-                {/* Review List */}
-                <div className="space-y-5">
+                {/* Review Cards */}
+                <div className="space-y-4">
                   {reviews.length === 0 ? (
-                    <div className="spatial-card p-10 rounded-2xl text-center text-stone-500 bg-stone-50/70 dark:bg-stone-900/60 border border-stone-200/60 dark:border-stone-800/60">
-                      <MessageSquare size={36} className="mx-auto mb-3 text-stone-400 opacity-60" />
-                      <p className="font-medium text-stone-700 dark:text-stone-300 text-sm">
-                        No reviews yet. Be the first to share your dining experience!
-                      </p>
-                      <p className="text-xs text-stone-400 mt-1">
-                        Rate the dishes, upload food photos, and earn community foodie badges.
-                      </p>
+                    <div className="text-center py-12 text-stone-400">
+                      <p className="text-sm">No reviews yet. Be the first to review!</p>
                     </div>
                   ) : (
                     reviews.map((r) => {
-                      const reviewerName = r.reviewer_name || 'Juan Dela Cruz';
-                      const initials = reviewerName
+                      const reviewerInitials = (r.reviewer_name || 'Anonymous User')
                         .split(' ')
                         .map((n) => n[0])
                         .join('')
                         .slice(0, 2)
                         .toUpperCase();
-                      const reviewPhotosList = r.photos || [];
 
                       return (
                         <div
                           key={r.id}
-                          className="spatial-card p-6 rounded-2xl bg-white/80 dark:bg-[#1a211c]/90 backdrop-blur-xl border border-stone-200/80 dark:border-stone-800/80 shadow-[0_4px_24px_rgba(0,0,0,0.03)] hover:shadow-[0_8px_30px_rgba(16,185,129,0.07)] transition-all duration-300"
+                          className="spatial-card p-5 sm:p-6 rounded-2xl bg-white/70 dark:bg-stone-900/60 border border-stone-200/80 dark:border-stone-800/80 shadow-spatial-sm space-y-4 transition-all duration-300 hover:shadow-spatial-md"
                         >
-                          {/* Header: User avatar, name, badges, stars */}
-                          <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-stone-100 dark:border-stone-800/60">
+                          {/* Reviewer Header */}
+                          <div className="flex items-start justify-between gap-3">
                             <div className="flex items-center gap-3">
-                              <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-emerald-600 to-teal-400 text-white font-bold text-xs flex items-center justify-center shadow-sm">
-                                {r.reviewer_avatar ? (
-                                  <Image
-                                    src={r.reviewer_avatar}
-                                    alt={reviewerName}
-                                    width={40}
-                                    height={40}
-                                    className="rounded-full object-cover w-full h-full"
-                                  />
-                                ) : (
-                                  initials
-                                )}
+                              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-emerald-500 to-teal-700 text-white flex items-center justify-center font-bold text-xs shadow-sm">
+                                {reviewerInitials}
                               </div>
                               <div>
                                 <div className="flex items-center gap-2">
-                                  <span className="font-semibold text-sm text-stone-900 dark:text-white">
-                                    {reviewerName}
-                                  </span>
-                                  <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
-                                    <CheckCircle2 size={10} /> Verified Diner
+                                  <h4 className="font-bold text-sm text-stone-900 dark:text-white">
+                                    {r.reviewer_name || 'Anonymous Foodie'}
+                                  </h4>
+                                  <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/60 px-2 py-0.5 rounded-full border border-emerald-200 dark:border-emerald-800">
+                                    <CheckCircle2 size={10} /> Verified Guest
                                   </span>
                                 </div>
-                                <span className="text-[11px] text-stone-400">
-                                  {r.created_at ? new Date(r.created_at).toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' }) : 'Recently reviewed'}
-                                </span>
+                                <div className="flex items-center gap-2 mt-0.5 text-xs text-stone-500 dark:text-stone-400">
+                                  <span>{new Date(r.created_at).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })}</span>
+                                  {r.visit_type && (
+                                    <>
+                                      <span>•</span>
+                                      <span className="capitalize">{r.visit_type}</span>
+                                    </>
+                                  )}
+                                </div>
                               </div>
                             </div>
 
-                            {/* Rating Stars */}
-                            <div className="flex items-center gap-1 bg-amber-50 dark:bg-stone-800/70 px-2.5 py-1 rounded-lg border border-amber-200/60 dark:border-amber-900/30">
-                              {Array.from({ length: 5 }).map((_, i) => (
-                                <Star
-                                  key={i}
-                                  size={14}
-                                  className={i < r.rating ? 'fill-amber-400 text-amber-400' : 'text-stone-300 dark:text-stone-600'}
-                                />
-                              ))}
-                              <span className="text-xs font-bold text-amber-600 dark:text-amber-400 ml-1">
+                            {/* Star Rating Badge */}
+                            <div className="flex items-center gap-1 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/60 px-2.5 py-1 rounded-full">
+                              <Star size={13} className="fill-cordova-gold text-cordova-gold" />
+                              <span className="text-xs font-bold text-stone-800 dark:text-amber-200">
                                 {r.rating}.0
                               </span>
                             </div>
@@ -770,55 +738,42 @@ export default function RestaurantDetailPage() {
 
                           {/* Review Comment */}
                           {r.comment && (
-                            <p className="text-stone-800 dark:text-stone-200 text-sm sm:text-base leading-relaxed my-3.5">
+                            <p className="text-xs sm:text-sm text-stone-700 dark:text-stone-300 leading-relaxed font-sans pl-1">
                               {r.comment}
                             </p>
                           )}
 
-                          {/* Dish Photos Attached */}
-                          {reviewPhotosList.length > 0 && (
-                            <div className="my-3.5">
-                              <div className="flex flex-wrap gap-2.5">
-                                {reviewPhotosList.map((photoUrl, pIdx) => (
-                                  <button
-                                    key={pIdx}
-                                    type="button"
-                                    onClick={() => setLightboxImage(photoUrl)}
-                                    className="relative h-24 w-28 sm:h-28 sm:w-32 rounded-xl overflow-hidden group/photo border border-stone-200/80 dark:border-stone-700/80 shadow-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                                  >
-                                    <Image
-                                      src={photoUrl}
-                                      alt={`Dish photo by ${reviewerName}`}
-                                      fill
-                                      className="object-cover group-hover/photo:scale-110 transition-transform duration-300"
-                                    />
-                                    <div className="absolute inset-0 bg-black/20 opacity-0 group-hover/photo:opacity-100 transition-opacity flex items-center justify-center">
-                                      <Maximize2 size={16} className="text-white drop-shadow" />
-                                    </div>
-                                  </button>
-                                ))}
-                              </div>
+                          {/* Uploaded Dish Photos */}
+                          {r.photos && r.photos.length > 0 && (
+                            <div className="flex flex-wrap gap-2.5 pt-1">
+                              {r.photos.map((photoUrl, pIdx) => (
+                                <button
+                                  key={pIdx}
+                                  type="button"
+                                  onClick={() => setLightboxImage(photoUrl)}
+                                  className="relative h-20 w-20 sm:h-24 sm:w-24 rounded-xl overflow-hidden border border-stone-200 dark:border-stone-700 shadow-sm group cursor-pointer focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                                >
+                                  <Image
+                                    src={photoUrl}
+                                    alt={`Dish photo ${pIdx + 1} by ${r.reviewer_name}`}
+                                    fill
+                                    className="object-cover group-hover:scale-110 transition-transform duration-300"
+                                  />
+                                  <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity text-white">
+                                    <Maximize2 size={16} />
+                                  </div>
+                                </button>
+                              ))}
                             </div>
                           )}
 
-                          {/* Owner Reply if exists */}
-                          {r.owner_reply && (
-                            <div className="mt-3 p-3.5 rounded-xl bg-stone-100/90 dark:bg-stone-800/90 border-l-4 border-emerald-500 text-xs space-y-1">
-                              <p className="font-bold text-stone-900 dark:text-white flex items-center gap-1.5">
-                                <span>🏪</span> Response from the Owner
-                              </p>
-                              <p className="text-stone-700 dark:text-stone-300">{r.owner_reply}</p>
-                            </div>
-                          )}
-
-                          {/* Action Footer: Spatial Emojis & Helpfulness */}
-                          <div className="mt-4 pt-3 border-t border-stone-100 dark:border-stone-800/60 flex flex-wrap items-center justify-between gap-3">
-                            {/* Spatial Emoji Reaction Bar */}
-                            <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
+                          {/* Spatial Reactions & Helpful Row */}
+                          <div className="pt-3 border-t border-stone-100 dark:border-stone-800/80 flex flex-wrap items-center justify-between gap-3">
+                            {/* Emoji Reactions Bar */}
+                            <div className="flex flex-wrap items-center gap-1.5">
                               {SPATIAL_EMOJIS.map(({ emoji, label }) => {
                                 const count = r.reactions?.[emoji] || 0;
                                 const isSelected = userReactions[r.id] === emoji;
-
                                 return (
                                   <button
                                     key={emoji}
@@ -869,9 +824,9 @@ export default function RestaurantDetailPage() {
                 {user?.role === 'customer' ? (
                   <form
                     onSubmit={submitReview}
-                    className="spatial-card p-6 sm:p-7 rounded-2xl bg-white/90 dark:bg-[#1a211c]/90 backdrop-blur-xl border border-stone-200/80 dark:border-stone-800/80 shadow-[0_8px_32px_rgba(0,0,0,0.05)] space-y-5 mt-8"
+                    className="spatial-card p-6 sm:p-7 rounded-2xl bg-white/80 dark:bg-stone-900/80 border border-stone-200 dark:border-stone-800 shadow-spatial-md space-y-5"
                   >
-                    <div className="flex items-center gap-2.5 pb-2 border-b border-stone-200/80 dark:border-stone-800/80">
+                    <div className="flex items-center gap-2 pb-3 border-b border-stone-200 dark:border-stone-800">
                       <Sparkles size={20} className="text-cordova-gold" />
                       <h3 className="font-serif text-lg sm:text-xl font-bold text-stone-900 dark:text-white">
                         Write a Spatial Review & Upload Dish Photos

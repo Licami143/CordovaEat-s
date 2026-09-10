@@ -38,7 +38,9 @@ body {
     @apply card hover:shadow-card-hover hover:-translate-y-0.5 transition-all duration-200;
   }
   .glass {
-    @apply bg-[var(--bg-elevated)]/80 backdrop-blur-xl border border-[var(--border)]/60;
+    @apply backdrop-blur-xl border;
+    background-color: color-mix(in srgb, var(--bg-elevated) 80%, transparent);
+    border-color: color-mix(in srgb, var(--border) 60%, transparent);
   }
   /* Spatial UI Glass Surfaces */
   .spatial-glass {

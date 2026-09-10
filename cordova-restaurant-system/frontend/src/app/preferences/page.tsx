@@ -110,8 +110,8 @@ export default function PreferencesPage() {
         preferredServices: selectedServices,
         budgetRange: selectedBudget,
       });
-      toast('Preferences saved successfully!', 'success');
-      router.push(returnTo || '/recommendations');
+      toast('Preferences saved successfully! Welcome to CordovaEats.', 'success');
+      router.push(returnTo || '/');
     } catch (err) {
       toast(err instanceof ApiClientError ? err.message : 'Failed to save preferences', 'error');
     } finally {
@@ -256,15 +256,15 @@ export default function PreferencesPage() {
                 disabled={loading}
                 className="w-full bg-[#F59E0B] hover:bg-[#D97706] text-white font-bold py-3.5 px-6 rounded-2xl text-sm transition-all duration-200 shadow-md disabled:opacity-50"
               >
-                {loading ? 'Saving...' : isFirstTime ? 'Complete Sign Up' : 'Save Preferences'}
+                {loading ? 'Saving...' : isFirstTime ? 'Complete Sign Up & Go to Home' : 'Save Preferences'}
               </button>
 
               <button
                 type="button"
-                onClick={() => router.push(returnTo || (isFirstTime ? '/' : '/recommendations'))}
+                onClick={() => router.push(returnTo || '/')}
                 className="w-full bg-stone-200 dark:bg-stone-800 hover:bg-stone-300 dark:hover:bg-stone-700 text-stone-700 dark:text-stone-300 font-semibold py-3 px-6 rounded-2xl text-xs transition-colors"
               >
-                {isFirstTime ? 'Skip for now' : returnTo ? 'Back to Recommendations' : 'Back to Home'}
+                {isFirstTime ? 'Skip for now' : 'Back to Home'}
               </button>
             </div>
           </form>

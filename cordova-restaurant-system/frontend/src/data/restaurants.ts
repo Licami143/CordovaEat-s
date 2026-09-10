@@ -38,18 +38,6 @@ export const RESTAURANT_CUSTOMIZATIONS: Record<string, RestaurantCustomConfig> =
     hours: '10:00 AM - 12:00 AM (Daily)',
   },
 
-  // 2. Grillhouse Cordova BBQ
-  'grillhouse-cordova-bbq': {
-    name: 'Grillhouse Cordova BBQ',
-    category: 'Restaurant',
-    coverImage: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQYx1TyZdXDc_Y1AEZbFrr5Z9bTwmQjoAZCuWUYtHu3ag&s=10',
-    barangay: 'Ibabao',
-    description: 'Classic Filipino BBQ and grilled favorites, budget-friendly family dining.',
-    address: '7W5X+6C2, Cordova, Cebu (or San Miguel Road)',
-    phone: '0927 296 4811',
-    hours: '9:00 AM - 9:00 PM (Daily)',
-  },
-
   // 3. Street Food Park
   'street-food-park': {
     name: 'Street Food Park',

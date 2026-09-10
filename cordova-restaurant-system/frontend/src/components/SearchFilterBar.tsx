@@ -133,7 +133,7 @@ export function SearchFilterBar({
     (filters.userLat != null ? 1 : 0);
 
   return (
-    <div className="bg-white dark:bg-[#1a211c] border border-stone-200 dark:border-stone-800 rounded-xl shadow-sm p-4 sm:p-6 mb-8 transition-all duration-300">
+    <div className="bg-white/80 dark:bg-[#161c18]/80 backdrop-blur-2xl border border-white/60 dark:border-white/10 rounded-2xl shadow-spatial-md p-4 sm:p-6 mb-8 transition-all duration-300">
       {/* Primary Search Bar Form */}
       <form onSubmit={handleSubmit} className="flex flex-col sm:flex-row items-center gap-3">
         <div className="relative flex-1 w-full">
@@ -146,7 +146,7 @@ export function SearchFilterBar({
             value={filters.keyword}
             onChange={(e) => handleKeywordChange(e.target.value)}
             placeholder="Search restaurants, dishes (e.g. Bangus, Pizza, Baked Scallops)..."
-            className="w-full pl-10 pr-32 py-3 text-sm bg-stone-50 dark:bg-stone-900 border border-stone-200 dark:border-stone-700 rounded-lg text-stone-900 dark:text-white placeholder:text-stone-400 focus:outline-none focus:ring-2 focus:ring-cordova-green"
+            className="w-full pl-10 pr-32 py-3 text-sm bg-stone-100/70 dark:bg-black/30 border border-stone-200/80 dark:border-white/10 rounded-xl text-stone-900 dark:text-white placeholder:text-stone-400 focus:outline-none focus:ring-2 focus:ring-cordova-green/50 backdrop-blur-sm"
           />
           <div className="absolute right-2.5 top-1/2 -translate-y-1/2 flex items-center gap-1.5">
             {filters.keyword && (
@@ -158,7 +158,7 @@ export function SearchFilterBar({
                 <X size={15} />
               </button>
             )}
-            <span className="flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-purple-700/90 text-white shadow-sm border border-purple-400/40 select-none">
+            <span className="flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-sm border border-purple-300/40 select-none">
               <Sparkles size={11} className="text-purple-200" />
               <span>AI Mode</span>
             </span>
@@ -170,10 +170,10 @@ export function SearchFilterBar({
           <button
             type="button"
             onClick={() => setShowAdvanced(!showAdvanced)}
-            className={`flex items-center justify-center gap-1.5 px-4 py-3 rounded-lg text-xs font-semibold uppercase tracking-wider border transition-colors shrink-0 ${
+            className={`flex items-center justify-center gap-1.5 px-4 py-3 rounded-xl text-xs font-semibold uppercase tracking-wider border transition-all shrink-0 ${
               showAdvanced || activeFilterCount > 0
-                ? 'border-cordova-green text-cordova-green bg-cordova-green/5 dark:bg-cordova-green/10'
-                : 'border-stone-300 dark:border-stone-700 text-stone-700 dark:text-stone-300 hover:bg-stone-100 dark:hover:bg-stone-800'
+                ? 'border-cordova-green text-cordova-green bg-cordova-green/10 dark:bg-emerald-500/15'
+                : 'border-stone-300/80 dark:border-white/10 text-stone-700 dark:text-stone-300 hover:bg-stone-100/80 dark:hover:bg-white/10'
             }`}
           >
             <SlidersHorizontal size={14} />
@@ -183,7 +183,7 @@ export function SearchFilterBar({
           <button
             type="submit"
             disabled={loading}
-            className="flex-1 sm:flex-none flex items-center justify-center gap-2 bg-cordova-green hover:bg-cordova-greenHover text-white px-6 py-3 rounded-lg text-xs font-bold uppercase tracking-wider shadow-sm transition-colors disabled:opacity-50"
+            className="flex-1 sm:flex-none flex items-center justify-center gap-2 bg-gradient-to-r from-cordova-green to-emerald-700 hover:from-emerald-700 hover:to-emerald-800 text-white px-6 py-3 rounded-xl text-xs font-bold uppercase tracking-wider shadow-spatial-sm transition-all disabled:opacity-50 active:scale-95"
           >
             {loading ? (
               <span>Searching...</span>
