@@ -1,11 +1,57 @@
 # Backend — Cordova Local Restaurant Recommendation System
 
-Node.js/Express REST API with PostgreSQL, JWT auth, RBAC, a rule-based AI
-recommendation engine, file uploads, rate limiting, and Swagger docs.
+Node.js/Express REST API with PostgreSQL, JWT auth, RBAC, a hybrid restaurant
+recommender with per-user logistic regression, file uploads, rate limiting,
+and Swagger docs.
+
+The recommender hard-filters dietary, service, distance, and open-now constraints.
+It ranks new users from saved preferences, then learns each customer's ranking
+from helpful/not-helpful votes, saved favorites, and visible review ratings. The
+personal model activates after at least 8 signals including 2 positive and 2
+negative examples. Apply new database migrations with `npm run db:migrate`.
+
+## External AI suggestions
+
+The recommendations endpoint can use Groq to interpret free-text food
+requests and select establishments from a short list of known candidates.
+CordovaEats generates the displayed reasons and match scores from its own
+restaurant data and recommender.
+
+In local development, an administrator can save a Groq key and test its
+connection on the AI Recommendations page. This writes to ignored
+`backend/.env.local`; the key is never returned to the browser.
+Local browser access is required to edit these settings. For hosted systems,
+set `GROQ_API_KEY` as a server environment variable. Server environment
+variables take precedence over local files. Do not put a key in the frontend.
+If a key has a scheduled expiration, set `GROQ_API_KEY_EXPIRES_AT` to its date
+or enter it on the admin page. This date is reminder metadata; the key does
+not renew itself. Training the shared recommendation model does not use Groq.
+
+`GROQ_MODEL` defaults to `openai/gpt-oss-20b`, `GROQ_TIMEOUT_MS` to 20000,
+`GROQ_MAX_REQUESTS_PER_15_MIN` to 60, and `GROQ_MAX_REQUESTS_PER_MIN` to 20.
+Each local cap is per backend process, includes connection tests, resets on
+restart, and is not shared across server instances. Groq's published free plan for GPT-OSS 20B lists 30 requests per
+minute and 1,000 per day, with token limits; the [Groq rate-limit page](https://console.groq.com/docs/rate-limits)
+has current limits and account-specific details. Without a key, or if Groq
+times out, rejects a request, or reaches a limit, recommendations use
+the local interpreter and ranker. Groq's Responses API does not support a
+`store` request field.
+
+When enabled, the backend sends the user's search text (up to 500 characters),
+selected preference filters, and a compact set of public establishment details
+to Groq. It does not send account identifiers, emails, auth tokens, or exact
+user coordinates. Users should avoid entering personal data in
+free-text search. The API key remains server-side. The response reports `groq`
+or `local` as `meta.aiProvider` according to what actually produced AI
+suggestions or preference filters.
+
+If `backend/.env` was ever committed, remove it from Git tracking and rotate
+the database and signing secrets it contained; ignoring it now does not erase
+past Git history.
 
 ## Prerequisites
 
-- Node.js 18+
+- Node.js 20.9+
 - PostgreSQL 14+ (running locally, in Docker, or a hosted instance)
 
 ## Setup
@@ -30,6 +76,12 @@ npm run dev   # starts on http://localhost:4000 with nodemon
 
 Health check: `GET http://localhost:4000/health`
 Interactive API docs (Swagger UI): `http://localhost:4000/api/docs`
+
+To import the 14 RCA Bilao Food Station items from its Foodpanda listing after
+the restaurant exists in the database, run `npm run db:seed-rca-menu`. The
+script looks up RCA by slug, updates matching prices and photo URLs, and leaves
+unrelated menu items intact. The two variable-price products use the lowest
+listed price and are labeled as starting prices on the restaurant page.
 
 ## Demo accounts (after `npm run db:seed`)
 

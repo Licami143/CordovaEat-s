@@ -6,78 +6,8 @@ included at the bottom for teams that must use MySQL per the proposal's
 
 ## Entity Relationship Diagram
 
-```mermaid
-erDiagram
-    USERS ||--o| USER_PREFERENCES : has
-    USERS ||--o{ REFRESH_TOKENS : owns
-    USERS ||--o{ RESTAURANTS : owns
-    USERS ||--o{ REVIEWS : writes
-    USERS ||--o{ FAVORITES : saves
-    USERS ||--o{ NOTIFICATIONS : receives
-    USERS ||--o{ AUDIT_LOGS : performs
-
-    RESTAURANTS ||--o{ RESTAURANT_CUISINES : tagged
-    CUISINES ||--o{ RESTAURANT_CUISINES : tags
-    RESTAURANTS ||--o{ RESTAURANT_DIETARY_OPTIONS : offers
-    RESTAURANTS ||--o{ RESTAURANT_IMAGES : has
-    RESTAURANTS ||--o{ OPERATING_HOURS : defines
-    RESTAURANTS ||--o{ MENU_CATEGORIES : groups
-    RESTAURANTS ||--o{ MENU_ITEMS : lists
-    MENU_CATEGORIES ||--o{ MENU_ITEMS : contains
-    RESTAURANTS ||--o{ REVIEWS : receives
-    RESTAURANTS ||--o{ FAVORITES : saved_by
-    RESTAURANTS ||--o{ PROMOTIONS : runs
-    RESTAURANTS ||--o{ RESTAURANT_VIEW_LOGS : tracked_by
-    RESTAURANTS ||--o{ RECOMMENDATION_LOGS : appears_in
-
-    USERS {
-        uuid id PK
-        string email UK
-        string password_hash
-        string full_name
-        enum role "customer|owner|admin"
-        boolean is_active
-    }
-
-    RESTAURANTS {
-        uuid id PK
-        uuid owner_id FK
-        string name
-        string slug UK
-        float latitude
-        float longitude
-        enum price_range
-        enum status "pending|verified|rejected|suspended"
-        numeric avg_rating
-        int review_count
-    }
-
-    MENU_ITEMS {
-        uuid id PK
-        uuid restaurant_id FK
-        uuid category_id FK
-        string name
-        numeric price
-        boolean is_available
-    }
-
-    REVIEWS {
-        uuid id PK
-        uuid restaurant_id FK
-        uuid user_id FK
-        smallint rating "1-5"
-        enum status "visible|flagged|removed"
-    }
-
-    RECOMMENDATION_WEIGHTS {
-        int id PK
-        numeric cuisine_weight
-        numeric budget_weight
-        numeric proximity_weight
-        numeric dietary_weight
-        numeric rating_weight
-    }
-```
+See the [simple ERD](ERD.md) for the main entities and the
+[complete ERD](ERD_FULL.md) for all tables, based on migrations 001–016.
 
 ## Design Notes & Rationale
 
@@ -93,10 +23,13 @@ erDiagram
   kept in sync via the `recalc_restaurant_rating()` trigger, because every
   restaurant list/search view needs them and recomputing an AVG() over
   reviews on every list request doesn't scale.
-- **`recommendation_weights`** is a single-row-active configuration table
-  that implements the "Update AI Model" admin use case without needing real
-  ML infrastructure — admins tune the rule-based scoring weights (see
-  `docs/API.md` → Recommendation Engine).
+- **`recommendation_weights`** supplies the cold-start ranking for customers
+  without enough feedback. `recommendation_feedback` stores direct helpful/not-
+  helpful labels; saved favorites and high/low reviews supply additional labels.
+  The recommender fits a per-customer logistic-regression ranker after at least
+  8 signals with at least 2 positive and 2 negative examples. Admins can train
+  versioned global logistic-regression models from pooled signals; active users
+  with a trained personal model use that first. See `docs/API.md` → Recommendation Engine.
 - **`recommendation_logs` / `restaurant_view_logs`** feed the "Admin: System-
   wide analytics" and "Owner: views, clicks & recommendation frequency"
   features. `query_params` is JSONB so new filter types don't require a
@@ -111,18 +44,15 @@ erDiagram
 
 ## Migrations
 
-| File | Purpose |
-|---|---|
-| `migrations/001_initial_schema.sql` | All extensions, enums, tables, indexes, triggers |
-| `migrations/002_reference_data.sql` | Cuisine lookup values + default AI weight profile (idempotent) |
+The migration runner applies all numbered files in `database/migrations/`
+in filename order. The current sequence is `001` through `016`; later files
+add review interactions, subscriptions, recommendation training, account
+tokens, business claims, and review reporting to the initial schema.
 
-Run with the Node `pg` client via `npm run db:migrate` (see backend README),
-or directly:
+From `backend/`, run:
 
 ```bash
-psql "$DATABASE_URL" -f database/migrations/001_initial_schema.sql
-psql "$DATABASE_URL" -f database/migrations/002_reference_data.sql
-psql "$DATABASE_URL" -f database/seed.sql   # optional, dev/demo only
+npm run db:migrate
 ```
 
 ## MySQL compatibility notes

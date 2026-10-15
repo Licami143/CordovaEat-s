@@ -1,6 +1,7 @@
 const router = require('express').Router();
 const restaurantController = require('../controllers/restaurant.controller');
 const reviewController = require('../controllers/review.controller');
+const highlightController = require('../controllers/highlight.controller');
 const analyticsController = require('../controllers/analytics.controller');
 const userController = require('../controllers/user.controller');
 const promotionController = require('../controllers/promotion.controller');
@@ -11,9 +12,14 @@ const { verifyBusinessValidator } = require('../validators/restaurant.validator'
 const { moderateReviewValidator } = require('../validators/misc.validator');
 
 router.use(requireAuth, requireRole('admin'));
+const claimController = require('../controllers/claim.controller');
+router.get('/claims', claimController.listAdmin);
+router.patch('/claims/:id/review', claimController.review);
+router.post('/claims/:id/message', claimController.messageApplicant);
 
 // Business permit & registration verification
 router.get('/restaurants', restaurantController.adminList);
+router.get('/restaurants/:id/permit', restaurantController.getPermit);
 router.patch('/restaurants/:id/verify', validate(verifyBusinessValidator), restaurantController.verify);
 router.patch('/restaurants/:id/suspend', restaurantController.suspend);
 router.delete('/restaurants/:id', restaurantController.adminDelete);
@@ -24,6 +30,8 @@ router.patch('/users/:id/active', userController.setUserActive);
 router.delete('/users/:id', userController.deleteUser);
 
 // Content & review moderation
+router.get('/highlights', highlightController.adminList);
+router.patch('/highlights/:id/moderate', highlightController.moderate);
 router.get('/reviews', reviewController.listAdminReviews);
 router.get('/reviews/flagged', reviewController.listFlagged);
 router.patch('/reviews/:id/moderate', validate(moderateReviewValidator), reviewController.moderate);

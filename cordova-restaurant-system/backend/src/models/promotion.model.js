@@ -20,7 +20,14 @@ async function listActive({ limit = 12, offset = 0, restaurantId } = {}) {
 
   const params = [];
   let idx = 1;
-  const conditions = [`p.status = 'active'`, `p.start_date <= CURRENT_DATE`, `p.end_date >= CURRENT_DATE`];
+  const conditions = [
+    `p.status = 'active'`,
+    `(p.payment_status = 'verified' OR p.payment_status IS NULL)`,
+    `p.start_date <= CURRENT_DATE`,
+    `p.end_date >= CURRENT_DATE`,
+    `r.status = 'verified'`,
+    `r.is_active = TRUE`
+  ];
   if (restaurantId) {
     conditions.push(`p.restaurant_id = $${idx++}`);
     params.push(restaurantId);
@@ -28,7 +35,9 @@ async function listActive({ limit = 12, offset = 0, restaurantId } = {}) {
   const where = `WHERE ${conditions.join(' AND ')}`;
 
   const { rows } = await query(
-    `SELECT p.*, r.name AS restaurant_name, r.slug AS restaurant_slug
+    `SELECT p.id, p.restaurant_id, p.title, p.description, p.image_url,
+       p.discount_label, p.start_date, p.end_date, p.status, p.created_at,
+       r.name AS restaurant_name, r.slug AS restaurant_slug
      FROM promotions p JOIN restaurants r ON r.id = p.restaurant_id
      ${where}
      ORDER BY p.end_date ASC, p.start_date DESC
@@ -36,7 +45,7 @@ async function listActive({ limit = 12, offset = 0, restaurantId } = {}) {
     [...params, limit, offset]
   );
   const { rows: countRows } = await query(
-    `SELECT COUNT(*) FROM promotions p ${where}`, params
+    `SELECT COUNT(*) FROM promotions p JOIN restaurants r ON r.id = p.restaurant_id ${where}`, params
   );
   return { rows, totalCount: parseInt(countRows[0].count, 10) };
 }
@@ -69,10 +78,10 @@ async function create(restaurantId, data) {
       data.discountLabel || null,
       data.startDate,
       data.endDate,
-      data.status || 'active',
+      data.status || 'pending_verification',
       data.paymentMethod || data.payment_method || 'gcash',
       data.paymentReference || data.payment_reference || data.referenceNo || null,
-      data.paymentStatus || data.payment_status || 'verified',
+      data.paymentStatus || data.payment_status || 'pending_verification',
     ]
   );
   return rows[0];
@@ -117,11 +126,13 @@ async function listAllAdmin({ status, search, limit = 50, offset = 0 } = {}) {
 
   if (status && status !== 'all') {
     if (status === 'active') {
-      conditions.push(`p.status = 'active' AND p.end_date >= CURRENT_DATE`);
+      conditions.push(`p.status = 'active' AND (p.payment_status = 'verified' OR p.payment_status IS NULL) AND p.end_date >= CURRENT_DATE`);
     } else if (status === 'expired') {
       conditions.push(`(p.status = 'expired' OR p.end_date < CURRENT_DATE)`);
     } else if (status === 'pending_verification') {
-      conditions.push(`p.payment_status = 'pending_verification'`);
+      conditions.push(`(p.payment_status = 'pending_verification' OR p.status = 'pending_verification')`);
+    } else if (status === 'rejected') {
+      conditions.push(`(p.status = 'rejected' OR p.payment_status = 'rejected')`);
     } else {
       conditions.push(`p.status = $${idx++}`);
       params.push(status);

@@ -1,6 +1,7 @@
 'use client';
+import { pendingClaimDestination } from '@/lib/claims';
 
-import { useState, useEffect, useRef, FormEvent } from 'react';
+import { useState, useEffect, useRef, useCallback, FormEvent } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -8,23 +9,27 @@ import { Eye, EyeOff, Sparkles, ArrowRight } from 'lucide-react';
 import { useAuth } from '@/lib/auth-context';
 import { useToast } from '@/lib/toast-context';
 import { ApiClientError } from '@/lib/api';
+import { getAuthApiFeedback, normalizeAuthEmail, validateAuthEmail } from '@/lib/auth-form';
+import { needsTastePreferences, syncTastePreferencesToAccount } from '@/lib/taste-preferences';
+import { preferencesOnboardingDestination } from '@/lib/onboarding';
 import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
 
 const rawClientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || '';
-const GOOGLE_CLIENT_ID =
-  rawClientId && !rawClientId.includes('YOUR_CLIENT_ID') && !rawClientId.includes('your_')
-    ? rawClientId
-    : null;
+const GOOGLE_CLIENT_ID = /^[\w-]+\.apps\.googleusercontent\.com$/.test(rawClientId.trim())
+  && !/your_client_id|placeholder|your_/i.test(rawClientId)
+  ? rawClientId.trim()
+  : null;
 
-const REQUIRE_EMAIL_VERIFICATION = process.env.NEXT_PUBLIC_REQUIRE_EMAIL_VERIFICATION === 'true';
+const REQUIRE_EMAIL_VERIFICATION = process.env.NODE_ENV === 'production'
+  || process.env.NEXT_PUBLIC_REQUIRE_EMAIL_VERIFICATION === 'true';
 
 export default function LoginPage() {
-  const { user, login, loginWithGoogle, loginWithFacebook } = useAuth();
+  const { user, loading: authLoading, login, loginWithGoogle } = useAuth();
   const { showToast } = useToast();
   const router = useRouter();
   const searchParams = useSearchParams();
-  const redirectTo = searchParams.get('redirect') || '/';
+  const redirectTo = searchParams.get('redirect') || searchParams.get('returnTo') || '/';
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -32,10 +37,10 @@ export default function LoginPage() {
   const [rememberMe, setRememberMe] = useState(true);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(false);
-  const [oauthLoading, setOauthLoading] = useState<'google' | 'facebook' | null>(null);
+  const [oauthLoading, setOauthLoading] = useState<'google' | null>(null);
   const redirectedRef = useRef(false);
 
-  const handleSuccessfulAuth = (authUserData?: any) => {
+  const handleSuccessfulAuth = useCallback(async (authUserData?: any) => {
     if (redirectedRef.current) return;
     redirectedRef.current = true;
 
@@ -45,38 +50,55 @@ export default function LoginPage() {
       router.replace('/verify-email-required');
       return;
     }
-    // Honour ?redirect= param from protected-route redirects (e.g. /dashboard/new) if role is authorized
-    if (redirectTo && redirectTo !== '/' && redirectTo.startsWith('/')) {
-      const isRestrictedAdmin = redirectTo.startsWith('/admin') && targetUser?.role !== 'admin';
-      const isRestrictedDashboard = redirectTo.startsWith('/dashboard') && targetUser?.role !== 'owner' && targetUser?.role !== 'admin';
 
-      if (!isRestrictedAdmin && !isRestrictedDashboard) {
-        router.replace(redirectTo);
+    if (targetUser) {
+      try {
+        await syncTastePreferencesToAccount(targetUser);
+      } catch {
+        showToast('Your taste preferences could not be synced yet. You can update them from your profile.', 'warning');
+      }
+    }
+
+    // Honour protected-route destinations only when they are local and authorized.
+    const requestedDestination = redirectTo !== '/' ? redirectTo : pendingClaimDestination() || '/';
+    const isLocalDestination = requestedDestination.startsWith('/')
+      && !requestedDestination.startsWith('//') && !requestedDestination.includes('\\');
+    const isRestrictedAdmin = requestedDestination.startsWith('/admin') && targetUser?.role !== 'admin';
+    const isRestrictedDashboard = requestedDestination.startsWith('/dashboard')
+      && !/^\/dashboard\/claims(?:\/|\?|$)/.test(requestedDestination)
+      && targetUser?.role !== 'owner' && targetUser?.role !== 'admin';
+    const fallback = targetUser?.role === 'admin' ? '/admin' : targetUser?.role === 'owner' ? '/dashboard' : '/';
+    const destination = isLocalDestination && !isRestrictedAdmin && !isRestrictedDashboard
+      ? requestedDestination : fallback;
+
+    if (targetUser && targetUser.role !== 'admin' && !destination.startsWith('/preferences')) {
+      try {
+        if (await needsTastePreferences(targetUser)) {
+          router.replace(preferencesOnboardingDestination(destination));
+          return;
+        }
+      } catch {
+        // Offer onboarding if the preferences service cannot confirm it was completed.
+        router.replace(preferencesOnboardingDestination(destination));
         return;
       }
     }
-    if (targetUser?.role === 'admin') {
-      router.replace('/admin');
-      return;
-    }
-    if (targetUser?.role === 'owner') {
-      router.replace('/dashboard');
-    } else {
-      router.replace('/');
-    }
-  };
+    router.replace(destination);
+  }, [user, redirectTo, showToast, router]);
+
+
 
   // If user is already authenticated, immediately navigate away from login
   useEffect(() => {
     if (user && !loading && !oauthLoading && !redirectedRef.current) {
-      handleSuccessfulAuth(user);
+      void handleSuccessfulAuth(user);
     }
-  }, [user, loading, oauthLoading]);
+  }, [user, loading, oauthLoading, handleSuccessfulAuth]);
 
   const validate = () => {
     const e: Record<string, string> = {};
-    if (!email.trim()) e.email = 'Please enter your email address.';
-    else if (!/\S+@\S+\.\S+/.test(email)) e.email = 'Please enter a valid email address.';
+    const emailError = validateAuthEmail(normalizeAuthEmail(email));
+    if (emailError) e.email = emailError;
     if (!password) e.password = 'Password is required.';
     setErrors(e);
     return Object.keys(e).length === 0;
@@ -87,30 +109,39 @@ export default function LoginPage() {
     if (!validate()) return;
     setLoading(true);
     try {
-      const loggedUser = await login(email, password);
+      const loggedUser = await login(normalizeAuthEmail(email), password);
       showToast('Welcome back to CordovaEats!', 'success');
-      handleSuccessfulAuth(loggedUser);
+      await handleSuccessfulAuth(loggedUser);
     } catch (err) {
       if (err instanceof ApiClientError) {
-        showToast(err.message, 'error');
+        const feedback = getAuthApiFeedback(err, { email: 'email', password: 'password' });
+        setErrors(feedback.fieldErrors);
+        showToast(feedback.message, 'error');
+      } else if (err instanceof TypeError && (err.message.includes('fetch') || err.message.includes('network') || err.message.includes('Failed'))) {
+        showToast('Cannot reach the server. Please make sure the backend is running.', 'error');
       } else {
-        showToast('Email or password is incorrect.', 'error');
+        showToast('Login failed. Please check your credentials and try again.', 'error');
       }
     } finally {
       setLoading(false);
     }
   };
 
-  const handleGoogleSignIn = async () => {
-    setOauthLoading('google');
 
-    // 1. If Google Client ID is configured, use official Google Identity Services popup
-    if (GOOGLE_CLIENT_ID) {
-      const client = (window as any).google?.accounts?.oauth2?.initTokenClient({
+  const handleGoogleSignIn = async () => {
+    if (!GOOGLE_CLIENT_ID) return;
+    setOauthLoading('google');
+    try {
+      if (!(window as any).google?.accounts?.oauth2?.initTokenClient) {
+        showToast('Google sign-in is temporarily unavailable. Please use email instead.', 'error');
+        setOauthLoading(null);
+        return;
+      }
+      const client = (window as any).google.accounts.oauth2.initTokenClient({
         client_id: GOOGLE_CLIENT_ID,
         scope: 'openid email profile',
         callback: async (tokenResponse: any) => {
-          if (tokenResponse.error) {
+          if (tokenResponse?.error || !tokenResponse?.access_token) {
             showToast('Google authentication was cancelled or failed.', 'error');
             setOauthLoading(null);
             return;
@@ -118,7 +149,7 @@ export default function LoginPage() {
           try {
             const loggedUser = await loginWithGoogle(tokenResponse.access_token);
             showToast('Signed in with Google successfully!', 'success');
-            handleSuccessfulAuth(loggedUser);
+            await handleSuccessfulAuth(loggedUser);
           } catch (err) {
             if (err instanceof ApiClientError) showToast(err.message, 'error');
             else showToast('Google authentication failed. Please try again.', 'error');
@@ -132,41 +163,20 @@ export default function LoginPage() {
         },
       });
 
-      if (client) {
-        client.requestAccessToken();
-        return;
-      }
-    }
-
-    // 2. Local Dev fallback if Google Client ID is not yet configured in .env.local
-    try {
-      showToast('Dev Mode: Signing in with simulated Google account…', 'info');
-      const devToken = `google_oauth_token_${Date.now()}`;
-      const loggedUser = await loginWithGoogle(devToken);
-      showToast('Signed in with Google (Dev Mode)!', 'success');
-      handleSuccessfulAuth(loggedUser);
-    } catch (err) {
-      if (err instanceof ApiClientError) showToast(err.message, 'error');
-      else showToast('Google authentication failed.', 'error');
-    } finally {
+      client.requestAccessToken();
+    } catch {
+      showToast('Google sign-in is temporarily unavailable. Please use email instead.', 'error');
       setOauthLoading(null);
     }
   };
 
-  const handleFacebookSignIn = async () => {
-    setOauthLoading('facebook');
-    try {
-      const mockFbToken = `fb_oauth_token_${Date.now()}`;
-      const loggedUser = await loginWithFacebook(mockFbToken);
-      showToast('Signed in with Facebook successfully!', 'success');
-      handleSuccessfulAuth(loggedUser);
-    } catch (err) {
-      if (err instanceof ApiClientError) showToast(err.message, 'error');
-      else showToast('Facebook authentication failed.', 'error');
-    } finally {
-      setOauthLoading(null);
-    }
-  };
+  if (authLoading) {
+    return (
+      <div className="min-h-[80vh] flex items-center justify-center py-10 px-4">
+        <div className="w-10 h-10 rounded-full border-4 border-emerald-500 border-t-transparent animate-spin" />
+      </div>
+    );
+  }
 
   if (user && !loading && !oauthLoading) {
     return (
@@ -201,9 +211,11 @@ export default function LoginPage() {
         </div>
 
         {/* Google Sign-In */}
+        {GOOGLE_CLIENT_ID && (
         <button
           type="button"
           onClick={handleGoogleSignIn}
+          style={{ display: process.env.NODE_ENV === 'production' && !process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID ? 'none' : undefined }}
           disabled={!!oauthLoading}
           className="w-full flex items-center justify-center gap-3 bg-white dark:bg-stone-800 hover:bg-stone-50 dark:hover:bg-stone-700 text-stone-700 dark:text-stone-200 font-semibold text-sm py-3 px-4 rounded-xl border border-stone-300 dark:border-stone-700 shadow-sm transition-colors mb-3 disabled:opacity-60"
         >
@@ -215,27 +227,17 @@ export default function LoginPage() {
           </svg>
           {oauthLoading === 'google' ? 'Connecting to Google…' : 'Continue with Google'}
         </button>
-
-        {/* Facebook Sign-In */}
-        <button
-          type="button"
-          onClick={handleFacebookSignIn}
-          disabled={!!oauthLoading}
-          className="w-full flex items-center justify-center gap-3 bg-[#1877F2] hover:bg-[#166fe5] text-white font-semibold text-sm py-3 px-4 rounded-xl shadow-sm transition-colors mb-6 disabled:opacity-60"
-        >
-          <svg className="w-5 h-5 shrink-0 fill-current" viewBox="0 0 24 24">
-            <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" />
-          </svg>
-          {oauthLoading === 'facebook' ? 'Connecting to Facebook…' : 'Continue with Facebook'}
-        </button>
+        )}
 
         {/* Divider */}
+        {GOOGLE_CLIENT_ID && (
         <div className="relative flex items-center justify-center mb-6">
           <div className="border-t border-stone-200 dark:border-stone-700 w-full" />
           <span className="absolute bg-white dark:bg-[#1a211c] px-3 text-[11px] font-bold text-stone-400 uppercase tracking-widest">
             or sign in with email
           </span>
         </div>
+        )}
 
         {/* Email/Password Form */}
         <form onSubmit={onSubmit} className="space-y-4" noValidate>
@@ -307,7 +309,7 @@ export default function LoginPage() {
 
         <p className="text-sm text-stone-500 dark:text-stone-400 mt-6 text-center">
           Don&apos;t have an account?{' '}
-          <Link href="/register" className="text-cordova-green font-bold hover:underline">
+          <Link href={redirectTo !== '/' ? `/register?redirect=${encodeURIComponent(redirectTo)}` : '/register'} className="text-cordova-green font-bold hover:underline">
             Sign up
           </Link>
         </p>

@@ -1,4 +1,5 @@
 'use client';
+import { pendingClaimDestination } from '@/lib/claims';
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
@@ -7,12 +8,14 @@ import { Mail, RefreshCw, LogOut, CheckCircle2 } from 'lucide-react';
 import { useAuth } from '@/lib/auth-context';
 import { useToast } from '@/lib/toast-context';
 import { ApiClientError } from '@/lib/api';
+import { destinationAfterEmailVerification } from '@/lib/onboarding';
 
-const REQUIRE_EMAIL_VERIFICATION = process.env.NEXT_PUBLIC_REQUIRE_EMAIL_VERIFICATION === 'true';
+const REQUIRE_EMAIL_VERIFICATION = process.env.NODE_ENV === 'production'
+  || process.env.NEXT_PUBLIC_REQUIRE_EMAIL_VERIFICATION === 'true';
 
 export default function VerifyEmailRequiredPage() {
   const router = useRouter();
-  const { user, resendVerificationEmail, devVerifyEmail, logout } = useAuth();
+  const { user, loading: authLoading, resendVerificationEmail, devVerifyEmail, logout } = useAuth();
   const { showToast } = useToast();
 
   const [cooldown, setCooldown] = useState(0);
@@ -20,6 +23,7 @@ export default function VerifyEmailRequiredPage() {
   const [devVerifying, setDevVerifying] = useState(false);
 
   useEffect(() => {
+    if (authLoading) return;
     if (!user) {
       router.push('/login');
     } else if (user.role === 'admin') {
@@ -27,10 +31,10 @@ export default function VerifyEmailRequiredPage() {
     } else if (user.email_verified || !REQUIRE_EMAIL_VERIFICATION) {
       // If already verified or verification is disabled on localhost, allow browsing
       if (user.email_verified) {
-        router.push('/');
+        router.push(destinationAfterEmailVerification(user.role, pendingClaimDestination()));
       }
     }
-  }, [user, router]);
+  }, [user, authLoading, router]);
 
   useEffect(() => {
     let timer: NodeJS.Timeout;
@@ -46,9 +50,9 @@ export default function VerifyEmailRequiredPage() {
     if (devVerifying) return;
     setDevVerifying(true);
     try {
-      await devVerifyEmail(user?.email);
+      const verifiedUser = await devVerifyEmail(user?.email);
       showToast('Account verified (Dev Mode)! Welcome to CordovaEats.', 'success');
-      router.push('/');
+      router.push(destinationAfterEmailVerification(verifiedUser.role, pendingClaimDestination()));
     } catch (err) {
       if (err instanceof ApiClientError) {
         showToast(err.message, 'error');
@@ -121,7 +125,7 @@ export default function VerifyEmailRequiredPage() {
 
         {/* Action Buttons */}
         <div className="space-y-3">
-          {!REQUIRE_EMAIL_VERIFICATION && (
+          {process.env.NODE_ENV !== 'production' && !REQUIRE_EMAIL_VERIFICATION && (
             <div className="p-3 bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-900/50 rounded-xl mb-3 space-y-2">
               <p className="text-[11px] font-semibold text-emerald-800 dark:text-emerald-300">
                 🛠️ Localhost Dev Mode Active (Email verification is optional)

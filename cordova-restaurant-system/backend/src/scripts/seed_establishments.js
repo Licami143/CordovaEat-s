@@ -55,27 +55,6 @@ async function addCordovaEstablishments() {
     ON CONFLICT DO NOTHING;
   `, [entoyId]);
 
-  // Add menu categories & items for Entoy's Bakasihan
-  const catRes = await pool.query(`
-    INSERT INTO menu_categories (restaurant_id, name, sort_order)
-    VALUES ($1, 'Signature Dishes', 1)
-    RETURNING id;
-  `, [entoyId]);
-  const catId = catRes.rows[0]?.id;
-
-  if (catId) {
-    await pool.query(`
-      INSERT INTO menu_items (restaurant_id, category_id, name, description, price) VALUES
-      ($1, $2, 'Linarang Bakasi', 'Signature sour and spicy eel soup with tomatoes, fermented black beans, and local chili', 150.00),
-      ($1, $2, 'Crispy Fried Bakasi', 'Crunchy deep-fried reef eels served with spicy vinegar dip', 130.00),
-      ($1, $2, 'Nilapwaan Kinsahon', 'Fresh local shellfish boiled in aromatic herbs and ginger', 160.00),
-      ($1, $2, 'Garlic Butter Shrimp', 'Fresh Cordova sea shrimp in garlic butter sauce', 250.00),
-      ($1, $2, 'Sinugbang Bangus', 'Grilled stuffed milkfish with tomato onion salsa', 220.00),
-      ($1, $2, 'Lambay (Steamed Crab)', 'Fresh local mud crabs steamed with native vinegar dip', 300.00)
-      ON CONFLICT DO NOTHING;
-    `, [entoyId, catId]);
-  }
-
   // Insert Tita Kim's
   const titaRes = await pool.query(`
     INSERT INTO restaurants (
@@ -157,6 +136,16 @@ async function addCordovaEstablishments() {
   await pool.query(`
     INSERT INTO restaurant_cuisines (restaurant_id, cuisine_id)
     SELECT '2d9bdb3c-5cb3-4e1b-b6a6-82137087d563', id FROM cuisines WHERE slug IN ('resort-dining','filipino','seafood')
+    ON CONFLICT DO NOTHING;
+  `);
+
+  // Ensure McDonald's and Papsy's BBQ have fast-food cuisine
+  await pool.query(`
+    INSERT INTO restaurant_cuisines (restaurant_id, cuisine_id)
+    SELECT r.id, c.id
+    FROM restaurants r, cuisines c
+    WHERE r.slug IN ('mcdonalds-cordova', 'papsys-bbq')
+      AND c.slug = 'fast-food'
     ON CONFLICT DO NOTHING;
   `);
 

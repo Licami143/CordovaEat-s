@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -29,12 +29,22 @@ import {
   ExternalLink,
   Calendar,
   UtensilsCrossed,
+  Eye,
 } from 'lucide-react';
+import {
+  recordRestaurantView,
+  getRecentlyViewed,
+  onActivityChange,
+  type RecentlyViewedRestaurant,
+} from '@/lib/activity-history';
 import { api, ApiClientError } from '@/lib/api';
 import { useAuth } from '@/lib/auth-context';
 import { useToast } from '@/lib/toast-context';
+import { ReportReview } from '@/components/ReportReview';
+import { ReviewActions } from '@/components/ReviewActions';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { MapViewClient } from '@/components/MapViewClient';
+import { VisitHighlights } from '@/components/VisitHighlights';
 import type {
   Restaurant,
   MenuItem,
@@ -44,13 +54,14 @@ import type {
   RestaurantImage,
   Promotion,
 } from '@/lib/types';
-import { applyRestaurantCustomization, getStaticRestaurantBySlug } from '@/data/restaurants';
-import { getVerifiedReviews, addPersistedReview, calculateRestaurantRatingStats } from '@/data/restaurantReviews';
+import { applyRestaurantCustomization, getStaticRestaurantBySlug, hasOriginalRestaurantLogo } from '@/data/restaurants';
+import { useLiveReviewStats, refreshReviewStats } from '@/lib/live-review-stats';
 import { MCDONALDS_CATEGORIES, MCDONALDS_MENU_ITEMS } from '@/data/mcdonaldsMenu';
 import { PAPSY_CATEGORIES, PAPSY_MENU_ITEMS } from '@/data/papsyMenu';
 import { PAROLA_CATEGORIES, PAROLA_MENU_ITEMS } from '@/data/parolaMenu';
 import { HORIZON_CATEGORIES, HORIZON_MENU_ITEMS } from '@/data/horizonMenu';
 import { EAT_N_REPEAT_CATEGORIES, EAT_N_REPEAT_MENU_ITEMS } from '@/data/eatNRepeatMenu';
+import { ENTOYS_CATEGORIES, ENTOYS_MENU_ITEMS } from '@/data/entoysMenu';
 import { STUFFED_N_FRIED_CATEGORIES, STUFFED_N_FRIED_MENU_ITEMS } from '@/data/stuffedNFriedMenu';
 import { TAYTAYAN_CATEGORIES, TAYTAYAN_MENU_ITEMS } from '@/data/taytayanMenu';
 import { TITA_KIMS_CATEGORIES, TITA_KIMS_MENU_ITEMS } from '@/data/titaKimsMenu';
@@ -59,7 +70,17 @@ import { DON_MACCHIATOS_CATEGORIES, DON_MACCHIATOS_MENU_ITEMS } from '@/data/don
 import { ALBERTOS_CATEGORIES, ALBERTOS_MENU_ITEMS } from '@/data/albertosMenu';
 import { TEN_THOUSAND_ROSES_CATEGORIES, TEN_THOUSAND_ROSES_MENU_ITEMS } from '@/data/tenThousandRosesMenu';
 import { ABY_ROAD_CATEGORIES, ABY_ROAD_MENU_ITEMS } from '@/data/abyRoadMenu';
+import { CSALT_CATEGORIES, CSALT_MENU_ITEMS } from '@/data/csaltMenu';
+import { SIP_N_STREET_CATEGORIES, SIP_N_STREET_MENU_ITEMS } from '@/data/sipNStreetMenu';
+import { BARRACKS_CATEGORIES, BARRACKS_MENU_ITEMS } from '@/data/barracksMenu';
+import { RCA_CATEGORIES, RCA_MENU_ITEMS } from '@/data/rcaMenu';
+import { BURANDAT_CATEGORIES, BURANDAT_MENU_ITEMS } from '@/data/burandatMenu';
+import { CASCADJA_CATEGORIES, CASCADJA_MENU_ITEMS } from '@/data/cascadjaMenu';
+import { SUNGKA_CATEGORIES, SUNGKA_MENU_ITEMS } from '@/data/sungkaMenu';
+import { LANTAW_CATEGORIES, LANTAW_MENU_ITEMS } from '@/data/lantawMenu';
+import { MAVERICKS_CATEGORIES, MAVERICKS_MENU_ITEMS } from '@/data/mavericksMenu';
 import { SpatialRestaurantMenu } from '@/components/menu/SpatialRestaurantMenu';
+
 
 const SPATIAL_EMOJIS = [
   { emoji: '❤️', label: 'Love it' },
@@ -68,6 +89,93 @@ const SPATIAL_EMOJIS = [
   { emoji: '👏', label: 'Bravo' },
   { emoji: '🦞', label: 'Bakasi/Fresh' },
 ];
+
+const EAT_N_REPEAT_LEGACY_SAMPLE_NAMES = new Set([
+  'House Special Latte',
+  'Cordova Cold Brew',
+  'Uji Matcha Milktea',
+  'Brown Sugar Boba Milk',
+  'Signature Chicken Inasal Rice Bowl',
+  'Spam & Egg Comfort Bowl',
+  'French Butter Croissant',
+  'Garlic Parmesan Truffle Fries',
+].map((name) => name.trim().toLowerCase()));
+
+const ENTOYS_LEGACY_SAMPLE_NAMES = new Set([
+  'Linarang Bakasi',
+  'Crispy Fried Bakasi',
+  'Nilapwaan Kinsahon',
+  'Garlic Butter Shrimp',
+  'Lambay (Steamed Crab)',
+  'Nilarang na Bakasi (Signature Reef Eel Soup)',
+  'Tinolang Bakasi (Coastal Ginger Broth)',
+  'Crispy Deep-Fried Bakasi',
+  'Puso (Cordova Hanging Rice)',
+].map((name) => name.trim().toLowerCase()));
+
+const LANTAW_MENU_NAME_ALIASES = new Map([
+  ['tinolang manok', 'tinola manok'],
+]);
+
+function mergeSuppliedMenu(
+  restaurantId: string,
+  liveCategories: MenuCategory[],
+  liveItems: MenuItem[],
+  suppliedCategories: MenuCategory[],
+  suppliedItems: MenuItem[],
+  matchByCategory = false,
+  legacySampleNames?: ReadonlySet<string>,
+  nameAliases?: ReadonlyMap<string, string>,
+): { categories: MenuCategory[]; items: MenuItem[] } {
+  const categories = [...liveCategories];
+  const categoryByName = new Map(
+    liveCategories.map((category) => [category.name.trim().toLowerCase(), category]),
+  );
+  const staticCategoryIds = new Map<string, string>();
+
+  for (const category of suppliedCategories) {
+    const key = category.name.trim().toLowerCase();
+    let matchingCategory = categoryByName.get(key);
+    if (!matchingCategory) {
+      matchingCategory = { ...category, restaurant_id: restaurantId };
+      categories.push(matchingCategory);
+      categoryByName.set(key, matchingCategory);
+    }
+    staticCategoryIds.set(category.id, matchingCategory.id);
+  }
+
+  const liveCategoryNames = new Map(liveCategories.map((category) => [category.id, category.name]));
+  const suppliedCategoryNames = new Map(suppliedCategories.map((category) => [category.id, category.name]));
+  const itemKey = (item: MenuItem, categoryNames: Map<string, string>) => {
+    const normalizedName = item.name.trim().toLowerCase();
+    const name = nameAliases?.get(normalizedName) || normalizedName;
+    if (!matchByCategory) return name;
+    const categoryName = categoryNames.get(item.category_id || '') || item.category_name || '';
+    return `${categoryName.trim().toLowerCase()}\u0000${name}`;
+  };
+
+  const suppliedNames = new Set(suppliedItems.map((item) => item.name.trim().toLowerCase()));
+  const retainedLiveItems = liveItems.filter((item) =>
+    !legacySampleNames?.has(item.name.trim().toLowerCase())
+      || suppliedNames.has(item.name.trim().toLowerCase()),
+  );
+
+  // A live row takes precedence even when its owner has marked it unavailable.
+  const liveKeys = new Set(retainedLiveItems.map((item) => itemKey(item, liveCategoryNames)));
+  const newStaticItems = suppliedItems
+    .filter((item) => !liveKeys.has(itemKey(item, suppliedCategoryNames)))
+    .filter((item) => !matchByCategory || item.is_available !== false)
+    .map((item) => ({
+      ...item,
+      restaurant_id: restaurantId,
+      category_id: staticCategoryIds.get(item.category_id || '') || item.category_id,
+    }));
+
+  return {
+    categories,
+    items: [...retainedLiveItems.filter((item) => item.is_available !== false), ...newStaticItems],
+  };
+}
 
 export default function RestaurantDetailPage() {
   const params = useParams();
@@ -80,6 +188,12 @@ export default function RestaurantDetailPage() {
   const [categories, setCategories] = useState<MenuCategory[]>([]);
   const [items, setItems] = useState<MenuItem[]>([]);
   const [reviews, setReviews] = useState<Review[]>([]);
+  const [reviewsPage,setReviewsPage] = useState(1);
+  const [reviewsTotal,setReviewsTotal] = useState(0);
+  const [reviewsPages,setReviewsPages] = useState(1);
+  const [reviewsError,setReviewsError] = useState(false);
+  const [reviewsLoading,setReviewsLoading] = useState(true);
+  const liveStats=useLiveReviewStats(slug);
   const [hours, setHours] = useState<OperatingHour[]>([]);
   const [gallery, setGallery] = useState<RestaurantImage[]>([]);
   const [activePromotions, setActivePromotions] = useState<Promotion[]>([]);
@@ -92,9 +206,51 @@ export default function RestaurantDetailPage() {
   const [reviewPhotos, setReviewPhotos] = useState<File[]>([]);
   const [reviewPhotoPreviews, setReviewPhotoPreviews] = useState<string[]>([]);
   const [lightboxImage, setLightboxImage] = useState<string | null>(null);
-  const [userReactions, setUserReactions] = useState<Record<string, string>>({});
+  const reactionRequests=useRef(new Set<string>());
+  const [reactionBusy,setReactionBusy]=useState<Record<string,boolean>>({});
   const [submittingReview, setSubmittingReview] = useState(false);
   const [heroImgError, setHeroImgError] = useState(false);
+  const [recentViews, setRecentViews] = useState<RecentlyViewedRestaurant[]>([]);
+
+  useEffect(() => {
+    const updateRecent = () => {
+      setRecentViews(getRecentlyViewed().filter((r) => r.slug !== slug && r.id !== restaurant?.id));
+    };
+    updateRecent();
+    return onActivityChange(updateRecent);
+  }, [slug, restaurant?.id]);
+
+  const reviewRestaurantId=restaurant?.id;
+  useEffect(() => {
+    if (!reviewRestaurantId || reviewRestaurantId.startsWith('static-')) {
+      setReviews([]);setReviewsTotal(0);setReviewsLoading(false);setReviewsError(Boolean(reviewRestaurantId));return;
+    }
+    const controller=new AbortController();
+    let pending=false;
+    setReviewsLoading(true);
+    const refresh=async()=>{
+      if(pending || document.visibilityState==='hidden') return;
+      pending=true;
+      try {
+        const res=await api.get('/api/restaurants/'+reviewRestaurantId+'/reviews?limit=12&page='+reviewsPage,{auth:false,cache:'no-store',signal:controller.signal});
+        if(controller.signal.aborted) return;
+        if(!Array.isArray(res.data) || !res.meta) throw new Error('Invalid reviews response');
+        if(reviewsPage>res.meta.totalPages) {setReviewsPage(res.meta.totalPages);return;}
+        setReviews(res.data);setReviewsTotal(res.meta.totalCount);setReviewsPages(res.meta.totalPages);setReviewsError(false);
+      } catch {
+        if(!controller.signal.aborted) setReviewsError(true);
+      } finally {pending=false;if(!controller.signal.aborted)setReviewsLoading(false);}
+    };
+    void refresh();
+    const timer=window.setInterval(refresh,20000);
+    window.addEventListener('focus',refresh);window.addEventListener('online',refresh);
+    window.addEventListener('cordova_review_updated',refresh);document.addEventListener('visibilitychange',refresh);
+    return ()=>{controller.abort();window.clearInterval(timer);window.removeEventListener('focus',refresh);window.removeEventListener('online',refresh);window.removeEventListener('cordova_review_updated',refresh);document.removeEventListener('visibilitychange',refresh);};
+  },[reviewRestaurantId,reviewsPage,liveStats?.revision,liveStats?.review_count]);
+
+  useEffect(()=>{
+    if(liveStats) setRestaurant(current=>current ? {...current,review_count:liveStats.review_count,avg_rating:liveStats.avg_rating} : current);
+  },[liveStats]);
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -106,7 +262,7 @@ export default function RestaurantDetailPage() {
         });
         found = detail.data.restaurant;
       } catch {
-        found = getStaticRestaurantBySlug(slug);
+        found = process.env.NODE_ENV === 'production' ? null : getStaticRestaurantBySlug(slug);
       }
 
       if (!found) {
@@ -117,10 +273,22 @@ export default function RestaurantDetailPage() {
       const customFound = applyRestaurantCustomization(found);
       setRestaurant(customFound);
 
+      recordRestaurantView({
+        id: customFound.id,
+        name: customFound.name,
+        slug: customFound.slug || slug,
+        coverImageUrl: customFound.cover_image_url,
+        avgRating: customFound.avg_rating,
+        reviewCount: customFound.review_count,
+        priceRange: customFound.price_range,
+        category: customFound.category,
+        address: customFound.address,
+        barangay: customFound.barangay,
+      });
+
       try {
-        const [menu, reviewsRes, hoursRes, galleryRes, promoRes] = await Promise.all([
+        const [menu, hoursRes, galleryRes, promoRes] = await Promise.all([
           api.get(`/api/restaurants/${found.id}/menu`, { auth: false }).catch(() => ({ data: {} })),
-          api.get(`/api/restaurants/${found.id}/reviews`, { auth: false }).catch(() => ({ data: [] })),
           api.get(`/api/restaurants/${found.id}/hours`, { auth: false }).catch(() => ({ data: [] })),
           api.get(`/api/restaurants/${found.id}/images`, { auth: false }).catch(() => ({ data: [] })),
           api.get(`/api/restaurants/${found.id}/promotions`, { auth: false }).catch(() => ({ data: [] })),
@@ -153,6 +321,11 @@ export default function RestaurantDetailPage() {
           customFound.name.toLowerCase().includes('eat n repeat') ||
           customFound.name.toLowerCase().includes("eat n' repeat") ||
           customFound.name.toLowerCase().includes('eat & repeat');
+
+        const isEntoys = slug === 'entoys-bakasihan'
+          || found.slug === 'entoys-bakasihan'
+          || customFound.name.toLowerCase().includes('entoys bakasihan')
+          || customFound.name.toLowerCase().includes("entoy's bakasihan");
 
         const isStuffedNFried =
           slug === 'stuffed-n-fried-cordova' ||
@@ -210,9 +383,130 @@ export default function RestaurantDetailPage() {
           customFound.name.toLowerCase().includes('aby road') ||
           customFound.name.toLowerCase().includes('abyroad');
 
-        if (menu.data?.items?.length) {
+        const isCsalt =
+          slug === 'csalt-cafe-cordova' ||
+          slug === 'csalt-cafe' ||
+          found.slug === 'csalt-cafe-cordova' ||
+          found.slug === 'csalt-cafe' ||
+          customFound.name.toLowerCase().includes('csalt');
+
+        const isSipNStreet =
+          slug === 'sip-n-street-brew-and-refreshments-mu9qvrtr' ||
+          slug === 'sip-n-street' ||
+          slug === 'sip-n-street-brew-and-refreshments' ||
+          found.slug?.includes('sip-n-street') ||
+          customFound.name.toLowerCase().includes('sip');
+
+        const isBarracks =
+          slug === 'barracks-grill-and-resto-bar' ||
+          slug === 'barracks-grill' ||
+          slug === 'barracks' ||
+          found.slug?.includes('barrack') ||
+          customFound.name.toLowerCase().includes('barrack');
+
+        const isRca = slug === 'rca-bilao-food-station'
+          || found.slug === 'rca-bilao-food-station'
+          || customFound.name.toLowerCase() === 'rca bilao food station';
+
+        const isBurandat = slug === 'burandat-seafood-bucket'
+          || found.slug === 'burandat-seafood-bucket'
+          || customFound.name.toLowerCase() === 'burandat seafood bucket';
+        const isCascadja = slug === 'cascaja-cafe'
+          || slug === 'cascadja-cafe'
+          || found.slug === 'cascaja-cafe'
+          || found.slug === 'cascadja-cafe'
+          || /cascadja|cascaja/i.test(customFound.name);
+        const isSungka = slug === 'sungka-native-restaurant'
+          || slug === 'sungka-native'
+          || slug === 'sungka'
+          || found.slug?.includes('sungka')
+          || customFound.name.toLowerCase().includes('sungka');
+        const isLantaw = slug === 'lantaw-floating-native-restaurant'
+          || slug === 'lantaw-floating-native'
+          || slug === 'lantaw'
+          || found.slug?.includes('lantaw')
+          || customFound.name.toLowerCase().includes('lantaw');
+        const isMavericks = slug === 'mavericks-by-the-baker-street'
+          || slug === 'mavericks'
+          || slug === 'mavericks-cafe'
+          || found.slug?.includes('mavericks')
+          || customFound.name.toLowerCase().includes('maverick');
+        const liveMenuItems: MenuItem[] = Array.isArray(menu.data?.items) ? menu.data.items : [];
+        // The owner can still recover unavailable rows in the admin menu editor.
+        const publicMenuItems = isBurandat
+          ? liveMenuItems.filter((item) => item.is_available !== false)
+          : liveMenuItems;
+
+        if (isMavericks) {
+          const mergedMenu = mergeSuppliedMenu(
+            found.id,
+            Array.isArray(menu.data?.categories) ? menu.data.categories : [],
+            liveMenuItems,
+            MAVERICKS_CATEGORIES,
+            MAVERICKS_MENU_ITEMS,
+          );
+          setCategories(mergedMenu.categories);
+          setItems(mergedMenu.items);
+        } else if (isEatNRepeat) {
+          const mergedMenu = mergeSuppliedMenu(
+            found.id,
+            Array.isArray(menu.data?.categories) ? menu.data.categories : [],
+            liveMenuItems,
+            EAT_N_REPEAT_CATEGORIES,
+            EAT_N_REPEAT_MENU_ITEMS,
+            true,
+            EAT_N_REPEAT_LEGACY_SAMPLE_NAMES,
+          );
+          setCategories(mergedMenu.categories);
+          setItems(mergedMenu.items);
+        } else if (isEntoys) {
+          const mergedMenu = mergeSuppliedMenu(
+            found.id,
+            Array.isArray(menu.data?.categories) ? menu.data.categories : [],
+            liveMenuItems,
+            ENTOYS_CATEGORIES,
+            ENTOYS_MENU_ITEMS,
+            false,
+            ENTOYS_LEGACY_SAMPLE_NAMES,
+          );
+          const suppliedByName = new Map(
+            ENTOYS_MENU_ITEMS.map((item) => [item.name.trim().toLowerCase(), item]),
+          );
+          const suppliedOrder = new Map(
+            ENTOYS_MENU_ITEMS.map((item, index) => [item.name.trim().toLowerCase(), index]),
+          );
+          setCategories(mergedMenu.categories);
+          setItems(mergedMenu.items.map((item) => {
+            const supplied = suppliedByName.get(item.name.trim().toLowerCase());
+            if (!supplied) return item;
+            return {
+              ...item,
+              image_url: item.image_url || supplied.image_url,
+              price_label: Number(item.price) === supplied.price
+                && (item.description || '') === (supplied.description || '')
+                ? supplied.price_label
+                : undefined,
+            };
+          }).sort((a, b) => (
+            (suppliedOrder.get(a.name.trim().toLowerCase()) ?? Number.MAX_SAFE_INTEGER)
+            - (suppliedOrder.get(b.name.trim().toLowerCase()) ?? Number.MAX_SAFE_INTEGER)
+          )));
+        } else if (isLantaw) {
+          const mergedMenu = mergeSuppliedMenu(
+            found.id,
+            Array.isArray(menu.data?.categories) ? menu.data.categories : [],
+            liveMenuItems,
+            LANTAW_CATEGORIES,
+            LANTAW_MENU_ITEMS,
+            false,
+            undefined,
+            LANTAW_MENU_NAME_ALIASES,
+          );
+          setCategories(mergedMenu.categories);
+          setItems(mergedMenu.items);
+        } else if (publicMenuItems.length) {
           setCategories(menu.data.categories || []);
-          setItems(menu.data.items);
+          setItems(publicMenuItems);
         } else if (isMcDo) {
           setCategories(MCDONALDS_CATEGORIES.map(c => ({ ...c, restaurant_id: found.id })));
           setItems(MCDONALDS_MENU_ITEMS.map(i => ({ ...i, restaurant_id: found.id })));
@@ -225,9 +519,6 @@ export default function RestaurantDetailPage() {
         } else if (isHorizon) {
           setCategories(HORIZON_CATEGORIES.map(c => ({ ...c, restaurant_id: found.id })));
           setItems(HORIZON_MENU_ITEMS.map(i => ({ ...i, restaurant_id: found.id })));
-        } else if (isEatNRepeat) {
-          setCategories(EAT_N_REPEAT_CATEGORIES.map(c => ({ ...c, restaurant_id: found.id })));
-          setItems(EAT_N_REPEAT_MENU_ITEMS.map(i => ({ ...i, restaurant_id: found.id })));
         } else if (isStuffedNFried) {
           setCategories(STUFFED_N_FRIED_CATEGORIES.map(c => ({ ...c, restaurant_id: found.id })));
           setItems(STUFFED_N_FRIED_MENU_ITEMS.map(i => ({ ...i, restaurant_id: found.id })));
@@ -252,6 +543,27 @@ export default function RestaurantDetailPage() {
         } else if (isAbyRoad) {
           setCategories(ABY_ROAD_CATEGORIES.map(c => ({ ...c, restaurant_id: found.id })));
           setItems(ABY_ROAD_MENU_ITEMS.map(i => ({ ...i, restaurant_id: found.id })));
+        } else if (isCsalt) {
+          setCategories(CSALT_CATEGORIES.map(c => ({ ...c, restaurant_id: found.id })));
+          setItems(CSALT_MENU_ITEMS.map(i => ({ ...i, restaurant_id: found.id })));
+        } else if (isSipNStreet) {
+          setCategories(SIP_N_STREET_CATEGORIES.map(c => ({ ...c, restaurant_id: found.id })));
+          setItems(SIP_N_STREET_MENU_ITEMS.map(i => ({ ...i, restaurant_id: found.id })));
+        } else if (isBarracks) {
+          setCategories(BARRACKS_CATEGORIES.map(c => ({ ...c, restaurant_id: found.id })));
+          setItems(BARRACKS_MENU_ITEMS.map(i => ({ ...i, restaurant_id: found.id })));
+        } else if (isRca) {
+          setCategories(RCA_CATEGORIES.map(c => ({ ...c, restaurant_id: found.id })));
+          setItems(RCA_MENU_ITEMS.map(i => ({ ...i, restaurant_id: found.id })));
+        } else if (isBurandat) {
+          setCategories(BURANDAT_CATEGORIES.map(c => ({ ...c, restaurant_id: found.id })));
+          setItems(BURANDAT_MENU_ITEMS.map(i => ({ ...i, restaurant_id: found.id })));
+        } else if (isCascadja) {
+          setCategories(CASCADJA_CATEGORIES.map(c => ({ ...c, restaurant_id: found.id })));
+          setItems(CASCADJA_MENU_ITEMS.map(i => ({ ...i, restaurant_id: found.id })));
+        } else if (isSungka) {
+          setCategories(SUNGKA_CATEGORIES.map(c => ({ ...c, restaurant_id: found.id })));
+          setItems(SUNGKA_MENU_ITEMS.map(i => ({ ...i, restaurant_id: found.id })));
         } else {
           setCategories(menu.data?.categories?.length ? menu.data.categories : [
             { id: 'cat-1', restaurant_id: found.id, name: 'House Specialties', sort_order: 1 },
@@ -290,25 +602,6 @@ export default function RestaurantDetailPage() {
             }
           ]);
         }
-        const verifiedList = getVerifiedReviews(slug || found.slug || found.id);
-        const loadedReviews = (reviewsRes.data && Array.isArray(reviewsRes.data) && reviewsRes.data.length > 0)
-          ? reviewsRes.data
-          : verifiedList;
-
-        setReviews(loadedReviews);
-
-        // Sync restaurant stats to match exact reviews
-        const dynamicStats = calculateRestaurantRatingStats(loadedReviews);
-        setRestaurant((prev) =>
-          prev
-            ? {
-                ...prev,
-                review_count: dynamicStats.count,
-                avg_rating: dynamicStats.rating,
-              }
-            : prev
-        );
-
         setHours(hoursRes.data?.length ? hoursRes.data : [0, 1, 2, 3, 4, 5, 6].map(d => ({
           day_of_week: d,
           open_time: '08:00',
@@ -402,100 +695,60 @@ export default function RestaurantDetailPage() {
     }
   };
 
-  const reactToReview = async (reviewId: string, emoji: string) => {
-    if (!user) {
-      toast('Please log in to react to reviews', 'info');
-      return;
-    }
-    setUserReactions((prev) => ({ ...prev, [reviewId]: emoji }));
-    setReviews((prev) =>
-      prev.map((r) => {
-        if (r.id !== reviewId) return r;
-        const currentReactions = { ...(r.reactions || {}) };
-        currentReactions[emoji] = (currentReactions[emoji] || 0) + 1;
-        return { ...r, reactions: currentReactions };
-      })
-    );
-    try {
-      await api.post(`/api/reviews/${reviewId}/react`, { emoji });
-    } catch {
-      // Ignore background reaction sync errors
-    }
+  const reactToReview = async (reviewId:string,emoji:string)=>{
+    if(!user){toast('Please log in to react to reviews','info');return;}
+    if(reactionRequests.current.has(reviewId))return;
+    reactionRequests.current.add(reviewId);setReactionBusy(current=>({...current,[reviewId]:true}));
+    try{
+      const res=await api.post('/api/reviews/'+reviewId+'/react',{emoji});
+      setReviews(current=>current.map(review=>review.id===reviewId?{...review,reactions:res.data.reactions,my_reaction:res.data.my_reaction}:review));
+      void refreshReviewStats();
+    }catch(error){toast(error instanceof Error?error.message:'Unable to update reaction','error');}
+    finally{reactionRequests.current.delete(reviewId);setReactionBusy(current=>({...current,[reviewId]:false}));}
   };
 
   const submitReview = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!restaurant) return;
+    if (!user || user.role !== 'customer') {
+      toast('Please sign in with a diner account to post a review.', 'info');
+      return;
+    }
     if (!reviewComment.trim()) {
       toast('Please write a brief comment describing your dining experience', 'info');
       return;
     }
     setSubmittingReview(true);
     try {
-      const newReviewId = `rev-${Date.now()}`;
-      const reviewerName = user?.full_name || 'Verified Cordova Foodie';
-      const reviewerAvatar = user?.avatar_url;
-      let submittedPhotos: string[] = [...reviewPhotoPreviews];
-
-      try {
-        if (reviewPhotos.length > 0) {
-          const formData = new FormData();
-          formData.append('rating', String(reviewRating));
-          if (reviewComment.trim()) formData.append('comment', reviewComment.trim());
-          reviewPhotos.forEach((file) => formData.append('photos', file));
-          const res = await api.post(`/api/restaurants/${restaurant.id}/reviews`, formData, { isFormData: true });
-          if (res?.data?.review?.photos?.length) {
-            submittedPhotos = res.data.review.photos;
-          }
-        } else {
-          await api.post(`/api/restaurants/${restaurant.id}/reviews`, {
-            rating: reviewRating,
-            comment: reviewComment,
-          });
-        }
-      } catch {
-        // Continue with real-time local persistence if backend is in mock/offline mode
+      if (!user) throw new Error('Please sign in to write a review');
+      let response: { success: boolean; data?: { review?: Review } };
+      if (reviewPhotos.length > 0) {
+        const formData = new FormData();
+        formData.append('rating', String(reviewRating));
+        formData.append('comment', reviewComment.trim());
+        reviewPhotos.forEach((file) => formData.append('photos', file));
+        response = await api.post(`/api/restaurants/${restaurant.id}/reviews`, formData, { isFormData: true });
+      } else {
+        response = await api.post(`/api/restaurants/${restaurant.id}/reviews`, { rating: reviewRating, comment: reviewComment.trim() });
       }
-
-      const newReviewObj: Review = {
-        id: newReviewId,
-        restaurant_id: restaurant.id,
-        user_id: user?.id || 'usr-guest',
-        reviewer_name: reviewerName,
-        reviewer_avatar: reviewerAvatar || undefined,
-        rating: Number(reviewRating),
-        comment: reviewComment.trim(),
-        photos: submittedPhotos,
-        reactions: { '❤️': 1 },
-        status: 'visible',
-        created_at: new Date().toISOString(),
-        like_count: 0,
-        liked_by_me: false,
-        visit_type: user ? 'verified diner' : 'guest explorer',
-      };
-
-      // Add to persistent storage and get updated list
-      const updatedReviews = addPersistedReview(slug || restaurant.slug || restaurant.id, newReviewObj);
-      setReviews(updatedReviews);
-
-      // Immediately recalculate accurate rating and review count in state
-      const newStats = calculateRestaurantRatingStats(updatedReviews);
-      setRestaurant((prev) =>
-        prev
-          ? {
-              ...prev,
-              review_count: newStats.count,
-              avg_rating: newStats.rating,
-            }
-          : prev
-      );
+      if (!response?.success || !response.data?.review?.id) {
+        throw new Error('Review submission did not return a saved review');
+      }
+      const saved = response.data.review;
+      const newReviewObj: Review = { ...saved, reviewer_name: user.full_name, reviewer_avatar: user.avatar_url || undefined, like_count: 0, liked_by_me: false };
+      setReviewsPage(1);
+      setReviews((current) => [newReviewObj, ...current.filter((review) => review.id !== newReviewObj.id)].slice(0, 12));
+      setReviewsTotal((current) => current + 1);
+      window.dispatchEvent(new Event('cordova_review_updated'));
+      void refreshReviewStats();
 
       setReviewComment('');
       setReviewPhotos([]);
+      reviewPhotoPreviews.forEach((preview) => URL.revokeObjectURL(preview));
       setReviewPhotoPreviews([]);
-      toast('Review submitted! Establishment ratings and review count updated automatically.', 'success');
+      toast('Review submitted successfully.', 'success');
     } catch (err) {
-      toast(err instanceof ApiClientError ? err.message : 'Failed to submit review', 'error');
+      toast(err instanceof ApiClientError ? err.message : 'Failed to submit review. Please try again.', 'error');
     } finally {
       setSubmittingReview(false);
     }
@@ -578,12 +831,15 @@ export default function RestaurantDetailPage() {
       ? 'https://images.unsplash.com/photo-1514933651103-005eec06c04b?w=1200&auto=format&fit=crop&q=85'
       : 'https://images.unsplash.com/photo-1540420773420-3366772f4999?w=1200&auto=format&fit=crop&q=85';
 
+  const isRcaLogo = restaurant.slug === 'rca-bilao-food-station';
   const heroImageSrc =
     !heroImgError &&
     restaurant.cover_image_url &&
     restaurant.cover_image_url.trim() !== ''
       ? restaurant.cover_image_url
       : fallbackHeroImage;
+  const showOriginalLogo = !heroImgError && hasOriginalRestaurantLogo(restaurant.slug);
+  const isHorizonLogo = restaurant.slug === 'horizon-bean-cafe';
 
   return (
     <div className="min-h-screen bg-cordova-cream dark:bg-[#121614] pb-24 relative overflow-hidden">
@@ -592,19 +848,27 @@ export default function RestaurantDetailPage() {
       <div className="absolute top-[55%] right-[-10%] w-[550px] h-[550px] rounded-full bg-amber-500/12 dark:bg-amber-500/18 blur-[130px] pointer-events-none -z-0" />
 
       {/* HERO COVER SECTION WITH SPATIAL GLASS DEPTH */}
-      <section className="relative w-full h-[430px] sm:h-[500px] overflow-hidden bg-stone-950">
-        <Image
+      <section className={`relative w-full h-[430px] sm:h-[500px] overflow-hidden ${isHorizonLogo ? 'bg-[#3b2923]' : isRcaLogo ? 'bg-gradient-to-br from-emerald-950 via-stone-900 to-stone-950' : 'bg-stone-950'}`}>
+        {!isRcaLogo && <Image
           src={heroImageSrc}
           alt={restaurant.name}
           fill
           priority
           unoptimized
           onError={() => setHeroImgError(true)}
-          className="object-cover object-center opacity-85 scale-[1.02] transition-transform duration-1000"
-        />
+          className={showOriginalLogo
+            ? 'object-contain object-center opacity-85 transition-transform duration-1000'
+            : 'object-cover object-center opacity-85 scale-[1.02] transition-transform duration-1000'}
+        />}
 
         {/* Ambient Dark Gradient Overlay for Maximum Text Clarity */}
         <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/55 to-black/35 backdrop-blur-[1.5px]" />
+
+        {isRcaLogo && restaurant.cover_image_url && (
+          <div className="absolute top-8 sm:top-10 left-1/2 -translate-x-1/2 z-10 w-44 h-44 sm:w-52 sm:h-52 rounded-full bg-amber-50 p-2 shadow-2xl ring-4 ring-amber-400/50">
+            <Image src={restaurant.cover_image_url} alt="RCA Lechon Belly & Bilao logo" fill unoptimized className="object-contain p-2" />
+          </div>
+        )}
 
         {/* Top Control Buttons (Spatial Glass Pills) */}
         <div className="absolute top-6 left-6 right-6 z-20 max-w-7xl mx-auto flex justify-between items-center">
@@ -650,6 +914,7 @@ export default function RestaurantDetailPage() {
 
       {/* OVERLAPPING MAIN CONTAINER */}
       <section className="relative z-30 -mt-10 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
+
         {/* ACTIVE PROMOTION BANNER IF AVAILABLE */}
         {activePromotions.length > 0 && (
           <div className="mb-5 bg-gradient-to-r from-amber-500 via-cordova-gold to-amber-600 rounded-3xl p-5 sm:p-6 text-white shadow-spatial-lg flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border border-amber-300/50 backdrop-blur-2xl ring-1 ring-amber-300/30">
@@ -825,12 +1090,12 @@ export default function RestaurantDetailPage() {
                   {/* Story Image with Circular Accent */}
                   <div className="lg:col-span-5 relative flex justify-center">
                     <div className="absolute -top-4 -right-4 w-48 h-48 rounded-full bg-amber-100/70 dark:bg-amber-950/30 -z-10" />
-                    <div className="relative h-72 sm:h-80 w-full rounded-2xl overflow-hidden shadow-spatial-md border border-stone-200 dark:border-stone-800">
+                    <div className={`relative h-72 sm:h-80 w-full rounded-2xl overflow-hidden shadow-spatial-md border border-stone-200 dark:border-stone-800 ${isHorizonLogo ? 'bg-[#3b2923]' : ''}`}>
                       <Image
                         src={restaurant.cover_image_url || '/hero_background.png'}
                         alt={restaurant.name}
                         fill
-                        className="object-cover"
+                        className={hasOriginalRestaurantLogo(restaurant.slug) ? 'object-contain' : 'object-cover'}
                       />
                     </div>
                   </div>
@@ -839,10 +1104,11 @@ export default function RestaurantDetailPage() {
 
 
                 {/* Gallery Section */}
-                <div>
-                  <h3 className="font-serif text-2xl sm:text-3xl font-bold text-stone-900 dark:text-white mb-6">
+                <section className="space-y-6">
+                  <h3 className="font-serif text-2xl sm:text-3xl font-bold text-stone-900 dark:text-white">
                     Gallery
                   </h3>
+                  <p className="text-sm text-stone-600 dark:text-stone-300">Explore food, ambiance, and moments shared by the community. Select a photo to view it full size.</p>
                   {allPhotos.length === 0 ? (
                     <div className="text-center py-12 text-stone-400">
                       <ImageOff size={32} className="mx-auto mb-2 opacity-60" />
@@ -851,9 +1117,12 @@ export default function RestaurantDetailPage() {
                   ) : (
                     <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-5">
                       {allPhotos.map((img, i) => (
-                        <div
+                        <button
+                          type="button"
                           key={img.id || i}
-                          className="relative h-48 sm:h-56 rounded-2xl overflow-hidden bg-stone-100 dark:bg-stone-800 shadow-spatial-sm border border-stone-200/60 dark:border-stone-800/60 group"
+                          onClick={() => setLightboxImage(img.image_url)}
+                          aria-label={`View ${restaurant.name} gallery photo ${i + 1} full size`}
+                          className="relative h-48 sm:h-56 rounded-2xl overflow-hidden bg-stone-100 dark:bg-stone-800 shadow-spatial-sm border border-stone-200/60 dark:border-stone-800/60 group focus:outline-none focus:ring-2 focus:ring-cordova-gold"
                         >
                           <Image
                             src={img.image_url}
@@ -861,11 +1130,12 @@ export default function RestaurantDetailPage() {
                             fill
                             className="object-cover group-hover:scale-105 transition-transform duration-300"
                           />
-                        </div>
+                        </button>
                       ))}
                     </div>
                   )}
-                </div>
+                  <VisitHighlights restaurant={restaurant} />
+                </section>
               </div>
             )}
 
@@ -880,16 +1150,8 @@ export default function RestaurantDetailPage() {
 
             {/* MAP TAB */}
             {activeTab === 'map' && (
-              <div className="space-y-6">
-                <div className="rounded-2xl overflow-hidden shadow-spatial-md border border-stone-200 dark:border-stone-800">
-                  <MapViewClient restaurants={[restaurant]} height="450px" />
-                </div>
-                <div className="text-center">
-                  <p className="font-serif text-base font-semibold text-stone-800 dark:text-white">
-                    {restaurant.name}
-                  </p>
-                  <p className="text-xs text-stone-500 mt-1">{restaurant.address}</p>
-                </div>
+              <div className="space-y-4">
+                <MapViewClient restaurants={[restaurant]} height="480px" />
               </div>
             )}
 
@@ -901,7 +1163,7 @@ export default function RestaurantDetailPage() {
                     <h3 className="font-serif text-2xl font-bold text-stone-900 dark:text-white flex items-center gap-2">
                       <span>Customer Reviews</span>
                       <span className="text-xs font-sans font-semibold bg-stone-100 dark:bg-stone-800 px-2.5 py-1 rounded-full text-stone-600 dark:text-stone-300">
-                        {reviews.length} total
+                        {reviewsTotal} total
                       </span>
                     </h3>
                     <p className="text-xs text-stone-500 dark:text-stone-400 mt-0.5">
@@ -912,7 +1174,7 @@ export default function RestaurantDetailPage() {
 
                 {/* Review Cards */}
                 <div className="space-y-4">
-                  {reviews.length === 0 ? (
+                  {reviewsLoading ? <p className="text-sm text-stone-500">Loading reviews…</p> : reviewsError && reviews.length === 0 ? <p role="alert" className="text-sm text-amber-700">Reviews are temporarily unavailable. We will retry automatically.</p> : reviews.length === 0 ? (
                     <div className="text-center py-12 text-stone-400">
                       <p className="text-sm">No reviews yet. Be the first to review!</p>
                     </div>
@@ -926,7 +1188,9 @@ export default function RestaurantDetailPage() {
                         .toUpperCase();
 
                       return (
-                        <div
+                        <ReviewActions
+                          review={r}
+                          onChanged={changed=>{setReviews(current=>changed ? current.map(item=>item.id===r.id?changed:item) : current.filter(item=>item.id!==r.id));if(!changed)setReviewsTotal(total=>Math.max(0,total-1));}}
                           key={r.id}
                           className="spatial-card p-5 sm:p-6 rounded-2xl bg-white/70 dark:bg-stone-900/60 border border-stone-200/80 dark:border-stone-800/80 shadow-spatial-sm space-y-4 transition-all duration-300 hover:shadow-spatial-md"
                         >
@@ -966,6 +1230,7 @@ export default function RestaurantDetailPage() {
                             </div>
                           </div>
 
+                          <ReportReview id={r.id} authorId={r.user_id} />
                           {/* Review Comment */}
                           {r.comment && (
                             <p className="text-xs sm:text-sm text-stone-700 dark:text-stone-300 leading-relaxed font-sans pl-1">
@@ -1003,11 +1268,13 @@ export default function RestaurantDetailPage() {
                             <div className="flex flex-wrap items-center gap-1.5">
                               {SPATIAL_EMOJIS.map(({ emoji, label }) => {
                                 const count = r.reactions?.[emoji] || 0;
-                                const isSelected = userReactions[r.id] === emoji;
+                                const isSelected = r.my_reaction === emoji;
                                 return (
                                   <button
                                     key={emoji}
                                     type="button"
+                                    disabled={reactionBusy[r.id]}
+                                    aria-pressed={isSelected}
                                     onClick={() => reactToReview(r.id, emoji)}
                                     title={label}
                                     className={`spatial-pill group px-2.5 sm:px-3 py-1 rounded-full text-xs font-medium flex items-center gap-1.5 transition-all duration-200 cursor-pointer select-none ${
@@ -1044,12 +1311,14 @@ export default function RestaurantDetailPage() {
                               {r.like_count > 0 && <span>({r.like_count})</span>}
                             </button>
                           </div>
-                        </div>
+                        </ReviewActions>
                       );
                     })
                   )}
                 </div>
 
+                {reviewsError && reviews.length > 0 && <p role="status" className="text-sm text-amber-700">Showing the last confirmed reviews. Reconnecting…</p>}
+                {reviewsPages > 1 && <div className="flex items-center gap-4 text-sm"><button type="button" disabled={reviewsPage<=1 || reviewsLoading} onClick={()=>setReviewsPage(p=>p-1)}>Previous</button><span>Page {reviewsPage} of {reviewsPages}</span><button type="button" disabled={reviewsPage>=reviewsPages || reviewsLoading} onClick={()=>setReviewsPage(p=>p+1)}>Next</button></div>}
                 {/* Add Review Form */}
                 <form
                   onSubmit={submitReview}
@@ -1062,13 +1331,13 @@ export default function RestaurantDetailPage() {
                         Write a Spatial Review & Upload Dish Photos
                       </h3>
                     </div>
-                    {user ? (
+                    {user?.role === 'customer' ? (
                       <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/50 px-3 py-1 rounded-full border border-emerald-200 dark:border-emerald-800">
                         Posting as {user.full_name || 'Verified User'}
                       </span>
                     ) : (
                       <span className="text-xs font-medium text-stone-500 dark:text-stone-400">
-                        Verified Guest Reviewer
+                        {user ? 'Diner account required to post' : 'Sign in to post a review'}
                       </span>
                     )}
                   </div>
@@ -1107,12 +1376,7 @@ export default function RestaurantDetailPage() {
                       </span>
                     </div>
                   </div>
-
-                  {/* Review Text */}
-                  <div>
-                    <label className="block text-xs font-bold uppercase tracking-wider text-stone-600 dark:text-stone-300 mb-1.5">
-                      Your Dining Feedback
-                    </label>
+                  <div className="flex flex-wrap items-center justify-between gap-2">
                     <textarea
                       rows={3}
                       value={reviewComment}
@@ -1168,7 +1432,7 @@ export default function RestaurantDetailPage() {
                   <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pt-2">
                     <button
                       type="submit"
-                      disabled={submittingReview}
+                      disabled={submittingReview || user?.role !== 'customer'}
                       className="bg-cordova-green hover:bg-cordova-greenHover text-white text-xs font-bold px-7 py-3 rounded-xl shadow-md transition-all hover:scale-[1.02] active:scale-98 flex items-center gap-2"
                     >
                       <Sparkles size={14} />
@@ -1176,7 +1440,7 @@ export default function RestaurantDetailPage() {
                     </button>
                     {!user && (
                       <p className="text-xs text-stone-500 dark:text-stone-400">
-                        Posting as guest. <Link href="/login" className="text-cordova-green dark:text-emerald-400 font-bold hover:underline">Log in</Link> to save to your personal profile.
+                        <Link href={`/login?redirect=${encodeURIComponent(`/restaurants/${slug}`)}`} className="text-cordova-green dark:text-emerald-400 font-bold hover:underline">Log in</Link> with a diner account to post.
                       </p>
                     )}
                   </div>
@@ -1186,6 +1450,68 @@ export default function RestaurantDetailPage() {
           </div>
         </div>
       </section>
+
+      {/* Recently Viewed Restaurants Shelf */}
+      {recentViews.length > 0 && (
+        <section className="border-t border-stone-200/80 dark:border-white/10 py-10 bg-stone-50/70 dark:bg-[#121714]">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="flex items-center justify-between mb-5">
+              <div className="flex items-center gap-2">
+                <Eye size={18} className="text-cordova-green dark:text-emerald-400" />
+                <h3 className="font-serif text-lg font-bold text-stone-900 dark:text-white">
+                  Other Places You Recently Viewed
+                </h3>
+              </div>
+              <Link
+                href="/history"
+                className="text-xs font-semibold text-cordova-green dark:text-emerald-400 hover:underline"
+              >
+                View Activity History →
+              </Link>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+              {recentViews.slice(0, 4).map((r) => (
+                <Link
+                  key={r.id}
+                  href={`/restaurants/${r.slug}`}
+                  className="group block p-3 rounded-2xl bg-white dark:bg-[#181f1a] border border-stone-200/70 dark:border-white/10 shadow-spatial-sm hover:shadow-spatial-md transition-all duration-300 hover:-translate-y-1"
+                >
+                  <div className="relative h-32 w-full rounded-xl overflow-hidden mb-2.5 bg-stone-100 dark:bg-stone-800">
+                    {r.coverImageUrl ? (
+                      <Image
+                        src={r.coverImageUrl}
+                        alt={r.name}
+                        fill
+                        className="object-cover group-hover:scale-105 transition-transform duration-300"
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-stone-400">🍽️</div>
+                    )}
+                    {r.priceRange && (
+                      <span className="absolute top-2 right-2 text-[10px] font-bold px-2 py-0.5 rounded-full bg-black/60 backdrop-blur-md text-white uppercase">
+                        {r.priceRange}
+                      </span>
+                    )}
+                  </div>
+                  <h4 className="font-bold text-sm text-stone-900 dark:text-white truncate group-hover:text-cordova-green dark:group-hover:text-emerald-400 transition-colors">
+                    {r.name}
+                  </h4>
+                  <div className="flex items-center justify-between mt-1 text-xs text-stone-500 dark:text-stone-400">
+                    <span className="truncate">{r.category || r.barangay || 'Cordova'}</span>
+                    {r.avgRating ? (
+                      <span className="flex items-center gap-0.5 font-bold text-amber-600 dark:text-amber-400">
+                        <Star size={11} className="fill-cordova-gold text-cordova-gold" />
+                        {r.avgRating.toFixed(1)}
+                      </span>
+                    ) : null}
+                  </div>
+                </Link>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* Full-Screen Lightbox Modal for Dish Photos */}
       {lightboxImage && (

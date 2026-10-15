@@ -12,8 +12,8 @@ A modern restaurant discovery, recommendation, and municipal business management
 - **Cleaned Navigation**: Removed redundant standalone AI Search navigation links from the top navbar.
 
 ### 2. 🍽️ Restaurant Directory & Business Verification Auto-Sync
-- **26 Verified Establishments**: Maintained and organized all 26 verified Cordova restaurants in [`frontend/src/data/restaurants.ts`](file:///c:/Users/Hp/Desktop/CordovaEATs/cordova-restaurant-system/cordova-restaurant-system/frontend/src/data/restaurants.ts) with standardized numbering, slugs, and complete metadata.
-- **Automated Frontend Sync (`restaurantSync.service.js`)**: When an admin verifies a new business, it is automatically synchronized into `restaurants.ts` and PostgreSQL without duplicate keys or loss of existing entries.
+- **Curated Establishments**: Maintained the starting Cordova restaurant information in `frontend/src/data/restaurants.ts` for local development and initial imports.
+- **Live Directory**: PostgreSQL is the source of truth for verified businesses and owner edits. Source-file synchronization is limited to local development because deployed files are read-only.
 - **Logo & Photo Registration**: Full backend and frontend support for business logo, cover photo URLs, and multi-photo galleries during business registration.
 
 ### 3. ⭐ User Taste Preferences & Personalized Recommendations
@@ -24,6 +24,7 @@ A modern restaurant discovery, recommendation, and municipal business management
   - Preferred Amenities & Atmosphere (WiFi, Parking, Pet Friendly, Al Fresco, Ocean View, Live Music)
   - Proximity radius slider (1 km – 20 km)
 - **Home Carousel ("Recommended For You")**: Swipeable, horizontally scrollable recommendation section on the Home page ranked dynamically by user preferences with direct link to adjust preferences in profile.
+- **Personalized machine-learning ranker**: The recommendation API now uses per-user logistic regression trained from helpful/not-helpful votes, saved favorites, and visible reviews rated 4–5 or 1–2 stars. It activates after at least 8 signals (including at least 2 positive and 2 negative); until then, users get the existing preference-based cold-start ranking. Dietary, service, distance, and open-now requirements remain strict filters. Apply the new table with `cd backend && npm run db:migrate`.
 
 ### 4. 🎨 UI & Layout Polishing
 - **Explore & Recommendation Rules**: "Recommended For You" section displays when logged in or signed up; unauthenticated users are guided with a sign-in prompt.

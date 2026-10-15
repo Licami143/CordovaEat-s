@@ -2,6 +2,7 @@ const router = require('express').Router();
 const restaurantController = require('../controllers/restaurant.controller');
 const menuController = require('../controllers/menu.controller');
 const reviewController = require('../controllers/review.controller');
+const highlightController = require('../controllers/highlight.controller');
 const promotionController = require('../controllers/promotion.controller');
 const hoursController = require('../controllers/operatingHours.controller');
 const analyticsController = require('../controllers/analytics.controller');
@@ -10,7 +11,7 @@ const favoriteController = require('../controllers/favorite.controller');
 const { requireAuth, optionalAuth } = require('../middleware/auth');
 const { requireRole } = require('../middleware/rbac');
 const validate = require('../middleware/validate');
-const { uploadRestaurantImage, uploadBusinessPermit, uploadBusinessCreation } = require('../middleware/upload');
+const { uploadRestaurantImage, uploadBusinessCreation, uploadHighlightImages } = require('../middleware/upload');
 
 const {
   createRestaurantValidator, updateRestaurantValidator, searchValidator,
@@ -20,8 +21,17 @@ const {
 } = require('../validators/misc.validator');
 
 // ---- Public browse/search ----
+const claimController = require('../controllers/claim.controller');
+const { evidenceUpload } = require('../middleware/claimEvidence');
+const { claimLimiter, reviewStatsLimiter } = require('../middleware/rateLimiter');
+router.get('/:id/claim-status', claimController.eligibility);
+router.post('/:id/claims', requireAuth, requireRole('customer','owner'), claimController.verifiedApplicant, claimLimiter, evidenceUpload, claimController.create);
+router.get('/review-stats', reviewStatsLimiter, reviewController.publicStats);
 router.get('/', validate(searchValidator), restaurantController.search);
 router.get('/mine', requireAuth, requireRole('owner', 'admin', 'customer'), restaurantController.listMine);
+router.get('/recently-viewed', requireAuth, restaurantController.getRecentlyViewed);
+router.delete('/recently-viewed', requireAuth, restaurantController.clearRecentlyViewed);
+router.delete('/recently-viewed/:restaurantId', requireAuth, restaurantController.removeRecentlyViewedItem);
 router.get('/by-slug/:slug', optionalAuth, restaurantController.getBySlug);
 router.get('/:id/similar', restaurantController.getSimilar);
 router.get('/:id', optionalAuth, restaurantController.getById);
@@ -89,6 +99,9 @@ router.patch(
 router.delete('/:restaurantId/menu/items/:itemId', requireAuth, requireRole('owner', 'admin'), menuController.deleteItem);
 
 // ---- Reviews (nested) ----
+router.get('/:restaurantId/highlights', highlightController.publicList);
+router.get('/:restaurantId/highlights/submissions', requireAuth, requireRole('owner'), highlightController.ownerList);
+router.post('/:restaurantId/highlights', requireAuth, requireRole('customer'), uploadHighlightImages.array('photos', 5), highlightController.create);
 router.get('/:restaurantId/reviews', optionalAuth, reviewController.listForRestaurant);
 router.post(
   '/:restaurantId/reviews',
@@ -100,7 +113,7 @@ router.post(
 );
 
 // ---- Promotions (nested) ----
-router.get('/:restaurantId/promotions', promotionController.listForRestaurant);
+router.get('/:restaurantId/promotions', optionalAuth, promotionController.listForRestaurant);
 router.post(
   '/:restaurantId/promotions',
   requireAuth,

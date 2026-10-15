@@ -1,6 +1,6 @@
 # Frontend — Cordova Local Restaurant Recommendation System
 
-Next.js 14 (App Router) + TypeScript + Tailwind CSS + Leaflet.
+Next.js 16 (App Router) + TypeScript + Tailwind CSS.
 
 ## Setup
 
@@ -8,12 +8,17 @@ Next.js 14 (App Router) + TypeScript + Tailwind CSS + Leaflet.
 cd frontend
 npm install
 cp .env.local.example .env.local
-# edit .env.local if your backend isn't on http://localhost:4000
+# set NEXT_PUBLIC_API_URL when your local backend isn't on http://localhost:4000
 
 npm run dev   # http://localhost:3000
 ```
 
 The backend must be running first (see `../backend/README.md`).
+
+The combined Vercel Services project routes `/api/*` to Express at the project
+level. Leave `BACKEND_URL` and `NEXT_PUBLIC_API_URL` unset there. The existing
+two-project deployment can still use a server-only `BACKEND_URL` in its frontend
+project until migration is complete. See `../docs/VERCEL_READINESS.md`.
 
 ## What's implemented
 

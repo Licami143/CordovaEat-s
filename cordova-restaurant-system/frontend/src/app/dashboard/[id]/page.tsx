@@ -12,8 +12,9 @@ import { Input, Textarea } from '@/components/ui/Input';
 import { Modal } from '@/components/ui/Modal';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { AMENITIES } from '@/lib/amenities';
-import { Copy, Check, QrCode, ArrowLeft, ArrowRight, Smartphone, Sparkles, AlertCircle, Clock, Calendar } from 'lucide-react';
+import { Copy, Check, QrCode, ArrowLeft, ArrowRight, Smartphone, Sparkles, AlertCircle, Clock, Calendar, ShoppingBag, Utensils, Tag, Percent, Download } from 'lucide-react';
 import type { Restaurant, MenuItem, MenuCategory, Promotion, OperatingHour, RestaurantImage } from '@/lib/types';
+import { PaymentPortalModal, PaymentTier } from '@/components/payments/PaymentPortalModal';
 
 const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 const TABS = ['overview', 'menu', 'hours', 'promotions', 'subscription', 'analytics'] as const;
@@ -619,12 +620,15 @@ function PromotionsTab({ restaurantId }: { restaurantId: string }) {
 
   const [renewTarget, setRenewTarget] = useState<Promotion | null>(null);
   const [renewEndDate, setRenewEndDate] = useState('');
+  const [renewMethod, setRenewMethod] = useState<'gcash' | 'maya'>('gcash');
+  const [renewRefNo, setRenewRefNo] = useState('');
+
+  const today = new Date().toISOString().slice(0, 10);
 
   const [form, setForm] = useState({
     title: '',
     description: '',
-    discountLabel: '',
-    startDate: new Date().toISOString().slice(0, 10),
+    startDate: today,
     endDate: '',
   });
   const [imageFile, setImageFile] = useState<File | null>(null);
@@ -637,9 +641,19 @@ function PromotionsTab({ restaurantId }: { restaurantId: string }) {
     setTimeout(() => setCopiedField(null), 2000);
   };
 
+  const getDaysDuration = (start: string, end: string) => {
+    if (!start || !end) return null;
+    const s = new Date(start);
+    const e = new Date(end);
+    if (isNaN(s.getTime()) || isNaN(e.getTime())) return null;
+    const diffTime = e.getTime() - s.getTime();
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+    return diffDays > 0 ? diffDays : null;
+  };
+
   const load = useCallback(async () => {
     try {
-      const res = await api.get(`/api/restaurants/${restaurantId}/promotions`, { auth: false });
+      const res = await api.get(`/api/restaurants/${restaurantId}/promotions`);
       setPromotions(res.data);
     } catch {
       toast('Failed to load promotions', 'error');
@@ -651,8 +665,16 @@ function PromotionsTab({ restaurantId }: { restaurantId: string }) {
   }, [load]);
 
   const handleProceedToPayment = () => {
-    if (!form.title.trim() || !form.startDate || !form.endDate) {
-      toast('Please provide a title, start date, and end date', 'error');
+    if (!form.title.trim()) {
+      toast('Please enter a promotion title', 'error');
+      return;
+    }
+    if (!form.description.trim()) {
+      toast('Please describe what you are promoting', 'error');
+      return;
+    }
+    if (!form.startDate || !form.endDate) {
+      toast('Please select both start date and end date', 'error');
       return;
     }
     if (new Date(form.endDate) < new Date(form.startDate)) {
@@ -664,7 +686,7 @@ function PromotionsTab({ restaurantId }: { restaurantId: string }) {
 
   const create = async () => {
     if (!referenceNo.trim()) {
-      toast('Please enter your GCash / Maya transaction or reference number', 'error');
+      toast('Please enter your GCash / Maya transaction reference number', 'error');
       return;
     }
     setSaving(true);
@@ -672,8 +694,7 @@ function PromotionsTab({ restaurantId }: { restaurantId: string }) {
       if (imageFile) {
         const formData = new FormData();
         formData.append('title', form.title);
-        if (form.description) formData.append('description', form.description);
-        if (form.discountLabel) formData.append('discountLabel', form.discountLabel);
+        formData.append('description', form.description);
         formData.append('startDate', form.startDate);
         formData.append('endDate', form.endDate);
         formData.append('publish', 'true');
@@ -691,15 +712,14 @@ function PromotionsTab({ restaurantId }: { restaurantId: string }) {
         });
       }
 
-      toast('Promotion created and submitted for verification successfully!', 'success');
+      toast('Promotion submitted! Awaiting administrator payment verification.', 'success');
       setModalOpen(false);
       setStep('details');
       setReferenceNo('');
       setForm({
         title: '',
         description: '',
-        discountLabel: '',
-        startDate: new Date().toISOString().slice(0, 10),
+        startDate: today,
         endDate: '',
       });
       setImageFile(null);
@@ -713,15 +733,27 @@ function PromotionsTab({ restaurantId }: { restaurantId: string }) {
 
   const renewPromotion = async () => {
     if (!renewTarget || !renewEndDate) return;
+    if (new Date(renewEndDate) < new Date(today)) {
+      toast('New expiry date must be today or in the future', 'error');
+      return;
+    }
+    if (!renewRefNo.trim()) {
+      toast('Please enter your GCash / Maya reference number for the ₱199 renewal', 'error');
+      return;
+    }
     setSaving(true);
     try {
       await api.patch(`/api/restaurants/${restaurantId}/promotions/${renewTarget.id}`, {
         endDate: renewEndDate,
-        status: 'active',
+        status: 'pending_verification',
+        paymentMethod: renewMethod,
+        paymentReference: renewRefNo.trim(),
+        paymentStatus: 'pending_verification',
       });
-      toast('Promotion renewed and reactivated!', 'success');
+      toast('Renewal submitted! Awaiting administrator payment verification.', 'success');
       setRenewTarget(null);
       setRenewEndDate('');
+      setRenewRefNo('');
       load();
     } catch (err) {
       toast(err instanceof ApiClientError ? err.message : 'Failed to renew promotion', 'error');
@@ -740,69 +772,178 @@ function PromotionsTab({ restaurantId }: { restaurantId: string }) {
     }
   };
 
-  const today = new Date().toISOString().slice(0, 10);
+  const durationDays = getDaysDuration(form.startDate, form.endDate);
+  const renewDurationDays = renewTarget ? getDaysDuration(today, renewEndDate) : null;
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-stone-50 dark:bg-stone-800/40 p-4 rounded-xl border border-stone-200 dark:border-stone-800">
-        <div>
-          <h3 className="font-serif font-bold text-lg text-stone-900 dark:text-white">Restaurant Promotions</h3>
-          <p className="text-xs text-stone-500">
-            Promotions are automatically published to diners and <strong>automatically removed from public view</strong> when their end date expires.
-          </p>
+      {/* ₱199 Promotion Feature Banner */}
+      <div className="bg-gradient-to-r from-emerald-950 via-stone-900 to-amber-950 text-white p-5 sm:p-6 rounded-2xl border border-cordova-gold/30 shadow-md relative overflow-hidden">
+        <div className="absolute right-0 top-0 translate-x-6 -translate-y-6 w-40 h-40 bg-cordova-gold/10 rounded-full blur-2xl pointer-events-none" />
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 relative z-10">
+          <div className="space-y-1.5 max-w-xl">
+            <div className="flex items-center gap-2">
+              <span className="bg-cordova-gold text-stone-900 text-[11px] font-extrabold px-2.5 py-0.5 rounded-full uppercase tracking-wider shadow-sm">
+                ₱199 ONLY
+              </span>
+              <span className="text-xs text-amber-200/80 font-semibold flex items-center gap-1">
+                <Sparkles size={13} /> Flat Promotion Rate
+              </span>
+            </div>
+            <h3 className="font-serif font-bold text-xl sm:text-2xl text-white">
+              Promote Your Store to Cordova Diners
+            </h3>
+            <p className="text-xs text-stone-300 leading-relaxed">
+              Promote your store on CordovaEATs for only <strong>₱199.00</strong> flat fee. Set what you want to promote, your start date, and your end date — once the promotion period ends, it <strong>automatically ends</strong> and is safely removed from public feeds.
+            </p>
+          </div>
+          <Button
+            onClick={() => {
+              setStep('details');
+              setModalOpen(true);
+            }}
+            className="bg-cordova-green hover:bg-cordova-greenHover text-white font-bold px-5 py-3 rounded-xl shrink-0 shadow-lg shadow-emerald-950/40 border border-emerald-400/30"
+          >
+            + Create Promotion (₱199)
+          </Button>
         </div>
-        <Button
-          onClick={() => {
-            setStep('details');
-            setModalOpen(true);
-          }}
-          className="bg-cordova-green hover:bg-cordova-greenHover text-white"
-        >
-          + Create New Promotion
-        </Button>
       </div>
 
+      {/* Promotions Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         {promotions.map((p) => {
-          const isExpired = p.status === 'expired' || p.end_date < today;
-          const isActive = p.status === 'active' && !isExpired;
+          const isPending = p.status === 'pending_verification' || p.payment_status === 'pending_verification';
+          const isRejected = p.status === 'rejected' || p.payment_status === 'rejected';
+          const isExpired = !isPending && !isRejected && (p.status === 'expired' || p.end_date < today);
+          const isActive = p.status === 'active' && !isExpired && !isPending && !isRejected;
 
           return (
-            <div key={p.id} className="bg-white dark:bg-[#1a211c] border border-stone-200 dark:border-stone-800 rounded-xl p-4 shadow-sm flex flex-col justify-between gap-3">
-              <div className="space-y-2">
+            <div
+              key={p.id}
+              className={`bg-white dark:bg-[#1a211c] border rounded-2xl p-5 shadow-sm flex flex-col justify-between gap-4 transition-all ${
+                isPending
+                  ? 'border-amber-400/70 dark:border-amber-500/50 ring-2 ring-amber-400/20'
+                  : isRejected
+                  ? 'border-rose-300 dark:border-rose-900/60'
+                  : isActive
+                  ? 'border-emerald-500/40 dark:border-emerald-500/30'
+                  : 'border-stone-200 dark:border-stone-800 opacity-90'
+              }`}
+            >
+              <div className="space-y-3">
                 {p.image_url && (
-                  <div className="relative h-32 w-full rounded-lg overflow-hidden bg-stone-100 dark:bg-stone-800">
+                  <div className="relative h-36 w-full rounded-xl overflow-hidden bg-stone-100 dark:bg-stone-800 border border-stone-200 dark:border-stone-800">
                     <Image src={p.image_url} alt={p.title} fill className="object-cover" />
                   </div>
                 )}
+
                 <div className="flex items-start justify-between gap-2">
-                  <h4 className="font-serif font-bold text-base text-stone-900 dark:text-white">{p.title}</h4>
-                  <Badge color={isActive ? 'success' : isExpired ? 'danger' : 'neutral'}>
-                    {isActive ? 'Active' : isExpired ? 'Expired' : p.status}
+                  <h4 className="font-serif font-bold text-base text-stone-900 dark:text-white truncate">
+                    {p.title}
+                  </h4>
+                  <Badge
+                    color={
+                      isPending
+                        ? 'warning'
+                        : isActive
+                        ? 'success'
+                        : isRejected
+                        ? 'danger'
+                        : 'neutral'
+                    }
+                  >
+                    {isPending
+                      ? 'Pending Review'
+                      : isActive
+                      ? 'Active'
+                      : isRejected
+                      ? 'Payment Rejected'
+                      : 'Expired'}
                   </Badge>
                 </div>
+
+                {/* Pending Verification Notice */}
+                {isPending && (
+                  <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-xs text-amber-900 dark:text-amber-200 space-y-1">
+                    <div className="flex items-center gap-1.5 font-bold">
+                      <Clock size={13} className="animate-pulse text-amber-600" />
+                      <span>Payment Verification Under Review</span>
+                    </div>
+                    <p className="text-[11px] text-stone-600 dark:text-stone-300">
+                      The administrator is reviewing your ₱199 payment (Ref: <span className="font-mono font-bold">{p.payment_reference || 'N/A'}</span> via {p.payment_method?.toUpperCase() || 'GCash'}). Once verified, your promotion will immediately go live to diners!
+                    </p>
+                  </div>
+                )}
+
+                {/* Rejected Notice */}
+                {isRejected && (
+                  <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/30 text-xs text-rose-900 dark:text-rose-200 space-y-1">
+                    <p className="font-bold">Payment Verification Rejected</p>
+                    <p className="text-[11px] text-stone-600 dark:text-stone-300">
+                      The administrator was unable to verify reference #{p.payment_reference}. Please re-submit with your correct receipt reference number.
+                    </p>
+                  </div>
+                )}
+
                 {p.discount_label && (
-                  <span className="inline-block bg-cordova-gold/15 text-cordova-gold text-xs font-bold px-2.5 py-1 rounded-md">
+                  <span className="inline-block bg-cordova-gold/15 text-cordova-gold text-xs font-extrabold px-2.5 py-1 rounded-md border border-cordova-gold/30">
                     {p.discount_label}
                   </span>
                 )}
-                {p.description && <p className="text-xs text-stone-600 dark:text-stone-300">{p.description}</p>}
-                <p className="text-xs text-stone-500">
-                  Duration: <span className="font-medium text-stone-700 dark:text-stone-300">{p.start_date}</span> to <span className="font-medium text-stone-700 dark:text-stone-300">{p.end_date}</span>
-                </p>
+
+                {p.description && (
+                  <p className="text-xs text-stone-600 dark:text-stone-300 line-clamp-3 leading-relaxed">
+                    {p.description}
+                  </p>
+                )}
+
+                <div className="pt-2 border-t border-stone-100 dark:border-stone-800/80 space-y-1 text-xs text-stone-500">
+                  <div className="flex items-center justify-between">
+                    <span className="flex items-center gap-1">
+                      <Calendar size={13} className="text-stone-400" />
+                      <span>
+                        {p.start_date} → {p.end_date}
+                      </span>
+                    </span>
+                    <span className="font-mono text-[11px] font-semibold text-emerald-600 dark:text-emerald-400">
+                      ₱199 Fee
+                    </span>
+                  </div>
+
+                  <div className="flex items-center gap-1 text-[11px]">
+                    <Clock size={12} className={isActive ? 'text-emerald-500' : isPending ? 'text-amber-500' : 'text-stone-400'} />
+                    {isPending ? (
+                      <span className="text-amber-600 dark:text-amber-400 font-medium">
+                        Submitted • Awaiting admin verification
+                      </span>
+                    ) : isActive ? (
+                      <span className="text-emerald-600 dark:text-emerald-400 font-medium">
+                        Live now • Ends automatically on {p.end_date}
+                      </span>
+                    ) : isRejected ? (
+                      <span className="text-rose-500 font-medium">
+                        Rejected by admin
+                      </span>
+                    ) : (
+                      <span className="text-red-500 font-medium">
+                        Ended on {p.end_date} (Removed from public view)
+                      </span>
+                    )}
+                  </div>
+                </div>
               </div>
 
               <div className="flex items-center justify-end gap-2 pt-2 border-t border-stone-100 dark:border-stone-800">
-                {isExpired && (
+                {(isExpired || isRejected) && (
                   <Button
                     variant="secondary"
                     onClick={() => {
                       setRenewTarget(p);
                       setRenewEndDate(new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 10));
                     }}
-                    className="text-xs py-1 px-3"
+                    className="text-xs py-1.5 px-3 font-semibold text-cordova-green hover:bg-emerald-50 dark:hover:bg-emerald-950/30"
                   >
-                    🔄 Extend / Renew
+                    🔄 {isRejected ? 'Re-submit Payment (₱199)' : 'Extend / Renew (₱199)'}
                   </Button>
                 )}
                 <button
@@ -815,11 +956,25 @@ function PromotionsTab({ restaurantId }: { restaurantId: string }) {
             </div>
           );
         })}
+
         {promotions.length === 0 && (
-          <div className="col-span-full py-12 text-center text-stone-500 bg-white dark:bg-[#1a211c] border border-stone-200 dark:border-stone-800 rounded-xl">
+          <div className="col-span-full py-12 text-center text-stone-500 bg-white dark:bg-[#1a211c] border border-stone-200 dark:border-stone-800 rounded-2xl">
             <p className="text-3xl mb-2">🎁</p>
-            <p className="font-serif font-medium text-stone-800 dark:text-stone-200">No promotions published yet</p>
-            <p className="text-xs text-stone-400 mt-1">Create your first promotion banner to attract diners!</p>
+            <p className="font-serif font-bold text-base text-stone-800 dark:text-stone-200">
+              No promotions published yet
+            </p>
+            <p className="text-xs text-stone-400 mt-1 max-w-sm mx-auto">
+              Promote your special offer, dish, sale, or discount for only ₱199!
+            </p>
+            <Button
+              onClick={() => {
+                setStep('details');
+                setModalOpen(true);
+              }}
+              className="mt-4 bg-cordova-green hover:bg-cordova-greenHover text-white text-xs font-bold"
+            >
+              + Launch First Promotion (₱199)
+            </Button>
           </div>
         )}
       </div>
@@ -831,48 +986,78 @@ function PromotionsTab({ restaurantId }: { restaurantId: string }) {
           setModalOpen(false);
           setStep('details');
         }}
-        title={step === 'details' ? 'Create Restaurant Promotion' : 'Promotion Payment & QR Verification'}
+        title={step === 'details' ? 'Create Restaurant Promotion (₱199)' : 'Promotion Payment (₱199)'}
       >
         {step === 'details' ? (
           <div className="space-y-4">
+            {/* Title */}
             <Input
-              label="Promotion Title"
-              placeholder="e.g. Weekend Seafood Special"
+              label="Promotion Title *"
+              placeholder="e.g. Weekend Special, Buy 1 Take 1, 20% Off..."
               value={form.title}
               onChange={(e) => setForm({ ...form, title: e.target.value })}
               required
             />
-            <Textarea
-              label="Description / Special Perks"
-              placeholder="e.g. Free appetizer for orders above ₱500..."
-              value={form.description}
-              onChange={(e) => setForm({ ...form, description: e.target.value })}
-            />
-            <Input
-              label="Discount Label (Badge text)"
-              placeholder="e.g. 20% OFF or BUY 1 GET 1"
-              value={form.discountLabel}
-              onChange={(e) => setForm({ ...form, discountLabel: e.target.value })}
-            />
+
+            {/* Description */}
+            <div>
+              <Textarea
+                label="Description *"
+                placeholder="Describe what you are promoting for diners to see (e.g. details of your special offer, newly launched recipe, discount, or storewide promo)..."
+                value={form.description}
+                onChange={(e) => setForm({ ...form, description: e.target.value })}
+                required
+              />
+              <p className="text-[11px] text-stone-400 mt-1">
+                Let diners know what they will enjoy when they visit or order from your store.
+              </p>
+            </div>
+
+            {/* Date Pickers (Timing) */}
             <div className="grid grid-cols-2 gap-3">
               <Input
-                label="Start Date"
+                label="Start Date *"
                 type="date"
                 value={form.startDate}
                 onChange={(e) => setForm({ ...form, startDate: e.target.value })}
                 required
               />
               <Input
-                label="End Date (Expiry Date)"
+                label="End Date (Expiry Date) *"
                 type="date"
                 value={form.endDate}
+                min={form.startDate || today}
                 onChange={(e) => setForm({ ...form, endDate: e.target.value })}
                 required
               />
             </div>
+
+            {/* Live Schedule & Auto-Expiry Notice */}
+            {durationDays !== null ? (
+              <div className="p-3.5 rounded-xl bg-emerald-50/80 dark:bg-emerald-950/30 border border-emerald-500/30 text-xs space-y-1">
+                <div className="flex items-center gap-2 font-bold text-emerald-800 dark:text-emerald-300">
+                  <Calendar size={14} />
+                  <span>
+                    Promotion Duration: <strong>{durationDays} days</strong> ({form.startDate} to {form.endDate})
+                  </span>
+                </div>
+                <p className="text-[11px] text-emerald-700 dark:text-emerald-400 flex items-center gap-1.5">
+                  <Clock size={12} className="shrink-0" />
+                  <span>
+                    <strong>Auto-Expiry:</strong> This promotion will automatically end and disappear from public view once {form.endDate} passes.
+                  </span>
+                </p>
+              </div>
+            ) : form.endDate && new Date(form.endDate) < new Date(form.startDate) ? (
+              <p className="text-xs text-rose-500 font-semibold flex items-center gap-1">
+                <AlertCircle size={13} /> End date must be on or after start date.
+              </p>
+            ) : null}
+
+            {/* Optional Banner Image */}
             <div>
               <label className="block text-xs font-semibold text-stone-700 dark:text-stone-300 mb-1">
-                Banner / Promotional Image (Optional)
+                Banner / Food Photo (Optional)
               </label>
               <input
                 type="file"
@@ -882,16 +1067,40 @@ function PromotionsTab({ restaurantId }: { restaurantId: string }) {
               />
             </div>
 
+            {/* Fixed Rate Pricing Notice */}
+            <div className="p-3 rounded-xl bg-amber-50 dark:bg-amber-950/30 border border-amber-500/30 flex items-center justify-between text-xs">
+              <div>
+                <p className="font-bold text-amber-900 dark:text-amber-200">
+                  Promotion Flat Fee: <span className="font-mono text-sm text-cordova-gold font-extrabold">₱199.00</span>
+                </p>
+                <p className="text-[11px] text-amber-700 dark:text-amber-300">
+                  One-time flat fee for your entire selected promotional period.
+                </p>
+              </div>
+              <span className="text-xl">💳</span>
+            </div>
+
             <Button
               onClick={handleProceedToPayment}
-              className="w-full bg-cordova-green hover:bg-cordova-greenHover text-white font-bold"
+              className="w-full bg-cordova-green hover:bg-cordova-greenHover text-white font-bold py-3 text-sm shadow-md"
             >
-              Proceed to Payment & QR Code <ArrowRight size={14} className="ml-1.5" />
+              Proceed to Payment (₱199.00) <ArrowRight size={15} className="ml-1.5" />
             </Button>
           </div>
         ) : (
           <div className="space-y-4">
-            {/* Payment Method Selector */}
+            {/* Top Summary Box (matching Subscription style) */}
+            <div className="p-3 rounded-xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/50 flex items-center justify-between">
+              <div>
+                <p className="text-xs font-bold text-amber-900 dark:text-amber-200">{form.title}</p>
+                <p className="text-[11px] text-amber-700 dark:text-amber-300">
+                  {durationDays ? `${durationDays} Days Duration (${form.startDate} to ${form.endDate})` : 'Scheduled Promotion'}
+                </p>
+              </div>
+              <span className="font-bold text-sm text-amber-900 dark:text-amber-100">₱199</span>
+            </div>
+
+            {/* Payment Method Selector (matching Subscription style) */}
             <div>
               <label className="block text-xs font-bold text-stone-700 dark:text-stone-300 mb-2">
                 Choose Payment Method:
@@ -943,16 +1152,17 @@ function PromotionsTab({ restaurantId }: { restaurantId: string }) {
               </div>
             </div>
 
-            {/* QR Code and Account Card */}
-            <div className="p-4 rounded-2xl bg-stone-50 dark:bg-stone-900/80 border border-stone-200 dark:border-stone-800 flex flex-col sm:flex-row items-center gap-4">
+            {/* Clean QR Display (No personal info or screenshots) */}
+            <div className="flex flex-col sm:flex-row items-center gap-4 p-4 rounded-2xl bg-stone-50 dark:bg-stone-900/80 border border-stone-200 dark:border-stone-800">
               {/* QR Image */}
               <div className="shrink-0 text-center">
-                <div className="relative w-44 h-44 sm:w-48 sm:h-48 rounded-2xl overflow-hidden shadow-md border border-stone-200 dark:border-stone-700 bg-white p-2">
+                <div className="relative w-44 h-44 rounded-2xl overflow-hidden shadow-md border-4 border-white dark:border-stone-800 bg-white p-2">
                   <Image
-                    src={paymentMethod === 'gcash' ? '/images/payments/gcash-qr-card.png' : '/images/payments/maya-qr-card.png'}
+                    src={paymentMethod === 'gcash' ? '/images/payments/gcash-qr-code.png' : '/images/payments/maya-qr-code.png'}
                     alt={paymentMethod === 'gcash' ? 'GCash QR' : 'Maya QR'}
                     fill
                     className="object-contain p-1"
+                    style={{ objectFit: 'contain' }}
                   />
                 </div>
                 <p className="text-[10px] text-stone-400 mt-1.5 flex items-center justify-center gap-1 font-medium">
@@ -960,85 +1170,80 @@ function PromotionsTab({ restaurantId }: { restaurantId: string }) {
                 </p>
               </div>
 
-              {/* Payment Details */}
-              <div className="flex-1 w-full space-y-2.5 text-xs">
-                <div>
+              {/* Payment Details & Actions */}
+              <div className="flex-1 w-full space-y-3 text-xs">
+                <div className="flex items-center justify-between">
                   <span className="text-[10px] font-bold uppercase tracking-wider text-stone-400">
-                    Payment Channel
+                    Payment Method
                   </span>
-                  <p className="font-bold text-stone-800 dark:text-stone-100 flex items-center gap-1.5">
-                    <span className={`inline-block w-2 h-2 rounded-full ${paymentMethod === 'gcash' ? 'bg-[#007DFE]' : 'bg-[#00D665]'}`} />
-                    {paymentMethod === 'gcash' ? 'GCash (InstaPay Supported)' : 'Maya (InstaPay Supported)'}
-                  </p>
+                  <span className="font-mono font-bold text-cordova-green dark:text-emerald-400 px-2.5 py-0.5 rounded bg-white dark:bg-stone-800 border border-stone-200 dark:border-stone-700">
+                    ₱199.00
+                  </span>
                 </div>
+                <p className="font-bold text-stone-800 dark:text-stone-100 flex items-center gap-1.5">
+                  <span className={`inline-block w-2 h-2 rounded-full ${paymentMethod === 'gcash' ? 'bg-[#007DFE]' : 'bg-[#00D665]'}`} />
+                  {paymentMethod === 'gcash' ? 'GCash (InstaPay Supported)' : 'Maya (InstaPay Supported)'}
+                </p>
 
-                <div>
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-stone-400">
-                    Account Name
-                  </span>
-                  <div className="flex items-center justify-between p-2 rounded-lg bg-white dark:bg-stone-800 border border-stone-200 dark:border-stone-700">
-                    <span className="font-mono font-bold text-stone-800 dark:text-stone-100">
-                      {paymentMethod === 'gcash' ? 'JOHN HERNAN L.' : 'JOHN HERNAN LICAMI'}
+                <div className="bg-white dark:bg-stone-800 rounded-xl p-2.5 border border-stone-200 dark:border-stone-700 text-[11px] space-y-1">
+                  <div className="flex justify-between">
+                    <span className="text-stone-500">Name:</span>
+                    <span className="font-bold text-stone-800 dark:text-stone-200">
+                      {paymentMethod === 'gcash' ? 'JO*N HE***N L.' : 'JOHN HERNAN LICAMI'}
                     </span>
-                    <button
-                      type="button"
-                      onClick={() =>
-                        copyToClipboard(
-                          paymentMethod === 'gcash' ? 'JOHN HERNAN L.' : 'JOHN HERNAN LICAMI',
-                          'Account Name'
-                        )
-                      }
-                      className="text-stone-500 hover:text-cordova-green transition-colors"
-                      title="Copy Account Name"
-                    >
-                      {copiedField === 'Account Name' ? <Check size={14} className="text-emerald-500" /> : <Copy size={14} />}
-                    </button>
                   </div>
-                </div>
-
-                {paymentMethod === 'maya' && (
-                  <div>
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-stone-400">
-                      Maya Handle
+                  <div className="flex justify-between">
+                    <span className="text-stone-500">Number:</span>
+                    <span className="font-bold text-stone-800 dark:text-stone-200 font-mono">
+                      {paymentMethod === 'gcash' ? '+63 992 512 ••••' : '+63 *** *** 5811'}
                     </span>
-                    <div className="flex items-center justify-between p-2 rounded-lg bg-white dark:bg-stone-800 border border-stone-200 dark:border-stone-700">
-                      <span className="font-mono font-bold text-stone-800 dark:text-stone-100">
+                  </div>
+                  {paymentMethod === 'maya' && (
+                    <div className="flex justify-between">
+                      <span className="text-stone-500">Handle:</span>
+                      <span className="font-semibold text-emerald-600 dark:text-emerald-400 font-mono">
                         @licamijohnhernan
                       </span>
-                      <button
-                        type="button"
-                        onClick={() => copyToClipboard('@licamijohnhernan', 'Maya Handle')}
-                        className="text-stone-500 hover:text-cordova-green transition-colors"
-                        title="Copy Maya Handle"
-                      >
-                        {copiedField === 'Maya Handle' ? <Check size={14} className="text-emerald-500" /> : <Copy size={14} />}
-                      </button>
                     </div>
-                  </div>
-                )}
+                  )}
+                </div>
 
-                <div>
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-stone-400">
-                    Mobile Number
-                  </span>
-                  <div className="flex items-center justify-between p-2 rounded-lg bg-white dark:bg-stone-800 border border-stone-200 dark:border-stone-700">
-                    <span className="font-mono font-bold text-stone-800 dark:text-stone-100">
-                      +63 992 512 5811
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() => copyToClipboard('+639925125811', 'Mobile Number')}
-                      className="text-stone-500 hover:text-cordova-green transition-colors"
-                      title="Copy Mobile Number"
-                    >
-                      {copiedField === 'Mobile Number' ? <Check size={14} className="text-emerald-500" /> : <Copy size={14} />}
-                    </button>
-                  </div>
+                <p className="text-[11px] text-stone-500 dark:text-stone-400 leading-snug">
+                  Scan the QR code using your {paymentMethod === 'gcash' ? 'GCash' : 'Maya'} app to complete the ₱199.00 promotion activation.
+                </p>
+
+                {/* Fast Mobile Payment Actions */}
+                <div className="pt-1 flex flex-wrap items-center gap-2">
+                  <Button
+                    type="button"
+                    size="sm"
+                    onClick={() => {
+                      if (paymentMethod === 'gcash') {
+                        window.location.href = 'gcash://';
+                        toast('Redirecting to GCash app... If not opened, scan the QR code above.', 'info');
+                      } else {
+                        window.location.href = 'paymaya://';
+                        toast('Redirecting to Maya app... If not opened, scan the QR code above.', 'info');
+                      }
+                    }}
+                    className={`text-xs font-bold ${
+                      paymentMethod === 'gcash' ? 'bg-[#007DFE] hover:bg-blue-600 text-white' : 'bg-[#00D665] hover:bg-emerald-500 text-stone-900'
+                    }`}
+                  >
+                    <Smartphone size={13} className="mr-1" /> Open in {paymentMethod === 'gcash' ? 'GCash' : 'Maya'} App
+                  </Button>
+                  <a
+                    href={paymentMethod === 'gcash' ? '/images/payments/gcash-qr-code.png' : '/images/payments/maya-qr-code.png'}
+                    download={`${paymentMethod}-qr-199.png`}
+                    className="inline-flex items-center text-xs font-bold px-3 py-1.5 rounded-lg border border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-800 text-stone-700 dark:text-stone-200 hover:bg-stone-50 transition-colors shadow-xs"
+                  >
+                    <Download size={13} className="mr-1" /> Save QR Code
+                  </a>
                 </div>
               </div>
             </div>
 
-            {/* Reference Number Field */}
+            {/* Reference Number Field (matching Subscription style) */}
             <div>
               <Input
                 label="Transaction / Reference Number *"
@@ -1052,7 +1257,7 @@ function PromotionsTab({ restaurantId }: { restaurantId: string }) {
               </p>
             </div>
 
-            {/* Navigation & Submit Buttons */}
+            {/* Buttons (matching Subscription style) */}
             <div className="flex items-center gap-2 pt-2">
               <Button
                 variant="secondary"
@@ -1069,28 +1274,183 @@ function PromotionsTab({ restaurantId }: { restaurantId: string }) {
                 loading={saving}
                 className="w-2/3 bg-cordova-green hover:bg-cordova-greenHover text-white font-bold"
               >
-                <Check size={14} className="mr-1" /> Confirm & Publish
+                <Check size={14} className="mr-1" /> Confirm & Publish (₱199)
               </Button>
             </div>
           </div>
         )}
       </Modal>
 
-      {/* Extend / Renew Modal */}
-      <Modal open={!!renewTarget} onClose={() => setRenewTarget(null)} title={`Renew ${renewTarget?.title}`}>
+      {/* Extend / Renew Modal (₱199 Renewal matching Subscription style) */}
+      <Modal
+        open={!!renewTarget}
+        onClose={() => {
+          setRenewTarget(null);
+          setRenewRefNo('');
+        }}
+        title={`Renew Promotion: ${renewTarget?.title || ''}`}
+      >
         <div className="space-y-4">
-          <p className="text-xs text-stone-500">
-            Set a new expiry date to reactivate this promotion immediately on the public promotions feed.
-          </p>
+          <div className="p-3 rounded-xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/50 flex items-center justify-between">
+            <div>
+              <p className="text-xs font-bold text-amber-900 dark:text-amber-200">{renewTarget?.title}</p>
+              <p className="text-[11px] text-amber-700 dark:text-amber-300">
+                {renewDurationDays ? `${renewDurationDays} Days Extension (until ${renewEndDate})` : 'Extend Promotion Period'}
+              </p>
+            </div>
+            <span className="font-bold text-sm text-amber-900 dark:text-amber-100">₱199</span>
+          </div>
+
           <Input
-            label="New Expiry Date"
+            label="New Expiry Date *"
             type="date"
             value={renewEndDate}
+            min={today}
             onChange={(e) => setRenewEndDate(e.target.value)}
             required
           />
-          <Button onClick={renewPromotion} loading={saving} className="w-full bg-cordova-green hover:bg-cordova-greenHover text-white">
-            Reactivate Promotion
+
+          {/* Payment Method Selector for Renewal */}
+          <div>
+            <label className="block text-xs font-bold text-stone-700 dark:text-stone-300 mb-2">
+              Choose Payment Method:
+            </label>
+            <div className="grid grid-cols-2 gap-3">
+              <button
+                type="button"
+                onClick={() => setRenewMethod('gcash')}
+                className={`p-3 rounded-xl border flex items-center justify-between transition-all ${
+                  renewMethod === 'gcash'
+                    ? 'border-[#007DFE] bg-blue-50/60 dark:bg-blue-950/40 ring-2 ring-[#007DFE]/40 shadow-sm'
+                    : 'border-stone-200 dark:border-stone-800 bg-white dark:bg-stone-900 hover:border-stone-300'
+                }`}
+              >
+                <div className="flex items-center gap-2.5 text-left">
+                  <div className="w-7 h-7 rounded-lg bg-[#007DFE] flex items-center justify-center text-white font-bold text-xs shadow-sm">
+                    G
+                  </div>
+                  <div>
+                    <p className="font-bold text-xs text-stone-900 dark:text-white">GCash</p>
+                    <p className="text-[10px] text-stone-500">Scan QR / InstaPay</p>
+                  </div>
+                </div>
+                {renewMethod === 'gcash' && <Check size={16} className="text-[#007DFE]" />}
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setRenewMethod('maya')}
+                className={`p-3 rounded-xl border flex items-center justify-between transition-all ${
+                  renewMethod === 'maya'
+                    ? 'border-[#00D665] bg-emerald-50/60 dark:bg-emerald-950/40 ring-2 ring-[#00D665]/40 shadow-sm'
+                    : 'border-stone-200 dark:border-stone-800 bg-white dark:bg-stone-900 hover:border-stone-300'
+                }`}
+              >
+                <div className="flex items-center gap-2.5 text-left">
+                  <div className="w-7 h-7 rounded-lg bg-[#00D665] flex items-center justify-center text-stone-900 font-bold text-xs shadow-sm">
+                    m
+                  </div>
+                  <div>
+                    <p className="font-bold text-xs text-stone-900 dark:text-white">Maya</p>
+                    <p className="text-[10px] text-stone-500">Scan QR / Handle</p>
+                  </div>
+                </div>
+                {renewMethod === 'maya' && <Check size={16} className="text-[#00D665]" />}
+              </button>
+            </div>
+          </div>
+
+          {/* Clean QR Display (No personal info or screenshots) */}
+          <div className="flex flex-col items-center justify-center p-4 rounded-2xl bg-stone-50 dark:bg-stone-900/80 border border-stone-200 dark:border-stone-800 space-y-3">
+            <div className="flex items-center justify-between w-full px-1">
+              <span className={`text-xs font-bold uppercase tracking-wider ${renewMethod === 'gcash' ? 'text-[#007DFE]' : 'text-[#00D665]'}`}>
+                {renewMethod === 'gcash' ? 'GCash QR' : 'Maya QR'}
+              </span>
+              <span className="font-mono font-bold text-xs text-stone-900 dark:text-white px-2 py-0.5 bg-white dark:bg-stone-800 rounded border border-stone-200 dark:border-stone-700">
+                ₱199.00
+              </span>
+            </div>
+
+            <div className="relative w-44 h-44 rounded-2xl overflow-hidden shadow-md border-4 border-white dark:border-stone-800 bg-white p-2">
+              <Image
+                src={renewMethod === 'gcash' ? '/images/payments/gcash-qr-code.png' : '/images/payments/maya-qr-code.png'}
+                alt={`${renewMethod.toUpperCase()} QR Code`}
+                fill
+                className="object-contain p-1"
+                style={{ objectFit: 'contain' }}
+              />
+            </div>
+
+            <div className="w-full bg-white dark:bg-stone-800 rounded-xl p-2.5 border border-stone-200 dark:border-stone-700 text-[11px] space-y-1">
+              <div className="flex justify-between">
+                <span className="text-stone-500">Name:</span>
+                <span className="font-bold text-stone-800 dark:text-stone-200">
+                  {renewMethod === 'gcash' ? 'JO*N HE***N L.' : 'JOHN HERNAN LICAMI'}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-stone-500">Number:</span>
+                <span className="font-bold text-stone-800 dark:text-stone-200 font-mono">
+                  {renewMethod === 'gcash' ? '+63 992 512 ••••' : '+63 *** *** 5811'}
+                </span>
+              </div>
+              {renewMethod === 'maya' && (
+                <div className="flex justify-between">
+                  <span className="text-stone-500">Handle:</span>
+                  <span className="font-semibold text-emerald-600 dark:text-emerald-400 font-mono">
+                    @licamijohnhernan
+                  </span>
+                </div>
+              )}
+            </div>
+
+            <p className="text-[11px] text-stone-400 font-medium text-center">
+              Scan with your {renewMethod === 'gcash' ? 'GCash' : 'Maya'} app to renew for ₱199
+            </p>
+
+            <div className="w-full flex items-center justify-center gap-2 pt-1">
+              <Button
+                type="button"
+                size="sm"
+                onClick={() => {
+                  if (renewMethod === 'gcash') {
+                    window.location.href = 'gcash://';
+                    toast('Redirecting to GCash app... If not opened, scan the QR code above.', 'info');
+                  } else {
+                    window.location.href = 'paymaya://';
+                    toast('Redirecting to Maya app... If not opened, scan the QR code above.', 'info');
+                  }
+                }}
+                className={`text-xs font-bold ${
+                  renewMethod === 'gcash' ? 'bg-[#007DFE] hover:bg-blue-600 text-white' : 'bg-[#00D665] hover:bg-emerald-500 text-stone-900'
+                }`}
+              >
+                <Smartphone size={13} className="mr-1" /> Open {renewMethod === 'gcash' ? 'GCash' : 'Maya'}
+              </Button>
+              <a
+                href={renewMethod === 'gcash' ? '/images/payments/gcash-qr-code.png' : '/images/payments/maya-qr-code.png'}
+                download={`${renewMethod}-qr-199.png`}
+                className="inline-flex items-center text-xs font-bold px-3 py-1.5 rounded-lg border border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-800 text-stone-700 dark:text-stone-200 hover:bg-stone-50 transition-colors shadow-xs"
+              >
+                <Download size={13} className="mr-1" /> Save QR
+              </a>
+            </div>
+          </div>
+
+          <Input
+            label="Transaction / Reference Number *"
+            placeholder="e.g. 1029384756 (from your GCash / Maya receipt)"
+            value={renewRefNo}
+            onChange={(e) => setRenewRefNo(e.target.value)}
+            required
+          />
+
+          <Button
+            onClick={renewPromotion}
+            loading={saving}
+            className="w-full bg-cordova-green hover:bg-cordova-greenHover text-white font-bold py-2.5"
+          >
+            Confirm Renewal (₱199)
           </Button>
         </div>
       </Modal>
@@ -1130,8 +1490,9 @@ function StatCard({ label, value }: { label: string; value: number }) {
 // ---------------- Subscription & Ranking Boost Tab ----------------
 function SubscriptionTab({ restaurant, onUpdated }: { restaurant: Restaurant; onUpdated: () => void }) {
   const { toast } = useToast();
+  const [renderedAt] = useState(() => Date.now());
   const [updating, setUpdating] = useState(false);
-  const [payTier, setPayTier] = useState<any | null>(null);
+  const [payTier, setPayTier] = useState<PaymentTier | null>(null);
   const [payMethod, setPayMethod] = useState<'gcash' | 'maya'>('gcash');
   const [referenceNo, setReferenceNo] = useState('');
   const [copiedField, setCopiedField] = useState<string | null>(null);
@@ -1159,13 +1520,13 @@ function SubscriptionTab({ restaurant, onUpdated }: { restaurant: Restaurant; on
     setTimeout(() => setCopiedField(null), 2000);
   };
 
-  const TIERS = [
+  const TIERS: PaymentTier[] = [
     {
       id: 'none',
       name: 'Free / Standard',
       price: '₱0 / month',
+      amount: 0,
       boost: '1.0x (No Boost)',
-      badge: 'neutral',
       features: [
         'Standard search indexing',
         'Direct menu & info display',
@@ -1176,8 +1537,8 @@ function SubscriptionTab({ restaurant, onUpdated }: { restaurant: Restaurant; on
       id: 'basic',
       name: 'Basic Boost',
       price: '₱499 / month',
+      amount: 499,
       boost: '1.1x Ranking Boost',
-      badge: 'brand',
       features: [
         '1.1x relevance multiplier',
         'Higher priority in local searches',
@@ -1188,8 +1549,8 @@ function SubscriptionTab({ restaurant, onUpdated }: { restaurant: Restaurant; on
       id: 'premium',
       name: 'Premium Boost',
       price: '₱999 / month',
+      amount: 999,
       boost: '1.3x Ranking Boost',
-      badge: 'success',
       features: [
         '1.3x relevance multiplier',
         'Substantial boost over non-subscribers',
@@ -1200,15 +1561,15 @@ function SubscriptionTab({ restaurant, onUpdated }: { restaurant: Restaurant; on
       id: 'featured',
       name: 'Featured Partner',
       price: '₱1,999 / month',
+      amount: 1999,
       boost: '1.5x Maximum Boost + Sponsored Slots',
-      badge: 'warning',
       features: [
         '1.5x maximum relevance multiplier',
         'Reserved Top 2 Sponsored positions',
         'Distinctive "Sponsored" gold badge',
       ],
     },
-  ] as const;
+  ];
 
   const handleSelectTier = (tier: any) => {
     if (tier.id === 'none') {
@@ -1249,7 +1610,7 @@ function SubscriptionTab({ restaurant, onUpdated }: { restaurant: Restaurant; on
   };
 
   const daysRemaining = restaurant.subscription_expires_at
-    ? Math.max(0, Math.ceil((new Date(restaurant.subscription_expires_at).getTime() - Date.now()) / (1000 * 60 * 60 * 24)))
+    ? Math.max(0, Math.ceil((new Date(restaurant.subscription_expires_at).getTime() - renderedAt) / (1000 * 60 * 60 * 24)))
     : null;
 
   return (
@@ -1348,7 +1709,7 @@ function SubscriptionTab({ restaurant, onUpdated }: { restaurant: Restaurant; on
                   </div>
 
                   <ul className="space-y-2 pt-3 border-t border-stone-100 dark:border-stone-800">
-                    {tier.features.map((f, idx) => (
+                    {tier.features?.map((f, idx) => (
                       <li key={idx} className="text-xs text-stone-600 dark:text-stone-300 flex items-start gap-1.5">
                         <span className="text-cordova-green font-bold shrink-0">✓</span>
                         <span>{f}</span>
@@ -1378,204 +1739,18 @@ function SubscriptionTab({ restaurant, onUpdated }: { restaurant: Restaurant; on
         </div>
       </div>
 
-      {/* Subscription Tier Payment Modal */}
-      <Modal
+      {/* High-Tech Payment Portal Modal for GCash & Maya (₱499, ₱999, ₱1,999) */}
+      <PaymentPortalModal
         open={!!payTier}
         onClose={() => setPayTier(null)}
-        title={`Activate ${payTier?.name}`}
-      >
-        <div className="space-y-4">
-          <div className="p-3 rounded-xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/50 flex items-center justify-between">
-            <div>
-              <p className="text-xs font-bold text-amber-900 dark:text-amber-200">{payTier?.name}</p>
-              <p className="text-[11px] text-amber-700 dark:text-amber-300">{payTier?.boost}</p>
-            </div>
-            <span className="font-bold text-sm text-amber-900 dark:text-amber-100">{payTier?.price}</span>
-          </div>
-
-          {/* Payment Method Selector */}
-          <div>
-            <label className="block text-xs font-bold text-stone-700 dark:text-stone-300 mb-2">
-              Choose Payment Method:
-            </label>
-            <div className="grid grid-cols-2 gap-3">
-              {/* GCash Option */}
-              <button
-                type="button"
-                onClick={() => setPayMethod('gcash')}
-                className={`p-3 rounded-xl border flex items-center justify-between transition-all ${
-                  payMethod === 'gcash'
-                    ? 'border-[#007DFE] bg-blue-50/60 dark:bg-blue-950/40 ring-2 ring-[#007DFE]/40 shadow-sm'
-                    : 'border-stone-200 dark:border-stone-800 bg-white dark:bg-stone-900 hover:border-stone-300'
-                }`}
-              >
-                <div className="flex items-center gap-2.5 text-left">
-                  <div className="w-7 h-7 rounded-lg bg-[#007DFE] flex items-center justify-center text-white font-bold text-xs shadow-sm">
-                    G
-                  </div>
-                  <div>
-                    <p className="font-bold text-xs text-stone-900 dark:text-white">GCash</p>
-                    <p className="text-[10px] text-stone-500">Scan QR / InstaPay</p>
-                  </div>
-                </div>
-                {payMethod === 'gcash' && <Check size={16} className="text-[#007DFE]" />}
-              </button>
-
-              {/* Maya Option */}
-              <button
-                type="button"
-                onClick={() => setPayMethod('maya')}
-                className={`p-3 rounded-xl border flex items-center justify-between transition-all ${
-                  payMethod === 'maya'
-                    ? 'border-[#00D665] bg-emerald-50/60 dark:bg-emerald-950/40 ring-2 ring-[#00D665]/40 shadow-sm'
-                    : 'border-stone-200 dark:border-stone-800 bg-white dark:bg-stone-900 hover:border-stone-300'
-                }`}
-              >
-                <div className="flex items-center gap-2.5 text-left">
-                  <div className="w-7 h-7 rounded-lg bg-[#00D665] flex items-center justify-center text-stone-900 font-bold text-xs shadow-sm">
-                    m
-                  </div>
-                  <div>
-                    <p className="font-bold text-xs text-stone-900 dark:text-white">Maya</p>
-                    <p className="text-[10px] text-stone-500">Scan QR / Handle</p>
-                  </div>
-                </div>
-                {payMethod === 'maya' && <Check size={16} className="text-[#00D665]" />}
-              </button>
-            </div>
-          </div>
-
-          {/* QR Code and Account Card */}
-          <div className="p-4 rounded-2xl bg-stone-50 dark:bg-stone-900/80 border border-stone-200 dark:border-stone-800 flex flex-col sm:flex-row items-center gap-4">
-            {/* QR Image */}
-            <div className="shrink-0 text-center">
-              <div className="relative w-44 h-44 sm:w-48 sm:h-48 rounded-2xl overflow-hidden shadow-md border border-stone-200 dark:border-stone-700 bg-white p-2">
-                <Image
-                  src={payMethod === 'gcash' ? '/images/payments/gcash-qr-card.png' : '/images/payments/maya-qr-card.png'}
-                  alt={payMethod === 'gcash' ? 'GCash QR' : 'Maya QR'}
-                  fill
-                  className="object-contain p-1"
-                />
-              </div>
-              <p className="text-[10px] text-stone-400 mt-1.5 flex items-center justify-center gap-1 font-medium">
-                <QrCode size={11} /> Scan with {payMethod === 'gcash' ? 'GCash' : 'Maya'} app
-              </p>
-            </div>
-
-            {/* Payment Details */}
-            <div className="flex-1 w-full space-y-2.5 text-xs">
-              <div>
-                <span className="text-[10px] font-bold uppercase tracking-wider text-stone-400">
-                  Payment Channel
-                </span>
-                <p className="font-bold text-stone-800 dark:text-stone-100 flex items-center gap-1.5">
-                  <span className={`inline-block w-2 h-2 rounded-full ${payMethod === 'gcash' ? 'bg-[#007DFE]' : 'bg-[#00D665]'}`} />
-                  {payMethod === 'gcash' ? 'GCash (InstaPay Supported)' : 'Maya (InstaPay Supported)'}
-                </p>
-              </div>
-
-              <div>
-                <span className="text-[10px] font-bold uppercase tracking-wider text-stone-400">
-                  Account Name
-                </span>
-                <div className="flex items-center justify-between p-2 rounded-lg bg-white dark:bg-stone-800 border border-stone-200 dark:border-stone-700">
-                  <span className="font-mono font-bold text-stone-800 dark:text-stone-100">
-                    {payMethod === 'gcash' ? 'JOHN HERNAN L.' : 'JOHN HERNAN LICAMI'}
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() =>
-                      copyToClipboard(
-                        payMethod === 'gcash' ? 'JOHN HERNAN L.' : 'JOHN HERNAN LICAMI',
-                        'Account Name'
-                      )
-                    }
-                    className="text-stone-500 hover:text-cordova-green transition-colors"
-                    title="Copy Account Name"
-                  >
-                    {copiedField === 'Account Name' ? <Check size={14} className="text-emerald-500" /> : <Copy size={14} />}
-                  </button>
-                </div>
-              </div>
-
-              {payMethod === 'maya' && (
-                <div>
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-stone-400">
-                    Maya Handle
-                  </span>
-                  <div className="flex items-center justify-between p-2 rounded-lg bg-white dark:bg-stone-800 border border-stone-200 dark:border-stone-700">
-                    <span className="font-mono font-bold text-stone-800 dark:text-stone-100">
-                      @licamijohnhernan
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() => copyToClipboard('@licamijohnhernan', 'Maya Handle')}
-                      className="text-stone-500 hover:text-cordova-green transition-colors"
-                      title="Copy Maya Handle"
-                    >
-                      {copiedField === 'Maya Handle' ? <Check size={14} className="text-emerald-500" /> : <Copy size={14} />}
-                    </button>
-                  </div>
-                </div>
-              )}
-
-              <div>
-                <span className="text-[10px] font-bold uppercase tracking-wider text-stone-400">
-                  Mobile Number
-                </span>
-                <div className="flex items-center justify-between p-2 rounded-lg bg-white dark:bg-stone-800 border border-stone-200 dark:border-stone-700">
-                  <span className="font-mono font-bold text-stone-800 dark:text-stone-100">
-                    +63 992 512 5811
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => copyToClipboard('+639925125811', 'Mobile Number')}
-                    className="text-stone-500 hover:text-cordova-green transition-colors"
-                    title="Copy Mobile Number"
-                  >
-                    {copiedField === 'Mobile Number' ? <Check size={14} className="text-emerald-500" /> : <Copy size={14} />}
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Reference Number Field */}
-          <div>
-            <Input
-              label="Transaction / Reference Number *"
-              placeholder="e.g. 1029384756 (from your GCash / Maya receipt)"
-              value={referenceNo}
-              onChange={(e) => setReferenceNo(e.target.value)}
-              required
-            />
-            <p className="text-[11px] text-stone-400 mt-1">
-              Required for payment verification by the platform administrator.
-            </p>
-          </div>
-
-          {/* Buttons */}
-          <div className="flex items-center gap-2 pt-2">
-            <Button
-              variant="secondary"
-              type="button"
-              onClick={() => setPayTier(null)}
-              className="w-1/3"
-              disabled={updating}
-            >
-              Cancel
-            </Button>
-            <Button
-              type="button"
-              onClick={() => handleUpdateTier(payTier?.id)}
-              loading={updating}
-              className="w-2/3 bg-cordova-green hover:bg-cordova-greenHover text-white font-bold"
-            >
-              <Check size={14} className="mr-1" /> Confirm & Activate
-            </Button>
-          </div>
-        </div>
-      </Modal>
+        tier={payTier}
+        restaurantId={restaurant.id}
+        restaurantName={restaurant.name}
+        onSuccess={() => {
+          fetchSubscriptionData();
+          onUpdated();
+        }}
+      />
     </div>
   );
 }

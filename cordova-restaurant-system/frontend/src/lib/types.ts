@@ -107,9 +107,10 @@ export interface MenuItem {
   name: string;
   description?: string;
   price: number;
+  price_label?: string;
   image_url?: string;
   is_available: boolean;
-  dietary_tags: string[];
+  dietary_tags?: string[];
 }
 
 export interface Review {
@@ -128,7 +129,25 @@ export interface Review {
   created_at: string;
   like_count: number;
   liked_by_me: boolean;
+  my_reaction?: string | null;
+  is_mine?: boolean;
   visit_type?: string;
+}
+
+export interface VisitHighlight {
+  id: string;
+  customer_id: string;
+  restaurant_id: string;
+  customer_name: string;
+  restaurant_name: string;
+  restaurant_slug: string;
+  caption: string;
+  category: 'Food' | 'Ambience' | 'Service' | 'Overall Experience';
+  status: 'pending' | 'approved' | 'rejected' | 'removed';
+  moderation_reason?: string | null;
+  images: Array<{ id: string; url: string }>;
+  created_at: string;
+  updated_at: string;
 }
 
 export interface Promotion {
@@ -143,7 +162,7 @@ export interface Promotion {
   discount_label?: string;
   start_date: string;
   end_date: string;
-  status: 'draft' | 'active' | 'expired' | 'archived';
+  status: 'draft' | 'active' | 'expired' | 'archived' | 'pending_verification' | 'rejected' | string;
   payment_method?: 'gcash' | 'maya' | string;
   payment_reference?: string;
   payment_status?: 'pending_verification' | 'verified' | 'rejected' | string;
@@ -178,15 +197,27 @@ export interface OperatingHour {
   is_closed: boolean;
 }
 
+export interface MatchedPreferences {
+  cuisines?: string[];
+  dietary?: string[];
+  services?: string[];
+  budgetFit?: boolean;
+  isNear?: boolean;
+}
+
 export interface RecommendationResult {
   restaurant: Restaurant;
   score: number;
+  matchPercentage?: number;
+  aiSuggested?: boolean;
+  matchedPreferences?: MatchedPreferences;
   scoreBreakdown: {
     cuisineMatch: number;
     budgetFit: number;
     proximity: number;
     dietaryMatch: number;
     rating: number;
+    servicesMatch?: number;
   };
   reason: string;
 }

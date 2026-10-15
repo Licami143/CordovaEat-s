@@ -29,10 +29,10 @@ const create = asyncHandler(async (req, res) => {
   const photos = [];
   if (req.files && Array.isArray(req.files)) {
     for (const f of req.files) {
-      photos.push(uploadService.publicUrlFor(f));
+      photos.push(await uploadService.publicUrlFor(await uploadService.processImage(f, { maxWidth: 1400 })));
     }
   } else if (req.file) {
-    photos.push(uploadService.publicUrlFor(req.file));
+    photos.push(await uploadService.publicUrlFor(await uploadService.processImage(req.file, { maxWidth: 1400 })));
   }
 
   if (req.body.photos) {
@@ -71,7 +71,7 @@ const update = asyncHandler(async (req, res) => {
 });
 
 const remove = asyncHandler(async (req, res) => {
-  await reviewModel.remove(req.params.id, req.user.id);
+  if (!await reviewModel.remove(req.params.id, req.user.id)) throw ApiError.notFound('Review not found or not yours');
   res.json({ success: true, message: 'Review deleted' });
 });
 
@@ -104,7 +104,7 @@ const listFlagged = asyncHandler(async (req, res) => {
 const listAdminReviews = asyncHandler(async (req, res) => {
   const { page, limit, offset } = parsePagination(req.query);
   const { rows, totalCount } = await reviewModel.listAdminReviews({
-    status: req.query.status || 'flagged',
+    status: req.query.status || 'reported',
     limit,
     offset,
   });
@@ -126,8 +126,26 @@ const react = asyncHandler(async (req, res) => {
   if (!review) throw ApiError.notFound('Review not found');
 
   const emoji = req.body.emoji || '❤️';
-  const reactions = await reviewModel.react(req.params.id, emoji);
-  res.json({ success: true, data: { reactions } });
+  const result = await reviewModel.react(req.params.id, req.user.id, emoji);
+  res.json({ success: true, data: result });
 });
 
-module.exports = { listForRestaurant, create, update, remove, reply, moderate, listFlagged, listAdminReviews, toggleLike, react };
+const report = asyncHandler(async (req, res) => {
+ const result = await reviewModel.report(req.params.id, req.user.id, req.body);
+ res.status(201).json({success:true, message:'Report submitted for admin review', data:result});
+});
+
+const publicStats = asyncHandler(async (req, res) => {
+ const {query}=require('../config/db');
+ const {rows}=await query("SELECT r.id,r.slug,COUNT(rv.id)::int AS review_count,COALESCE(ROUND(AVG(rv.rating)::numeric,2),0) AS avg_rating,MAX(rv.updated_at) AS revision FROM restaurants r LEFT JOIN reviews rv ON rv.restaurant_id=r.id AND rv.status='visible' WHERE r.status='verified' AND r.is_active=true GROUP BY r.id ORDER BY r.id");
+ res.set('Cache-Control','no-store');
+ res.json({success:true,data:rows});
+});
+
+const mine = asyncHandler(async (req, res) => {
+  const { page, limit, offset } = parsePagination(req.query);
+  const { rows, totalCount } = await reviewModel.mine(req.user.id, { limit, offset });
+  res.json({ success: true, data: rows, meta: buildPageMeta({ page, limit, totalCount }) });
+});
+
+module.exports = { mine, publicStats, report, listForRestaurant, create, update, remove, reply, moderate, listFlagged, listAdminReviews, toggleLike, react };

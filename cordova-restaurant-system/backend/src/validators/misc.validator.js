@@ -6,10 +6,28 @@ const createReviewValidator = [
   body('comment').optional().trim().isLength({ max: 1000 }),
 ];
 
+const editReviewValidator = [
+  param('id').isUUID(),
+  body('rating').optional().isInt({ min: 1, max: 5 }),
+  body('comment').optional().isString().trim().isLength({ min: 1, max: 1000 }),
+  body('photos').optional().isArray({ max: 5 }),
+  body('photos.*').optional().isString().isLength({ max: 2000 }),
+  body().custom((value) => value.rating !== undefined || value.comment !== undefined || value.photos !== undefined)
+    .withMessage('Provide a review change'),
+];
+const reactReviewValidator = [param('id').isUUID(), body('emoji').isIn(['❤️', '😋', '🔥', '👏', '🦞'])];
+const reviewIdValidator = [param('id').isUUID()];
+
+const reportReviewValidator = [
+ param('id').isUUID(),
+ body('category').isIn(['spam','harassment','hate_speech','personal_information','irrelevant','other']),
+ body('details').isString().trim().isLength({min:10,max:1000}),
+];
+
 const moderateReviewValidator = [
   param('id').isUUID(),
   body('status').isIn(['visible', 'flagged', 'removed']),
-  body('flaggedReason').if(body('status').equals('flagged')).notEmpty(),
+  body('flaggedReason').isString().trim().isLength({ min: 10, max: 1000 }).withMessage('Explain the moderation decision (10–1000 characters)'),
 ];
 
 const createMenuItemValidator = [
@@ -30,14 +48,35 @@ const createPromotionValidator = [
 ];
 
 const recommendationValidator = [
-  body('preferredCuisines').optional().isArray(),
+  body('query').optional().isString().trim().isLength({ max: 500 }),
+  body('preferredCuisines').optional().isArray({ max: 20 }),
+  body('preferredCuisines.*').optional().isString().trim().isLength({ min: 1, max: 80 }),
   body('budgetRange').optional().isIn(['budget', 'moderate', 'expensive', 'premium']),
-  body('dietaryRestrictions').optional().isArray(),
-  body('requiredServices').optional().isArray(),
+  body('dietaryRestrictions').optional().isArray({ max: 20 }),
+  body('dietaryRestrictions.*').optional().isString().trim().isLength({ min: 1, max: 80 }),
+  body('requiredServices').optional().isArray({ max: 20 }),
+  body('requiredServices.*').optional().isString().trim().isLength({ min: 1, max: 80 }),
   body('lat').optional().isFloat({ min: -90, max: 90 }),
   body('lng').optional().isFloat({ min: -180, max: 180 }),
   body('maxDistanceKm').optional().isFloat({ min: 0.1, max: 50 }),
   body('onlyOpenNow').optional().isBoolean(),
+  body('limit').optional().isInt({ min: 1, max: 20 }),
+];
+
+const recommendationFeedbackValidator = [
+  body('restaurantId').isUUID(),
+  body('sentiment').custom((value) => value === 1 || value === -1)
+    .withMessage('Sentiment must be 1 (helpful) or -1 (not helpful)'),
+  body('preferredCuisines').optional().isArray({ max: 20 }),
+  body('preferredCuisines.*').optional().isString().trim().isLength({ max: 80 }),
+  body('budgetRange').optional({ nullable: true }).isIn(['budget', 'moderate', 'expensive', 'premium']),
+  body('dietaryRestrictions').optional().isArray({ max: 20 }),
+  body('dietaryRestrictions.*').optional().isString().trim().isLength({ max: 80 }),
+  body('requiredServices').optional().isArray({ max: 20 }),
+  body('requiredServices.*').optional().isString().trim().isLength({ max: 80 }),
+  body('maxDistanceKm').optional().isFloat({ min: 0.1, max: 50 }),
+  body('lat').optional({ nullable: true }).isFloat({ min: -90, max: 90 }),
+  body('lng').optional({ nullable: true }).isFloat({ min: -180, max: 180 }),
 ];
 
 const updateWeightsValidator = [
@@ -49,10 +88,15 @@ const updateWeightsValidator = [
 ];
 
 module.exports = {
+  editReviewValidator,
+  reactReviewValidator,
+  reviewIdValidator,
+  reportReviewValidator,
   createReviewValidator,
   moderateReviewValidator,
   createMenuItemValidator,
   createPromotionValidator,
   recommendationValidator,
+  recommendationFeedbackValidator,
   updateWeightsValidator,
 };

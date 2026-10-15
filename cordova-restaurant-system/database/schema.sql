@@ -17,7 +17,7 @@ CREATE TYPE business_status AS ENUM ('pending', 'verified', 'rejected', 'suspend
 CREATE TYPE price_range AS ENUM ('budget', 'moderate', 'expensive', 'premium');
 CREATE TYPE service_type AS ENUM ('dine_in', 'takeout', 'delivery');
 CREATE TYPE review_status AS ENUM ('visible', 'flagged', 'removed');
-CREATE TYPE promotion_status AS ENUM ('draft', 'active', 'expired', 'archived');
+CREATE TYPE promotion_status AS ENUM ('draft', 'active', 'expired', 'archived', 'pending_verification', 'rejected');
 CREATE TYPE subscription_tier AS ENUM ('none', 'basic', 'premium', 'featured');
 CREATE TYPE notification_type AS ENUM (
   'business_verified', 'business_rejected', 'review_flagged',
@@ -229,6 +229,9 @@ CREATE TABLE promotions (
   start_date    DATE NOT NULL,
   end_date      DATE NOT NULL,
   status        promotion_status NOT NULL DEFAULT 'draft',
+  payment_method VARCHAR(50),
+  payment_reference VARCHAR(100),
+  payment_status VARCHAR(50) DEFAULT 'pending_verification',
   created_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
   CHECK (end_date >= start_date)
 );
@@ -251,6 +254,37 @@ CREATE TABLE recommendation_logs (
 CREATE INDEX idx_recommendation_logs_user ON recommendation_logs(user_id);
 CREATE INDEX idx_recommendation_logs_created ON recommendation_logs(created_at);
 CREATE INDEX idx_recommendation_logs_top_result ON recommendation_logs(top_result_id);
+
+-- Personalized recommendation feedback used to train the per-user ranker.
+CREATE TABLE recommendation_feedback (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  restaurant_id UUID NOT NULL REFERENCES restaurants(id) ON DELETE CASCADE,
+  sentiment SMALLINT NOT NULL CHECK (sentiment IN (-1, 1)),
+  preference_snapshot JSONB NOT NULL DEFAULT '{}'::jsonb,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  UNIQUE (user_id, restaurant_id)
+);
+CREATE INDEX idx_recommendation_feedback_user ON recommendation_feedback(user_id);
+
+-- Globally trained ML model versions used as the cold-start scorer.
+CREATE TABLE recommendation_model_versions (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  model JSONB NOT NULL,
+  training_examples INTEGER NOT NULL CHECK (training_examples >= 0),
+  positive_examples INTEGER NOT NULL CHECK (positive_examples >= 0),
+  negative_examples INTEGER NOT NULL CHECK (negative_examples >= 0),
+  trained_by UUID REFERENCES users(id) ON DELETE SET NULL,
+  is_active BOOLEAN NOT NULL DEFAULT FALSE,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  CHECK (positive_examples + negative_examples = training_examples)
+);
+CREATE UNIQUE INDEX idx_recommendation_model_one_active
+  ON recommendation_model_versions(is_active)
+  WHERE is_active = TRUE;
+CREATE INDEX idx_recommendation_model_versions_created
+  ON recommendation_model_versions(created_at DESC);
 
 CREATE TABLE restaurant_view_logs (
   id            UUID PRIMARY KEY DEFAULT uuid_generate_v4(),

@@ -36,22 +36,22 @@ function AdminPromotionsContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
 
-  const initialStatus = searchParams.get('status') || 'active';
+  const initialStatus = searchParams.get('status') || 'pending_verification';
   const [status, setStatus] = useState(initialStatus);
   const [promotions, setPromotions] = useState<Promotion[]>([]);
   const [subscriptions, setSubscriptions] = useState<SubscriptionTransaction[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
   const [search, setSearch] = useState('');
   const debouncedSearch = useDebounce(search, 300);
   const [deleteTarget, setDeleteTarget] = useState<Promotion | null>(null);
   const [deleteSubTarget, setDeleteSubTarget] = useState<SubscriptionTransaction | null>(null);
   const [copiedRef, setCopiedRef] = useState<string | null>(null);
+  const [renderedAt] = useState(() => Date.now());
 
   useEffect(() => {
-    const urlStatus = searchParams.get('status') || 'active';
-    if (urlStatus !== status) {
-      setStatus(urlStatus);
-    }
+    const urlStatus = searchParams.get('status') || 'pending_verification';
+    setStatus((current) => current === urlStatus ? current : urlStatus);
   }, [searchParams]);
 
   const copyToClipboard = (text: string) => {
@@ -63,6 +63,7 @@ function AdminPromotionsContent() {
 
   const load = useCallback(async () => {
     setLoading(true);
+    setLoadError(false);
     try {
       if (status === 'subscriptions') {
         const params = new URLSearchParams();
@@ -79,16 +80,16 @@ function AdminPromotionsContent() {
         setPromotions(res.data || []);
       }
     } catch (err) {
+      setLoadError(true);
       if (status === 'subscriptions') {
         setSubscriptions([]);
       } else {
         setPromotions([]);
       }
-      toast(err instanceof ApiClientError ? err.message : 'Failed to load records', 'error');
     } finally {
       setLoading(false);
     }
-  }, [status, debouncedSearch, toast]);
+  }, [status, debouncedSearch]);
 
   useEffect(() => {
     load();
@@ -99,10 +100,19 @@ function AdminPromotionsContent() {
     router.replace(`/admin/promotions?status=${newStatus}`, { scroll: false });
   };
 
-  const updateStatus = async (id: string, newStatus: string) => {
+  const updateStatus = async (id: string, newStatus: string, paymentStatus?: string) => {
     try {
-      await api.patch(`/api/admin/promotions/${id}/status`, { status: newStatus });
-      toast(`Promotion marked as ${newStatus}`, 'success');
+      const payload: { status: string; paymentStatus?: string } = { status: newStatus };
+      if (paymentStatus) payload.paymentStatus = paymentStatus;
+      await api.patch(`/api/admin/promotions/${id}/status`, payload);
+      toast(
+        newStatus === 'active'
+          ? 'Promotion payment verified and activated on public feed!'
+          : newStatus === 'rejected'
+          ? 'Promotion rejected.'
+          : `Promotion marked as ${newStatus}`,
+        newStatus === 'rejected' ? 'info' : 'success'
+      );
       load();
     } catch (err) {
       toast(err instanceof ApiClientError ? err.message : 'Failed to update promotion', 'error');
@@ -157,18 +167,19 @@ function AdminPromotionsContent() {
     <div className="space-y-6">
       <div>
         <h1 className="font-serif text-2xl sm:text-3xl font-bold text-stone-900 dark:text-white">
-          Promotion & Billing Moderation
+          Promotions
         </h1>
         <p className="text-xs sm:text-sm text-stone-500 mt-1">
-          Verify GCash / Maya transaction receipts, active dining promotions, and ranking boost subscription upgrades submitted by restaurant owners.
+          Offers, payment verification, and subscription boosts
         </p>
       </div>
 
       {/* Filter and Search Bar */}
-      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-white dark:bg-[#1a211c] p-3 rounded-2xl border border-stone-200 dark:border-stone-800 shadow-sm">
+      <div className="flex flex-col xl:flex-row items-stretch xl:items-center justify-between gap-3 bg-white dark:bg-[#1a211c] p-3 rounded-2xl border border-stone-200 dark:border-stone-800 shadow-sm">
         {/* Status Tabs */}
         <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0">
           {[
+            { id: 'pending_verification', label: 'Pending Verification', icon: Clock },
             { id: 'active', label: 'Active Deals', icon: Sparkles },
             { id: 'subscriptions', label: 'Subscription Boosts', icon: Zap },
             { id: 'all', label: 'All Promotions', icon: Tag },
@@ -206,7 +217,13 @@ function AdminPromotionsContent() {
       </div>
 
       {/* Subscription Boosts List */}
-      {status === 'subscriptions' ? (
+      {loadError ? (
+        <div role="alert" className="border-l-4 border-red-500 bg-red-50 dark:bg-red-950/30 p-4">
+          <p className="text-sm font-semibold">Records could not be loaded.</p>
+          <p className="mt-1 text-sm">The service or database needs attention. No records are shown until the request succeeds.</p>
+          <button onClick={load} className="mt-2 text-sm underline font-medium">Try again</button>
+        </div>
+      ) : status === 'subscriptions' ? (
         loading ? (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <Skeleton className="h-48 w-full rounded-2xl" />
@@ -230,7 +247,7 @@ function AdminPromotionsContent() {
               const isVerified = tx.status === 'verified';
               const isRejected = tx.status === 'rejected';
               const daysLeft = tx.expires_at
-                ? Math.max(0, Math.ceil((new Date(tx.expires_at).getTime() - Date.now()) / (1000 * 60 * 60 * 24)))
+                ? Math.max(0, Math.ceil((new Date(tx.expires_at).getTime() - renderedAt) / (1000 * 60 * 60 * 24)))
                 : null;
 
               return (
@@ -409,14 +426,22 @@ function AdminPromotionsContent() {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
             {promotions.map((p) => {
-              const isExpired = new Date(p.end_date) < new Date();
-              const isActive = p.status === 'active' && !isExpired;
+              const isPending = p.payment_status === 'pending_verification' || p.status === 'pending_verification';
+              const isRejected = p.payment_status === 'rejected' || p.status === 'rejected';
+              const isExpired = !isPending && !isRejected && (p.status === 'expired' || new Date(p.end_date) < new Date());
+              const isActive = p.status === 'active' && !isExpired && !isPending && !isRejected;
               const isGcash = (p.payment_method || '').toLowerCase() === 'gcash';
 
               return (
                 <div
                   key={p.id}
-                  className="spatial-card bg-white dark:bg-[#1a211c] border border-stone-200 dark:border-stone-800 rounded-2xl p-5 shadow-sm flex flex-col justify-between gap-4 transition-all hover:shadow-spatial-sm"
+                  className={`spatial-card bg-white dark:bg-[#1a211c] border rounded-2xl p-5 shadow-sm flex flex-col justify-between gap-4 transition-all hover:shadow-spatial-sm ${
+                    isPending
+                      ? 'border-amber-400/70 dark:border-amber-500/50 ring-2 ring-amber-400/20'
+                      : isRejected
+                      ? 'border-rose-300 dark:border-rose-900/60'
+                      : 'border-stone-200 dark:border-stone-800'
+                  }`}
                 >
                   <div className="space-y-3">
                     <div className="flex gap-4">
@@ -432,7 +457,7 @@ function AdminPromotionsContent() {
                         ) : (
                           <div className="w-full h-full flex flex-col items-center justify-center text-stone-400 p-2 text-center">
                             <Tag size={20} className="mb-1 text-amber-500" />
-                            <span className="text-[10px] font-bold">Special Promo</span>
+                            <span className="text-[10px] font-bold">Promotion</span>
                           </div>
                         )}
                         {p.discount_label && (
@@ -448,8 +473,24 @@ function AdminPromotionsContent() {
                           <h2 className="font-serif font-bold text-base text-stone-900 dark:text-white truncate">
                             {p.title}
                           </h2>
-                          <Badge color={isActive ? 'success' : isExpired ? 'neutral' : 'warning'}>
-                            {isActive ? 'Active' : isExpired ? 'Expired' : p.status}
+                          <Badge
+                            color={
+                              isPending
+                                ? 'warning'
+                                : isActive
+                                ? 'success'
+                                : isRejected
+                                ? 'danger'
+                                : 'neutral'
+                            }
+                          >
+                            {isPending
+                              ? 'Pending Review'
+                              : isActive
+                              ? 'Active'
+                              : isRejected
+                              ? 'Rejected'
+                              : 'Expired'}
                           </Badge>
                         </div>
 
@@ -464,11 +505,14 @@ function AdminPromotionsContent() {
                           </p>
                         )}
 
-                        <div className="flex items-center gap-1.5 text-[11px] text-stone-400 pt-1">
-                          <Calendar size={12} />
-                          <span>
-                            {new Date(p.start_date).toLocaleDateString()} – {new Date(p.end_date).toLocaleDateString()}
-                          </span>
+                        <div className="flex items-center justify-between text-[11px] text-stone-400 pt-1">
+                          <div className="flex items-center gap-1.5">
+                            <Calendar size={12} />
+                            <span>
+                              {new Date(p.start_date).toLocaleDateString()} – {new Date(p.end_date).toLocaleDateString()}
+                            </span>
+                          </div>
+                          <span className="font-bold text-stone-700 dark:text-stone-300">₱199.00 Fee</span>
                         </div>
                       </div>
                     </div>
@@ -486,15 +530,28 @@ function AdminPromotionsContent() {
                           </span>
                           <span className="text-stone-400 text-[11px]">Payment Channel</span>
                         </div>
-                        <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">
-                          <ShieldCheck size={12} /> {p.payment_status || 'Verified'}
-                        </span>
+
+                        {isPending ? (
+                          <span className="inline-flex items-center gap-1 text-[11px] font-bold text-amber-700 dark:text-amber-300 bg-amber-500/15 px-2.5 py-0.5 rounded-full border border-amber-500/30 animate-pulse">
+                            <Clock size={12} /> Pending Verification
+                          </span>
+                        ) : isActive ? (
+                          <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">
+                            <ShieldCheck size={12} /> Verified & Active
+                          </span>
+                        ) : isRejected ? (
+                          <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-rose-600 dark:text-rose-400 bg-rose-500/10 px-2 py-0.5 rounded-full border border-rose-500/20">
+                            Rejected
+                          </span>
+                        ) : (
+                          <span className="text-[11px] font-semibold text-stone-400">{p.status}</span>
+                        )}
                       </div>
 
                       <div className="flex items-center justify-between pt-1 border-t border-stone-200/60 dark:border-stone-800">
                         <div className="flex items-center gap-1.5 font-mono font-bold text-stone-800 dark:text-stone-200">
                           <CreditCard size={13} className="text-stone-400" />
-                          <span>Ref: {p.payment_reference || 'N/A (Standard)'}</span>
+                          <span>Ref: {p.payment_reference || 'N/A'}</span>
                         </div>
                         {p.payment_reference && (
                           <button
@@ -527,19 +584,45 @@ function AdminPromotionsContent() {
                     )}
 
                     <div className="flex items-center gap-2">
-                      {p.status === 'active' ? (
+                      {isPending ? (
+                        <>
+                          <Button
+                            size="sm"
+                            onClick={() => updateStatus(p.id, 'active', 'verified')}
+                            className="bg-cordova-green hover:bg-cordova-greenHover text-white text-xs font-bold shadow-sm"
+                          >
+                            <CheckCircle2 size={13} className="mr-1" /> Accept & Verify (₱199)
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="secondary"
+                            onClick={() => updateStatus(p.id, 'rejected', 'rejected')}
+                            className="text-xs text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30"
+                          >
+                            Reject
+                          </Button>
+                        </>
+                      ) : isActive ? (
                         <Button
                           variant="secondary"
                           size="sm"
-                          onClick={() => updateStatus(p.id, 'expired')}
+                          onClick={() => updateStatus(p.id, 'expired', 'verified')}
                           className="text-xs text-amber-600 dark:text-amber-400"
                         >
                           Mark Expired
                         </Button>
+                      ) : isRejected ? (
+                        <Button
+                          size="sm"
+                          onClick={() => updateStatus(p.id, 'active', 'verified')}
+                          className="bg-cordova-green hover:bg-cordova-greenHover text-white text-xs font-bold"
+                        >
+                          <CheckCircle2 size={12} className="mr-1" /> Re-verify & Accept
+                        </Button>
                       ) : (
                         <Button
                           size="sm"
-                          onClick={() => updateStatus(p.id, 'active')}
+                          onClick={() => updateStatus(p.id, 'active', 'verified')}
                           className="bg-cordova-green hover:bg-cordova-greenHover text-white text-xs font-bold"
                         >
                           <CheckCircle2 size={12} className="mr-1" /> Reactivate

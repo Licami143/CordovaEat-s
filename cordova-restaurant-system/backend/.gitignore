@@ -1,8 +1,11 @@
 node_modules/
 .env
+.env.local*
 uploads/business-permits/*
+uploads/claim-evidence/*
 uploads/restaurant-images/*
 uploads/avatars/*
+private-uploads/
 !uploads/**/.gitkeep
 logs/
 coverage/

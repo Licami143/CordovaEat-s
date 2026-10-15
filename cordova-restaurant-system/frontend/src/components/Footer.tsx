@@ -4,6 +4,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '@/lib/auth-context';
+import ClaimBusinessLink from './ClaimBusinessLink';
 
 interface FooterLink {
   label: string;
@@ -29,7 +30,7 @@ const COLUMNS: FooterColumn[] = [
     title: 'Explore',
     links: [
       { label: 'Browse Restaurants', href: '/' },
-      { label: 'Recommended Restaurants', href: '/recommendations', authRequired: true },
+      { label: 'Recommended Restaurants', href: '/#recommendations' },
     ],
   },
   {
@@ -37,6 +38,7 @@ const COLUMNS: FooterColumn[] = [
     links: [
       { label: 'List Your Restaurant', href: '/dashboard/new' },
       { label: 'Advertise With Us', href: '/for-restaurants#advertise' },
+      { label: 'Payment Portal (GCash / Maya)', href: '/portal/payment' },
       { label: 'Owner Dashboard', href: '/dashboard' },
     ],
   },
@@ -53,6 +55,7 @@ const COLUMNS: FooterColumn[] = [
 export function Footer() {
   const { user } = useAuth();
   const pathname = usePathname();
+  const restaurantSlug = pathname?.match(/^\/restaurants\/([^/]+)$/)?.[1];
 
   // Do not display footer on admin portal pages or when admin views profile
   if (pathname?.startsWith('/admin') || (user?.role === 'admin' && pathname?.startsWith('/profile'))) {
@@ -65,7 +68,7 @@ export function Footer() {
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-8">
           <div className="col-span-2 sm:col-span-4 mb-2">
             <Link href="/" className="flex items-center gap-3.5 w-fit group">
-              <div className="relative h-16 w-16 shrink-0 transition-transform group-hover:scale-105 filter drop-shadow-sm">
+              <div className="relative h-16 w-16 shrink-0 aspect-square transition-transform group-hover:scale-105 filter drop-shadow-sm">
                 <Image
                   src="/cordova_eats_logo.png"
                   alt="CordovaEats Logo"
@@ -89,6 +92,9 @@ export function Footer() {
               <div key={col.title}>
                 <h3 className="text-sm font-semibold mb-3 text-stone-900 dark:text-stone-100">{col.title}</h3>
                 <ul className="space-y-2">
+                  {col.title === 'For Restaurant Owners' && user?.role !== 'admin' && (
+                    <li><ClaimBusinessLink restaurantSlug={restaurantSlug} /></li>
+                  )}
                   {visibleLinks.map((link) => (
                     <li key={link.label}>
                       <Link

@@ -46,16 +46,33 @@ function calculateHaversineDistance(lat1, lon1, lat2, lon2) {
   return R * c;
 }
 
+const CORDOVA_SYNONYMS = {
+  bakasi: ['bakasi', 'eel', 'nilarang', 'linarang', 'reef eel'],
+  eel: ['bakasi', 'eel', 'nilarang', 'linarang'],
+  nilarang: ['bakasi', 'eel', 'nilarang', 'linarang'],
+  seafood: ['seafood', 'fish', 'shrimp', 'squid', 'scallops', 'pompano', 'bangus', 'crab', 'calamares', 'bucket'],
+  sunset: ['sunset', 'parola', 'view', 'views', 'ocean', 'waterfront', 'seaview', 'overwater'],
+  parola: ['parola', 'lighthouse', 'sunset', 'seaview', 'overwater'],
+  bbq: ['bbq', 'barbecue', 'grill', 'grilled', 'charcoal', 'inasal', 'liempo'],
+  grill: ['grill', 'grilled', 'bbq', 'barbecue', 'charcoal', 'sinugba'],
+  barbecue: ['barbecue', 'bbq', 'grill', 'charcoal'],
+  coffee: ['coffee', 'cafe', 'espresso', 'latte', 'macchiato', 'matcha', 'pastry'],
+  cafe: ['cafe', 'coffee', 'pastry', 'latte', 'tambayan'],
+  romantic: ['romantic', 'date', 'sunset', 'roses', 'cozy'],
+  budget: ['budget', 'affordable', 'cheap', 'sulit'],
+};
+
 /**
  * Tokenizes and normalizes text for keyword similarity
  */
 function tokenize(text) {
   if (!text) return [];
+  const stopWords = new Set(['and', 'the', 'in', 'of', 'for', 'a', 'an', 'at', 'to', 'near', 'with']);
   return String(text)
     .toLowerCase()
     .replace(/[^\w\s]/g, ' ')
     .split(/\s+/)
-    .filter((w) => w.length > 1);
+    .filter((w) => w.length > 1 && !stopWords.has(w));
 }
 
 /**
@@ -68,6 +85,14 @@ function scoreKeywordMatch(restaurant, queryKeyword, menuItems = []) {
 
   const queryTokens = tokenize(queryKeyword);
   if (queryTokens.length === 0) return 1.0;
+
+  // Expand with synonyms
+  const expandedTokens = new Set(queryTokens);
+  for (const token of queryTokens) {
+    if (CORDOVA_SYNONYMS[token]) {
+      for (const s of CORDOVA_SYNONYMS[token]) expandedTokens.add(s);
+    }
+  }
 
   const restaurantNameTokens = tokenize(restaurant.name);
   const restaurantDescTokens = tokenize(restaurant.description);
@@ -85,7 +110,11 @@ function scoreKeywordMatch(restaurant, queryKeyword, menuItems = []) {
 
     let itemMatchCount = 0;
     for (const token of queryTokens) {
-      if (allItemTokens.has(token) || Array.from(allItemTokens).some((t) => t.includes(token) || token.includes(t))) {
+      if (
+        allItemTokens.has(token) ||
+        Array.from(allItemTokens).some((t) => t.includes(token) || token.includes(t)) ||
+        Array.from(expandedTokens).some((et) => allItemTokens.has(et))
+      ) {
         itemMatchCount++;
       }
     }
@@ -111,7 +140,8 @@ function scoreKeywordMatch(restaurant, queryKeyword, menuItems = []) {
   for (const token of queryTokens) {
     if (
       allRestTokens.has(token) ||
-      Array.from(allRestTokens).some((t) => t.includes(token) || token.includes(t))
+      Array.from(allRestTokens).some((t) => t.includes(token) || token.includes(t)) ||
+      Array.from(expandedTokens).some((et) => allRestTokens.has(et))
     ) {
       restMatchCount++;
     }
@@ -122,7 +152,7 @@ function scoreKeywordMatch(restaurant, queryKeyword, menuItems = []) {
   // Name exact/substring match gives strong boost
   const queryLower = queryKeyword.toLowerCase().trim();
   const nameLower = (restaurant.name || '').toLowerCase();
-  const isNameExact = nameLower.includes(queryLower);
+  const isNameExact = nameLower.includes(queryLower) || queryTokens.some((t) => nameLower.includes(t));
 
   let finalKeywordScore = Math.max(restScore, maxItemScore);
   if (isNameExact) {
@@ -253,11 +283,26 @@ function passesFilters(restaurant, query) {
     }
   }
 
+function satisfiesDietary(userDiet, offeredList) {
+  if (!userDiet) return true;
+  const normUser = String(userDiet).toLowerCase().replace(/[-_\s]/g, '');
+  const normOffered = (offeredList || []).map((d) =>
+    String(d).toLowerCase().replace(/[-_\s]/g, '')
+  );
+  if (normOffered.includes(normUser)) return true;
+  if (normOffered.some((opt) => opt.includes(normUser) || normUser.includes(opt))) return true;
+  if (normUser === 'nopork' || normUser === 'porkfree') {
+    return normOffered.some((o) => ['nopork', 'porkfree', 'halal', 'vegan', 'vegetarian'].includes(o));
+  }
+  if (normUser === 'vegetarian') {
+    return normOffered.some((o) => ['vegetarian', 'vegan'].includes(o));
+  }
+  return false;
+}
+
   if (Array.isArray(dietaryTags) && dietaryTags.length > 0) {
-    const offered = (restaurant.dietary_options || []).map((d) => d.toLowerCase());
-    const satisfiesAll = dietaryTags.every((d) =>
-      offered.some((opt) => opt.includes(d.toLowerCase()) || d.toLowerCase().includes(opt))
-    );
+    const offered = restaurant.dietary_options || [];
+    const satisfiesAll = dietaryTags.every((d) => satisfiesDietary(d, offered));
     if (!satisfiesAll) return false;
   }
 
@@ -267,7 +312,7 @@ function passesFilters(restaurant, query) {
 /**
  * Main Rank Function
  * @param {Array} restaurants - list of restaurant objects
- * @param {Object} query - user query object { keyword, cuisine, priceRange, maxDistanceKm, dietaryTags, userLat, userLng }
+ * @param {Object} query - user query object { keyword, cuisine, priceRange, maxDistanceKm, dietaryTags, userLat, userLng, preferredCuisines }
  * @param {Object} menuItemsMap - Map of restaurantId -> Array of menuItems
  */
 function rankRestaurants(restaurants, query = {}, menuItemsMap = {}) {
@@ -277,6 +322,7 @@ function rankRestaurants(restaurants, query = {}, menuItemsMap = {}) {
     maxDistanceKm,
     userLat,
     userLng,
+    preferredCuisines = [],
   } = query;
 
   // Step 1: Filter candidates based on dietary/cuisine
@@ -292,13 +338,26 @@ function rankRestaurants(restaurants, query = {}, menuItemsMap = {}) {
     const rtScore = scoreRating(restaurant);
     const avScore = scoreAvailability(restaurant);
 
+    // Preference affinity boost when user preferences are applied
+    let prefBonus = 0;
+    if (Array.isArray(preferredCuisines) && preferredCuisines.length > 0) {
+      const restCuisines = (restaurant.cuisines || []).map((c) => String(c).toLowerCase());
+      const matchesPref = preferredCuisines.some((pc) => {
+        const normPc = String(pc).toLowerCase();
+        return restCuisines.some((rc) => rc.includes(normPc) || normPc.includes(rc));
+      });
+      if (matchesPref) prefBonus = 0.08;
+    }
+
     const relevance_score = Number(
-      (
+      Math.min(
+        1.0,
         kwScore * WEIGHTS.keyword +
-        prScore * WEIGHTS.priceRange +
-        distScore * WEIGHTS.distance +
-        rtScore * WEIGHTS.rating +
-        avScore * WEIGHTS.availability
+          prScore * WEIGHTS.priceRange +
+          distScore * WEIGHTS.distance +
+          rtScore * WEIGHTS.rating +
+          avScore * WEIGHTS.availability +
+          prefBonus
       ).toFixed(4)
     );
 
@@ -315,19 +374,24 @@ function rankRestaurants(restaurants, query = {}, menuItemsMap = {}) {
       distance_km = Number(Number(restaurant.distance_km).toFixed(2));
     }
 
+    const kwTokens = tokenize(keyword);
     const matched_menu_items = items
       .filter((i) => {
         if (!keyword || !keyword.trim()) return false;
         const kw = keyword.toLowerCase().trim();
+        const itemName = (i.name || '').toLowerCase();
+        const itemDesc = (i.description || '').toLowerCase();
         return (
-          (i.name && i.name.toLowerCase().includes(kw)) ||
-          (i.description && i.description.toLowerCase().includes(kw))
+          itemName.includes(kw) ||
+          itemDesc.includes(kw) ||
+          kwTokens.some((t) => itemName.includes(t) || itemDesc.includes(t))
         );
       })
       .slice(0, 3);
 
     return {
       ...restaurant,
+      kw_score: kwScore,
       distance_km,
       relevance_score,
       subscription_boost: boostMultiplier,
@@ -338,8 +402,14 @@ function rankRestaurants(restaurants, query = {}, menuItemsMap = {}) {
     };
   });
 
-  // Step 3: Hard availability filter - exclude closed unless all results are closed
+  // Step 3: Hard availability & keyword relevance filter
   let availableCandidates = scoredList.filter((r) => r.is_open);
+  if (keyword && keyword.trim()) {
+    const kwFiltered = availableCandidates.filter((r) => r.kw_score > 0);
+    if (kwFiltered.length > 0) {
+      availableCandidates = kwFiltered;
+    }
+  }
   if (availableCandidates.length === 0) {
     availableCandidates = scoredList; // fallback if all closed
   }

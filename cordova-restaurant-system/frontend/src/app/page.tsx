@@ -17,33 +17,125 @@ import {
   ChevronRight,
   Sparkles,
   X,
+  Clock,
 } from 'lucide-react';
 import { api } from '@/lib/api';
 import { useAuth } from '@/lib/auth-context';
+import { getTastePreferences } from '@/lib/taste-preferences';
 import { RestaurantCard } from '@/components/RestaurantCard';
+import { SearchRestaurantImage } from '@/components/SearchRestaurantImage';
+import { TastePreferencesDialog } from '@/components/TastePreferencesDialog';
 import { RestaurantGridSkeleton } from '@/components/ui/Skeleton';
 import { Pagination } from '@/components/ui/Pagination';
-import type { Restaurant, PageMeta } from '@/lib/types';
+import type { Restaurant, PageMeta, MatchedPreferences } from '@/lib/types';
 import { isRestaurantVisible, getAllStaticRestaurants, normalizeKey, matchesCategory } from '@/data/restaurants';
+import { standardSearchRestaurants } from '@/lib/aiSearch';
+import { rankRestaurantNames } from '@/lib/restaurant-search';
+import {
+  saveSearchHistory,
+  getSearchHistory,
+  onActivityChange,
+  type SearchHistoryItem,
+} from '@/lib/activity-history';
 
 export default function HomePage() {
   const router = useRouter();
   const { user } = useAuth();
   const [searchQuery, setSearchQuery] = useState('');
-  const [aiMode, setAiMode] = useState(true);
+  const [debouncedQuery, setDebouncedQuery] = useState('');
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
   const [page, setPage] = useState(1);
   const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
   const [meta, setMeta] = useState<PageMeta | null>(null);
   const [loading, setLoading] = useState(true);
+  const [recentSearches, setRecentSearches] = useState<SearchHistoryItem[]>([]);
+  const [searchCatalog, setSearchCatalog] = useState<Restaurant[]>([]);
+  const catalogRefresh = useRef<(() => void) | null>(null);
+  const [suggestionsOpen, setSuggestionsOpen] = useState(false);
+  const [activeSuggestion, setActiveSuggestion] = useState(-1);
+  const searchRequestId = useRef(0);
+  const suggestionCatalog = new Map(getAllStaticRestaurants().filter(isRestaurantVisible).map(r => [normalizeKey(r.slug || r.name), r]));
+  searchCatalog.filter(isRestaurantVisible).forEach(r => suggestionCatalog.set(normalizeKey(r.slug || r.name), r));
+  const suggestions = rankRestaurantNames(Array.from(suggestionCatalog.values()), searchQuery).slice(0, 5);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    let refreshing = false;
+    const refresh = async () => {
+      if (refreshing || document.visibilityState === 'hidden') return;
+      refreshing = true;
+      try {
+        const items: Restaurant[] = [];
+        let catalogPage = 1;
+        let hasNextPage = true;
+        while (hasNextPage && !controller.signal.aborted) {
+          const response = await api.get<{ data: Restaurant[]; meta?: PageMeta }>(
+            `/api/restaurants?limit=100&page=${catalogPage}`,
+            { auth: false, cache: 'no-store', signal: controller.signal }
+          );
+          if (!Array.isArray(response.data)) throw new Error('Invalid restaurant catalog');
+          items.push(...response.data);
+          hasNextPage = Boolean(response.meta?.hasNextPage);
+          catalogPage += 1;
+        }
+        if (!controller.signal.aborted) setSearchCatalog(items.filter(isRestaurantVisible));
+      } catch {
+        // Preserve the last catalog when the API is temporarily unavailable.
+      } finally {
+        refreshing = false;
+      }
+    };
+    catalogRefresh.current = refresh;
+    void refresh();
+    const interval = window.setInterval(refresh, 30000);
+    window.addEventListener('focus', refresh);
+    document.addEventListener('visibilitychange', refresh);
+    return () => {
+      controller.abort();
+      catalogRefresh.current = null;
+      window.clearInterval(interval);
+      window.removeEventListener('focus', refresh);
+      document.removeEventListener('visibilitychange', refresh);
+    };
+  }, []);
+
+  useEffect(() => {
+    setRecentSearches(getSearchHistory());
+    return onActivityChange(() => {
+      setRecentSearches(getSearchHistory());
+    });
+  }, []);
 
   // Recommended For You Carousel State & Ref
-  const [recommendations, setRecommendations] = useState<{ restaurant: Restaurant; score: number }[]>([]);
+  const [recommendationState, setRecommendationState] = useState<{ requestKey: string; items: {
+    restaurant: Restaurant;
+    score: number;
+    matchedPreferences?: MatchedPreferences;
+    reason?: string;
+  }[] }>({ requestKey: '', items: [] });
   const [recLoading, setRecLoading] = useState(true);
+  const [recommendationIssue, setRecommendationIssue] = useState<'error' | 'empty' | null>(null);
+  const [preferencesOpen, setPreferencesOpen] = useState(false);
+  const [preferencesRevision, setPreferencesRevision] = useState(0);
+  const recommendationRequestId = useRef(0);
+  const accountKey = user?.id || 'guest';
+  const requestKey = `${accountKey}:${preferencesRevision}`;
+  const recommendations = recommendationState.requestKey === requestKey ? recommendationState.items : [];
+  const showingRecLoading = recLoading || recommendationState.requestKey !== requestKey;
   const recScrollRef = useRef<HTMLDivElement>(null);
   const establishmentsRef = useRef<HTMLDivElement>(null);
 
   const PAGE_SIZE = 6;
+
+
+
+  // Debounce typing in search input to prevent network spam and UI stutter
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedQuery(searchQuery);
+    }, 280);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
 
   const handlePageChange = (newPage: number) => {
     setPage(newPage);
@@ -53,22 +145,21 @@ export default function HomePage() {
   };
 
   const fetchRestaurants = useCallback(async () => {
+    const requestId = ++searchRequestId.current;
     setLoading(true);
     try {
       let apiList: Restaurant[] = [];
+      const queryTerm = debouncedQuery.trim();
 
-      // If AI mode is active and there's a search term, query the smart AI ranking endpoint
-      if (aiMode && searchQuery.trim()) {
+      if (queryTerm) {
         try {
-          const res = await api.post(
-            '/api/search',
-            {
-              keyword: searchQuery.trim(),
-              cuisine: activeCategory && activeCategory !== 'restaurants' ? activeCategory : undefined,
-            },
-            { auth: false }
-          );
-          if (res.data && Array.isArray(res.data)) {
+          const params = new URLSearchParams();
+          params.set('q', queryTerm);
+          if (activeCategory && activeCategory !== 'restaurants') params.set('cuisines', activeCategory);
+          params.set('limit', '100');
+
+          const res = await api.get(`/api/restaurants?${params.toString()}`, { auth: false });
+          if (res.data && Array.isArray(res.data) && res.data.length > 0) {
             apiList = res.data;
           }
         } catch {
@@ -77,7 +168,6 @@ export default function HomePage() {
       } else {
         try {
           const params = new URLSearchParams();
-          if (searchQuery.trim()) params.set('q', searchQuery.trim());
           if (activeCategory && activeCategory !== 'restaurants') params.set('cuisines', activeCategory);
           params.set('limit', '100');
 
@@ -90,49 +180,46 @@ export default function HomePage() {
         }
       }
 
-      const staticList = getAllStaticRestaurants();
-
-      // Combine static list with API list, keyed by normalized slug/name
+      // Static fallback list with customizations applied
+      if (requestId !== searchRequestId.current) return;
+      const staticList = process.env.NODE_ENV === 'production'
+        ? []
+        : getAllStaticRestaurants().filter(isRestaurantVisible);
       const map = new Map<string, Restaurant>();
-      for (const item of staticList) {
-        map.set(normalizeKey(item.slug), item);
-      }
-      for (const item of apiList) {
-        const key = normalizeKey(item.slug || item.name);
-        map.set(key, item);
+
+      if (apiList.length > 0) {
+        for (const item of apiList) {
+          const key = normalizeKey(item.slug || item.name);
+          map.set(key, item);
+        }
+      } else {
+        for (const item of staticList) {
+          map.set(normalizeKey(item.slug), item);
+        }
       }
 
       let all: Restaurant[] = [];
 
-      if (aiMode && searchQuery.trim() && apiList.length > 0) {
-        // Retain the AI ranking order from apiList
-        const seen = new Set<string>();
-        for (const item of apiList) {
-          const key = normalizeKey(item.slug || item.name);
-          const fullItem = map.get(key) || item;
-          if (isRestaurantVisible(fullItem) && !seen.has(key)) {
-            all.push(fullItem);
-            seen.add(key);
-          }
+      if (queryTerm) {
+        if (apiList.length > 0) {
+          all = Array.from(map.values()).filter(isRestaurantVisible);
+        } else {
+          all = standardSearchRestaurants(staticList, queryTerm, activeCategory);
         }
+        const catalog = new Map(staticList.map(r => [normalizeKey(r.slug || r.name), r]));
+        searchCatalog.forEach(r => catalog.set(normalizeKey(r.slug || r.name), r));
+        const nameMatches = rankRestaurantNames(Array.from(catalog.values()).filter(r => !activeCategory || matchesCategory(r, activeCategory)), queryTerm);
+        const results = new Map(nameMatches.map(r => [normalizeKey(r.slug || r.name), r]));
+        all.forEach(r => results.set(normalizeKey(r.slug || r.name), r));
+        all = Array.from(results.values());
+        const rankedNames = rankRestaurantNames(all, queryTerm);
+        if (rankedNames.length) all = rankedNames;
       } else {
         all = Array.from(map.values()).filter(isRestaurantVisible);
-
-        // Filter by search query if standard search
-        if (searchQuery.trim()) {
-          const q = searchQuery.toLowerCase().trim();
-          all = all.filter((r) =>
-            r.name.toLowerCase().includes(q) ||
-            (r.description && r.description.toLowerCase().includes(q)) ||
-            (r.barangay && r.barangay.toLowerCase().includes(q)) ||
-            (r.cuisines && r.cuisines.some((c) => c.toLowerCase().includes(q)))
-          );
+        // Filter by active category
+        if (activeCategory) {
+          all = all.filter((r) => matchesCategory(r, activeCategory));
         }
-      }
-
-      // Filter by active category
-      if (activeCategory) {
-        all = all.filter((r) => matchesCategory(r, activeCategory));
       }
 
       const totalCount = all.length;
@@ -151,33 +238,56 @@ export default function HomePage() {
         hasPrevPage: currentPage > 1,
       });
     } catch {
+      if (requestId !== searchRequestId.current) return;
       setRestaurants([]);
       setMeta(null);
     } finally {
-      setLoading(false);
+      if (requestId === searchRequestId.current) setLoading(false);
     }
-  }, [searchQuery, activeCategory, page, aiMode]);
+  }, [debouncedQuery, activeCategory, page, searchCatalog]);
 
-  const fetchRecommendations = useCallback(async () => {
+  const fetchRecommendations = useCallback(async (requestId: number) => {
     setRecLoading(true);
+    setRecommendationIssue(null);
     try {
-      let recList: { restaurant: Restaurant; score: number }[] = [];
+      let recList: {
+        restaurant: Restaurant;
+        score: number;
+        matchedPreferences?: MatchedPreferences;
+        reason?: string;
+      }[] = [];
+      let recommendationsApiResponded = false;
+      let recommendationRequestFailed = false;
       try {
-        const res = await api.post('/api/recommendations', { limit: 10 }, { auth: !!user });
+        const guestPreferences = user ? null : getTastePreferences();
+        const requestBody = user
+          ? { limit: 10 }
+          : {
+              preferredCuisines: guestPreferences?.preferredCuisines || [],
+              dietaryRestrictions: guestPreferences?.dietaryRestrictions || [],
+              requiredServices: guestPreferences?.preferredServices || [],
+              budgetRange: guestPreferences?.budgetRange || undefined,
+              limit: 10,
+            };
+        const res = await api.post('/api/recommendations', requestBody, { auth: !!user });
+        recommendationsApiResponded = true;
         if (res.data && Array.isArray(res.data)) {
           recList = res.data
             .filter((r: any) => isRestaurantVisible(r.restaurant))
             .map((r: any) => ({
               restaurant: r.restaurant,
-              score: r.score,
+              score: r.matchPercentage || Math.round(r.score),
+              matchedPreferences: r.matchedPreferences,
+              reason: r.reason,
             }));
         }
       } catch {
         recList = [];
+        recommendationRequestFailed = true;
       }
 
-      // If recommendations API is empty or user has no custom recs yet, show high-rated establishments
-      if (recList.length === 0) {
+      // Use generic offline fallback only for guests; never bypass a user's saved constraints.
+      if (process.env.NODE_ENV !== 'production' && recList.length === 0 && !recommendationsApiResponded && !user) {
         const staticList = getAllStaticRestaurants().filter(isRestaurantVisible);
         recList = staticList.slice(0, 8).map((r, i) => ({
           restaurant: r,
@@ -185,20 +295,29 @@ export default function HomePage() {
         }));
       }
 
-      setRecommendations(recList);
+      if (requestId === recommendationRequestId.current) {
+        setRecommendationState({ requestKey, items: recList });
+        setRecommendationIssue(recList.length ? null : recommendationRequestFailed ? 'error' : 'empty');
+      }
     } catch {
-      setRecommendations([]);
+      if (requestId === recommendationRequestId.current) {
+        setRecommendationState({ requestKey, items: [] });
+        setRecommendationIssue('error');
+      }
     } finally {
-      setRecLoading(false);
+      if (requestId === recommendationRequestId.current) setRecLoading(false);
     }
-  }, [user]);
+  }, [user, requestKey]);
 
   useEffect(() => {
     fetchRestaurants();
   }, [fetchRestaurants]);
 
   useEffect(() => {
-    fetchRecommendations();
+    const requestId = ++recommendationRequestId.current;
+    setRecLoading(true);
+    void fetchRecommendations(requestId);
+    return () => { recommendationRequestId.current += 1; };
   }, [fetchRecommendations]);
 
   const scrollRec = (direction: 'left' | 'right') => {
@@ -208,11 +327,25 @@ export default function HomePage() {
     }
   };
 
+  const runSearch = (query: string) => {
+    const trimmed = query.trim();
+    setSearchQuery(trimmed);
+    setDebouncedQuery(trimmed);
+    setPage(1);
+    setSuggestionsOpen(false);
+    setActiveSuggestion(-1);
+    if (trimmed) {
+      saveSearchHistory({
+        query: trimmed,
+        source: 'search',
+      });
+    }
+    establishmentsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
+
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (searchQuery.trim()) {
-      fetchRestaurants();
-    }
+    runSearch(searchQuery);
   };
 
   const handleCategoryClick = (categorySlug: string) => {
@@ -223,6 +356,8 @@ export default function HomePage() {
     }
     setPage(1);
   };
+
+
 
   return (
     <div className="min-h-screen bg-cordova-cream dark:bg-[#121614] pb-20 relative overflow-hidden">
@@ -240,6 +375,7 @@ export default function HomePage() {
           fill
           priority
           className="object-cover object-center"
+          style={{ objectFit: 'cover', objectPosition: 'center' }}
         />
 
         {/* Dark Gradient Overlay */}
@@ -259,6 +395,7 @@ export default function HomePage() {
               alt="CordovaEats Emblem"
               fill
               className="object-contain"
+              style={{ objectFit: 'contain' }}
               priority
             />
           </motion.div>
@@ -306,44 +443,44 @@ export default function HomePage() {
       {/* FLOATING SPATIAL SEARCH BAR SECTION */}
       <section className="relative z-20 -mt-12 px-4 max-w-3xl mx-auto group">
         {/* Spatial Ambient Glow Backlight */}
-        <div
-          className={`absolute -inset-1.5 rounded-3xl blur-2xl opacity-60 dark:opacity-40 transition-all duration-500 pointer-events-none -z-10 ${
-            aiMode
-              ? 'bg-gradient-to-r from-purple-500/30 via-fuchsia-500/25 to-indigo-500/30'
-              : 'bg-gradient-to-r from-emerald-500/25 via-teal-500/20 to-amber-500/25'
-          }`}
-        />
+        <div className="absolute -inset-1.5 rounded-3xl blur-2xl opacity-60 dark:opacity-40 transition-all duration-500 pointer-events-none -z-10 bg-gradient-to-r from-emerald-500/25 via-teal-500/20 to-amber-500/25" />
 
         <form
           onSubmit={handleSearchSubmit}
-          className={`relative rounded-2xl transition-all duration-300 p-2 sm:p-2.5 flex items-center gap-2 backdrop-blur-2xl ${
-            aiMode
-              ? 'bg-white/90 dark:bg-[#140e24]/85 border border-purple-400/40 dark:border-purple-400/30 shadow-[0_16px_40px_rgba(147,51,234,0.14),inset_0_1px_1.5px_rgba(255,255,255,0.7)] dark:shadow-[0_16px_40px_rgba(0,0,0,0.4),inset_0_1px_1.5px_rgba(255,255,255,0.15)] ring-1 ring-purple-400/20'
-              : 'bg-white/90 dark:bg-[#161e18]/90 border border-white/80 dark:border-white/15 shadow-[0_16px_40px_rgba(0,0,0,0.08),inset_0_1px_1.5px_rgba(255,255,255,0.9)] dark:shadow-[0_16px_40px_rgba(0,0,0,0.4),inset_0_1px_1.5px_rgba(255,255,255,0.12)] ring-1 ring-black/[0.04] dark:ring-white/[0.05]'
-          }`}
+          style={{ zIndex: 30 }}
+          className="relative rounded-2xl transition-all duration-300 p-2 sm:p-2.5 flex items-center gap-2 backdrop-blur-2xl bg-white/90 dark:bg-[#161e18]/90 border border-white/80 dark:border-white/15 shadow-[0_16px_40px_rgba(0,0,0,0.08),inset_0_1px_1.5px_rgba(255,255,255,0.9)] dark:shadow-[0_16px_40px_rgba(0,0,0,0.4),inset_0_1px_1.5px_rgba(255,255,255,0.12)] ring-1 ring-black/[0.04] dark:ring-white/[0.05]"
         >
           <div className="flex items-center pl-3 text-stone-500 shrink-0">
-            {aiMode ? (
-              <Sparkles size={20} className="text-purple-600 dark:text-purple-400 animate-pulse" />
-            ) : (
-              <Search size={20} className="text-emerald-700 dark:text-emerald-400" />
-            )}
+            <Search size={20} className="text-emerald-700 dark:text-emerald-400" />
           </div>
 
           <input
             type="text"
             value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder={
-              aiMode
-                ? 'Ask AI: search seafood, bakasi, sunset view, romantic dinner...'
-                : 'Search restaurants, fresh seafood, BBQ, cafes...'
-            }
-            className={`flex-1 px-2.5 py-3 bg-transparent text-sm sm:text-base outline-none font-sans font-medium transition-colors ${
-              aiMode
-                ? 'text-stone-900 dark:text-white placeholder:text-purple-700/70 dark:placeholder:text-purple-300/70'
-                : 'text-stone-900 dark:text-white placeholder:text-stone-500 dark:placeholder:text-stone-400'
-            }`}
+            onChange={(e) => {
+              setSearchQuery(e.target.value);
+              setPage(1);
+              setSuggestionsOpen(true);
+              setActiveSuggestion(-1);
+            }}
+            onFocus={() => { setSuggestionsOpen(true); catalogRefresh.current?.(); }}
+            onBlur={() => { setSuggestionsOpen(false); setActiveSuggestion(-1); }}
+            onKeyDown={(e) => {
+              if (e.key === 'Escape') { setSuggestionsOpen(false); setActiveSuggestion(-1); }
+              if (!suggestionsOpen || !suggestions.length) return;
+              if (e.key === 'ArrowDown') { e.preventDefault(); setActiveSuggestion(i => (i + 1) % suggestions.length); }
+              if (e.key === 'ArrowUp') { e.preventDefault(); setActiveSuggestion(i => (i <= 0 ? suggestions.length : i) - 1); }
+              if (e.key === 'Enter' && activeSuggestion >= 0 && suggestions[activeSuggestion]) { e.preventDefault(); runSearch(suggestions[activeSuggestion].name); }
+            }}
+            role="combobox"
+            aria-label="Search restaurants"
+            aria-autocomplete="list"
+            aria-expanded={suggestionsOpen && suggestions.length > 0}
+            aria-controls="restaurant-suggestions"
+            aria-activedescendant={suggestionsOpen && activeSuggestion >= 0 && suggestions[activeSuggestion] ? `restaurant-suggestion-${activeSuggestion}` : undefined}
+            autoComplete="off"
+            placeholder="Search restaurants, fresh seafood, BBQ, cafes..."
+            className="min-w-0 flex-1 px-2.5 py-3 bg-transparent text-sm sm:text-base outline-none font-sans font-medium transition-colors text-stone-900 dark:text-white placeholder:text-stone-500 dark:placeholder:text-stone-400"
           />
 
           {searchQuery && (
@@ -351,7 +488,10 @@ export default function HomePage() {
               type="button"
               onClick={() => {
                 setSearchQuery('');
+                setDebouncedQuery('');
                 setPage(1);
+                setSuggestionsOpen(false);
+                setActiveSuggestion(-1);
               }}
               className="p-1.5 rounded-full text-stone-400 hover:text-stone-600 dark:hover:text-stone-200 hover:bg-stone-100 dark:hover:bg-white/10 transition-colors"
               title="Clear search"
@@ -359,21 +499,6 @@ export default function HomePage() {
               <X size={16} />
             </button>
           )}
-
-          {/* AI Mode Toggle Pill Button */}
-          <button
-            type="button"
-            onClick={() => setAiMode(!aiMode)}
-            className={`flex items-center gap-1.5 px-3.5 py-2 sm:px-4 sm:py-2.5 rounded-xl text-xs font-bold tracking-wide transition-all duration-300 shrink-0 select-none ${
-              aiMode
-                ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-[0_4px_14px_rgba(147,51,234,0.35),inset_0_1px_1px_rgba(255,255,255,0.4)] border border-purple-300/40 ring-1 ring-purple-400/30 scale-105'
-                : 'bg-stone-100/90 dark:bg-white/10 hover:bg-stone-200/90 dark:hover:bg-white/15 text-stone-800 dark:text-stone-200 border border-stone-300/80 dark:border-white/10'
-            }`}
-            title="Toggle AI Search Mode"
-          >
-            <Sparkles size={13} className={aiMode ? 'text-purple-200' : 'text-stone-500'} />
-            <span>AI Mode</span>
-          </button>
 
           {/* Search Action Button */}
           <button
@@ -383,28 +508,53 @@ export default function HomePage() {
           >
             <Search size={18} />
           </button>
+          {suggestionsOpen && suggestions.length > 0 && (
+            <ul id="restaurant-suggestions" role="listbox" aria-label="Restaurant suggestions" className="absolute z-30 left-0 right-0 top-full mt-2 overflow-hidden rounded-lg border border-stone-200 dark:border-white/15 bg-white dark:bg-[#161e18] shadow-xl">
+              {suggestions.map((restaurant, index) => (
+                <li key={restaurant.slug || restaurant.id} id={`restaurant-suggestion-${index}`} role="option" aria-selected={activeSuggestion === index} onMouseDown={e => e.preventDefault()} onMouseEnter={() => setActiveSuggestion(index)} onClick={() => runSearch(restaurant.name)} className={`flex cursor-pointer items-center gap-3 px-4 py-3 text-left text-sm text-stone-900 dark:text-white ${activeSuggestion === index ? 'bg-emerald-50 dark:bg-white/10' : ''}`}>
+                  <SearchRestaurantImage restaurant={restaurant} />
+                  <span className="min-w-0 break-words">
+                    <span className="block font-medium">{restaurant.name}</span>
+                    {restaurant.barangay && <span className="block text-xs text-stone-500 dark:text-stone-400">{restaurant.barangay}, Cordova</span>}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
         </form>
 
-        {/* Quick Suggestion Chips */}
-        {aiMode && (
-          <div className="flex flex-wrap items-center justify-center gap-2 mt-4 text-xs">
-            <span className="text-stone-700 dark:text-stone-300 font-bold text-[11px] flex items-center gap-1">
-              <Sparkles size={12} className="text-purple-500" /> Popular Searches:
-            </span>
-            {['Fresh Seafood', 'Bakasi Eel', 'Sunset & Parola View', 'Budget-Friendly BBQ', 'Artisan Coffee'].map((chip) => (
-              <button
-                key={chip}
-                type="button"
-                onClick={() => {
-                  setSearchQuery(chip);
-                  setPage(1);
-                }}
-                className="px-3.5 py-1.5 rounded-full bg-white/80 dark:bg-purple-950/50 hover:bg-white dark:hover:bg-purple-900/80 border border-purple-300/60 dark:border-purple-700/60 text-purple-900 dark:text-purple-200 font-bold transition-all text-[11px] shadow-spatial-sm hover:shadow-spatial-md hover:scale-105 active:scale-95 backdrop-blur-xl"
+        {/* Quick Recent Searches below homepage hero search */}
+        {user && recentSearches.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: 5 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mt-3 flex flex-wrap items-center justify-center gap-1.5 px-2"
+          >
+            <div className="flex items-center gap-1 text-[11px] font-bold text-white/90 drop-shadow mr-1 uppercase tracking-wider">
+              <Clock size={12} className="text-amber-400" />
+              <span>Recent:</span>
+            </div>
+            <div className="flex flex-wrap items-center justify-center gap-1.5">
+              {recentSearches.slice(0, 5).map((item) => (
+                <button
+                  key={item.id}
+                  type="button"
+                  onClick={() => {
+                    runSearch(item.query);
+                  }}
+                  className="bg-black/50 hover:bg-black/75 backdrop-blur-md border border-white/20 hover:border-amber-400 text-white text-xs px-3 py-1 rounded-full transition-all duration-200 shadow-sm flex items-center gap-1"
+                >
+                  <span>{item.query}</span>
+                </button>
+              ))}
+              <Link
+                href="/history?tab=searches"
+                className="text-[11px] font-semibold text-emerald-900 hover:text-emerald-950 dark:text-white dark:hover:text-emerald-200 underline ml-1 drop-shadow transition-colors"
               >
-                ✨ {chip}
-              </button>
-            ))}
-          </div>
+                View All →
+              </Link>
+            </div>
+          </motion.div>
         )}
       </section>
 
@@ -451,7 +601,7 @@ export default function HomePage() {
       </section>
 
       {/* RECOMMENDED FOR YOU SWIPEABLE CAROUSEL SECTION */}
-      <section className="max-w-6xl mx-auto px-4 mt-20 relative z-10">
+      <section id="recommendations" className="max-w-6xl mx-auto px-4 mt-20 relative z-10 scroll-mt-8">
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-8">
           <div>
             <div className="flex items-center gap-2">
@@ -462,8 +612,8 @@ export default function HomePage() {
             </div>
             <p className="text-xs sm:text-sm text-stone-500 dark:text-stone-400 mt-1">
               {user
-                ? 'Handpicked recommendations curated for your taste preferences.'
-                : 'Top-rated culinary hotspots and local favorites in Cordova.'}
+                ? 'Ranked for your saved preferences and personalized by your feedback.'
+                : 'Local restaurant matches. Add your tastes to make them more personal.'}
             </p>
             <div className="h-0.5 w-16 bg-cordova-gold mt-3 rounded-full" />
           </div>
@@ -471,14 +621,14 @@ export default function HomePage() {
           <div className="flex items-center gap-3 self-end sm:self-center">
             {user ? (
               <button
-                onClick={() => router.push('/profile#taste-preferences')}
+                onClick={() => setPreferencesOpen(true)}
                 className="text-xs font-semibold text-cordova-green dark:text-emerald-400 hover:text-emerald-600 transition-colors px-3 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 backdrop-blur-sm shadow-spatial-sm hover:scale-105 active:scale-95"
               >
                 Adjust Preferences
               </button>
             ) : (
               <button
-                onClick={() => router.push('/login')}
+                onClick={() => router.push('/preferences?returnTo=%2F%23recommendations')}
                 className="text-xs font-semibold text-cordova-gold hover:text-amber-500 transition-colors px-3 py-1.5 rounded-full bg-amber-500/10 border border-amber-500/20 backdrop-blur-sm shadow-spatial-sm hover:scale-105 active:scale-95"
               >
                 Personalize Tastes
@@ -507,7 +657,7 @@ export default function HomePage() {
           </div>
         </div>
 
-        {recLoading ? (
+        {showingRecLoading ? (
           <RestaurantGridSkeleton count={3} />
         ) : recommendations.length > 0 ? (
           /* Horizontal Swipeable Container */
@@ -515,7 +665,7 @@ export default function HomePage() {
             ref={recScrollRef}
             className="flex gap-6 overflow-x-auto snap-x snap-mandatory scrollbar-none pb-4 pt-2 px-1 scroll-smooth"
           >
-            {recommendations.map(({ restaurant, score }, idx) => (
+            {recommendations.map(({ restaurant, score, matchedPreferences, reason }, idx) => (
               <motion.div
                 key={restaurant.id}
                 initial={{ opacity: 0, x: 20 }}
@@ -523,35 +673,87 @@ export default function HomePage() {
                 transition={{ duration: 0.35, delay: Math.min(idx, 8) * 0.06 }}
                 className="snap-start shrink-0 w-[290px] sm:w-[320px] lg:w-[350px]"
               >
-                <RestaurantCard restaurant={restaurant} matchScore={score} />
+                <RestaurantCard
+                  restaurant={restaurant}
+                  matchScore={score}
+                  matchedPreferences={matchedPreferences}
+                  suggestionReason={reason}
+                />
               </motion.div>
             ))}
           </div>
         ) : (
-          <div className="spatial-card p-8 text-center text-stone-500 max-w-md mx-auto">
-            <p className="text-2xl mb-2">✨</p>
-            <p className="font-serif font-medium text-stone-800 dark:text-stone-200 mb-1">
-              Personalize Your Experience
-            </p>
-            <p className="text-xs text-stone-500 mb-4">
-              Set your food preferences to get personalized restaurant recommendations.
-            </p>
+          <div className="py-5 text-center text-sm text-stone-500 dark:text-stone-400" role="status">
+            <p>{recommendationIssue === 'error'
+              ? 'Recommendations could not be loaded right now.'
+              : 'No matching establishments are available right now.'}</p>
             <button
-              onClick={() => router.push(user ? '/profile#taste-preferences' : '/login')}
-              className="bg-cordova-green hover:bg-cordova-greenHover text-white text-xs font-semibold px-5 py-2.5 rounded-xl shadow-spatial-sm active:scale-95"
+              type="button"
+              onClick={() => void fetchRecommendations(++recommendationRequestId.current)}
+              className="mt-2 text-xs font-semibold text-cordova-green underline underline-offset-2 dark:text-emerald-400"
             >
-              Set Preferences
+              Try again
             </button>
           </div>
         )}
       </section>
 
+      {preferencesOpen && (
+        <TastePreferencesDialog
+          open={preferencesOpen}
+          onClose={() => setPreferencesOpen(false)}
+          onSaved={() => setPreferencesRevision((revision) => revision + 1)}
+        />
+      )}
+
       {/* ALL ESTABLISHMENTS SECTION */}
       <section ref={establishmentsRef} className="max-w-6xl mx-auto px-4 mt-24 scroll-mt-6 relative z-10">
+        {/* Active Search Feedback Banner */}
+        {debouncedQuery.trim() && (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mb-8 p-4 sm:p-5 rounded-2xl bg-emerald-500/10 dark:bg-emerald-950/40 border border-emerald-300/40 dark:border-emerald-500/30 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 backdrop-blur-xl shadow-spatial-sm"
+          >
+            <div className="flex items-center gap-3">
+              <div className="p-2.5 rounded-xl bg-emerald-600/15 text-emerald-600 dark:text-emerald-400 shrink-0">
+                <Search size={20} />
+              </div>
+              <div>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="text-xs font-extrabold uppercase tracking-wider text-emerald-800 dark:text-emerald-300 bg-emerald-200/60 dark:bg-emerald-900/60 px-2 py-0.5 rounded-md">
+                    Search Active
+                  </span>
+                  <p className="text-sm sm:text-base font-bold text-stone-900 dark:text-white">
+                    Showing results for &ldquo;{debouncedQuery}&rdquo;
+                  </p>
+                </div>
+                <p className="text-xs text-stone-600 dark:text-stone-300 mt-0.5">
+                  {meta?.totalCount ?? restaurants.length} {meta?.totalCount === 1 ? 'establishment matches' : 'establishments match'} your query in Cordova
+                </p>
+              </div>
+            </div>
+
+            <button
+              onClick={() => {
+                setSearchQuery('');
+                setDebouncedQuery('');
+                setPage(1);
+              }}
+              className="text-xs font-bold text-emerald-800 dark:text-emerald-200 hover:text-emerald-950 dark:hover:text-white px-3.5 py-2 rounded-xl bg-emerald-200/50 hover:bg-emerald-200 dark:bg-emerald-800/40 dark:hover:bg-emerald-800/80 transition-all flex items-center gap-1.5 shrink-0 border border-emerald-300/50 dark:border-emerald-600/50 shadow-spatial-sm active:scale-95"
+            >
+              <X size={14} />
+              <span>Clear Search</span>
+            </button>
+          </motion.div>
+        )}
+
         <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-10">
           <div>
             <h2 className="font-serif text-3xl sm:text-4xl font-bold text-stone-900 dark:text-white capitalize">
-              {activeCategory ? `${activeCategory} Establishments` : 'All Establishments'}
+              {debouncedQuery.trim()
+                ? `Search Results for "${debouncedQuery}"`
+                : (activeCategory ? `${activeCategory} Establishments` : 'All Establishments')}
             </h2>
             <div className="h-0.5 w-16 bg-cordova-gold mt-3 rounded-full" />
           </div>
@@ -566,18 +768,21 @@ export default function HomePage() {
               No establishments found
             </p>
             <p className="text-xs text-stone-500">
-              Try adjusting your search query or selecting a different category.
+              {debouncedQuery.trim()
+                ? `No restaurants found matching "${debouncedQuery}". Try a different search term.`
+                : 'Try adjusting your search query or selecting a different category.'}
             </p>
-            {(activeCategory || searchQuery) && (
+            {(activeCategory || searchQuery || debouncedQuery) && (
               <button
                 onClick={() => {
                   setActiveCategory(null);
                   setSearchQuery('');
+                  setDebouncedQuery('');
                   setPage(1);
                 }}
                 className="mt-4 text-xs font-semibold text-cordova-green dark:text-emerald-400 hover:underline"
               >
-                Clear filters
+                Clear search & filters
               </button>
             )}
           </div>

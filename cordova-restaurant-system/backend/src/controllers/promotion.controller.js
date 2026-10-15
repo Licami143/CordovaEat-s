@@ -21,7 +21,12 @@ const listActive = asyncHandler(async (req, res) => {
 });
 
 const listForRestaurant = asyncHandler(async (req, res) => {
-  const promotions = await promotionModel.listForRestaurant(req.params.restaurantId);
+  const restaurant = await restaurantModel.findById(req.params.restaurantId);
+  if (!restaurant) throw ApiError.notFound('Restaurant not found');
+  const canManage = req.user && (req.user.role === 'admin' || restaurant.owner_id === req.user.id);
+  const promotions = canManage
+    ? await promotionModel.listForRestaurant(req.params.restaurantId)
+    : (await promotionModel.listActive({ restaurantId: req.params.restaurantId, limit: 100 })).rows;
   res.json({ success: true, data: promotions });
 });
 
@@ -31,7 +36,7 @@ const create = asyncHandler(async (req, res) => {
   let imageUrl;
   if (req.file) {
     const processed = await uploadService.processImage(req.file, { maxWidth: 1000 });
-    imageUrl = uploadService.publicUrlFor(processed);
+    imageUrl = await uploadService.publicUrlFor(processed);
   }
 
   const { title, description, discountLabel, startDate, endDate, paymentMethod, paymentReference, referenceNo } = req.body;
@@ -45,19 +50,23 @@ const create = asyncHandler(async (req, res) => {
     imageUrl,
     paymentMethod: paymentMethod || 'gcash',
     paymentReference: paymentReference || referenceNo || null,
-    paymentStatus: 'verified',
-    status: 'active',
+    paymentStatus: 'pending_verification',
+    status: 'pending_verification',
   });
-  res.status(201).json({ success: true, message: 'Promotion created', data: { promotion } });
+  res.status(201).json({ success: true, message: 'Promotion created and pending verification', data: { promotion } });
 });
 
 const update = asyncHandler(async (req, res) => {
   await assertOwnership(req.params.restaurantId, req.user.id, req.user.role);
 
   let updateData = { ...req.body };
+  if (req.user.role !== 'admin') {
+    updateData.status = 'pending_verification';
+    updateData.paymentStatus = 'pending_verification';
+  }
   if (req.file) {
     const processed = await uploadService.processImage(req.file, { maxWidth: 1000 });
-    updateData.imageUrl = uploadService.publicUrlFor(processed);
+    updateData.imageUrl = await uploadService.publicUrlFor(processed);
   }
 
   const promotion = await promotionModel.update(req.params.id, req.params.restaurantId, updateData);

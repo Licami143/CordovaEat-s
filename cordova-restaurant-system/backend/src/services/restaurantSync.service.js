@@ -41,6 +41,8 @@ function normalizeKey(str = '') {
 }
 
 function syncToRestaurantTs(restaurant) {
+  // Production deployments have immutable code; listings are read from Postgres.
+  if (process.env.NODE_ENV === 'production') return false;
   try {
     if (!fs.existsSync(RESTAURANTS_TS_PATH)) {
       logger.warn(`restaurants.ts not found at ${RESTAURANTS_TS_PATH}`);
@@ -88,7 +90,16 @@ function syncToRestaurantTs(restaurant) {
     }
 
     const useKey = foundKey || rawSlug;
-    const replacementEntry = `  '${useKey}': {\n    name: '${name.replace(/'/g, "\\'")}',\n    category: '${category}',\n    coverImage: '${coverImage}',\n    barangay: '${barangay.replace(/'/g, "\\'")}',\n    description: '${description}',\n    address: '${address}',\n    phone: '${phone}',\n  },`;
+    const latitude = Number(restaurant.latitude);
+    const longitude = Number(restaurant.longitude);
+    const hasCoordinates =
+      restaurant.latitude !== null && restaurant.latitude !== undefined && restaurant.latitude !== '' &&
+      restaurant.longitude !== null && restaurant.longitude !== undefined && restaurant.longitude !== '' &&
+      Number.isFinite(latitude) && Number.isFinite(longitude) &&
+      latitude >= -90 && latitude <= 90 && longitude >= -180 && longitude <= 180;
+    const latField = hasCoordinates ? `\n    latitude: ${latitude},` : '';
+    const lngField = hasCoordinates ? `\n    longitude: ${longitude},` : '';
+    const replacementEntry = `  '${useKey}': {\n    name: '${name.replace(/'/g, "\\'")}',\n    category: '${category}',\n    coverImage: '${coverImage}',\n    barangay: '${barangay.replace(/'/g, "\\'")}',\n    description: '${description}',\n    address: '${address}',\n    phone: '${phone}',${latField}${lngField}\n  },`;
 
     if (foundKey && fullMatchedBlock) {
       content = content.replace(fullMatchedBlock, replacementEntry);
@@ -116,6 +127,7 @@ function syncToRestaurantTs(restaurant) {
 }
 
 function removeFromRestaurantTs(restaurant) {
+  if (process.env.NODE_ENV === 'production') return false;
   try {
     if (!fs.existsSync(RESTAURANTS_TS_PATH)) {
       logger.warn(`restaurants.ts not found at ${RESTAURANTS_TS_PATH}`);

@@ -3,6 +3,8 @@
 @tailwind utilities;
 
 :root {
+  --font-inter: 'Inter Variable';
+  --font-playfair: 'Playfair Display Variable';
   --bg: #faf8f4;
   --bg-elevated: #ffffff;
   --text: #1b241f;
@@ -172,8 +174,8 @@ body {
   }
 }
 
-/* Leaflet map container needs an explicit height or it renders collapsed */
-.leaflet-container {
+/* Map container styles */
+.map-container {
   height: 100%;
   width: 100%;
   border-radius: 1rem;

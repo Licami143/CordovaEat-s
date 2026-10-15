@@ -39,7 +39,7 @@ async function getSearchCandidates() {
         '{}'
       ) AS dietary_options
     FROM restaurants r
-    WHERE r.is_active = TRUE
+    WHERE r.is_active = TRUE AND r.status = 'verified'
     ORDER BY r.avg_rating DESC
   `;
 
@@ -65,6 +65,7 @@ async function getMenuItemsForRestaurants(restaurantIds = []) {
       dietary_tags
     FROM menu_items
     WHERE restaurant_id = ANY($1::uuid[])
+      AND is_available = true
   `;
 
   const { rows } = await query(sql, [restaurantIds]);

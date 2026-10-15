@@ -3,20 +3,29 @@
 import { memo, useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { MapPin, Star } from 'lucide-react';
-import type { Restaurant } from '@/lib/types';
-import { applyRestaurantCustomization } from '@/data/restaurants';
+import { MapPin, Star, Sparkles } from 'lucide-react';
+import type { Restaurant, MatchedPreferences } from '@/lib/types';
+import { applyRestaurantCustomization, hasOriginalRestaurantLogo } from '@/data/restaurants';
+import { useLiveReviewStats } from '@/lib/live-review-stats';
 
 export const RestaurantCard = memo(function RestaurantCard({
   restaurant: rawRestaurant,
   matchScore,
+  matchedPreferences,
+  suggestionReason,
 }: {
   restaurant: Restaurant;
   matchScore?: number;
+  matchedPreferences?: MatchedPreferences;
+  suggestionReason?: string;
 }) {
   const restaurant = applyRestaurantCustomization(rawRestaurant);
   const [imgError, setImgError] = useState(false);
-  const ratingVal = Number(restaurant.avg_rating || 4.5).toFixed(1);
+  const showOriginalLogo = !imgError && hasOriginalRestaurantLogo(restaurant.slug);
+  const isHorizonLogo = showOriginalLogo && restaurant.slug === 'horizon-bean-cafe';
+  const live = useLiveReviewStats(restaurant.slug || restaurant.id);
+  const reviewCount = live?.review_count ?? Number(restaurant.review_count || 0);
+  const ratingVal = reviewCount > 0 ? Number(live?.avg_rating ?? restaurant.avg_rating ?? 0).toFixed(1) : '—';
   const locationText = restaurant.barangay
     ? `${restaurant.barangay}, Cordova`
     : restaurant.address || 'Cordova, Cebu';
@@ -68,14 +77,16 @@ export const RestaurantCard = memo(function RestaurantCard({
         : 'border-stone-200/80 dark:border-white/10'
     }`}>
       {/* Cover Image Container */}
-      <div className="relative h-48 sm:h-52 w-full bg-stone-100 dark:bg-stone-800/80 overflow-hidden">
+      <div className={`relative h-48 sm:h-52 w-full overflow-hidden ${isHorizonLogo ? 'bg-[#3b2923]' : 'bg-stone-100 dark:bg-stone-800/80'}`}>
         <Image
           src={imageSrc}
           alt={restaurant.name}
           fill
           unoptimized
           onError={() => setImgError(true)}
-          className="object-cover transition-transform duration-700 ease-out group-hover:scale-105"
+          className={showOriginalLogo
+            ? 'object-contain p-3 transition-transform duration-700 ease-out group-hover:scale-105'
+            : 'object-cover transition-transform duration-700 ease-out group-hover:scale-105'}
           sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
         />
 
@@ -159,7 +170,7 @@ export const RestaurantCard = memo(function RestaurantCard({
               <Star size={14} className="fill-cordova-gold text-cordova-gold" />
               <span>{ratingVal}</span>
               <span className="text-stone-500 dark:text-stone-400 font-normal">
-                ({restaurant.review_count || 0} reviews)
+                ({reviewCount} {reviewCount === 1 ? 'review' : 'reviews'})
               </span>
             </div>
 
@@ -187,6 +198,58 @@ export const RestaurantCard = memo(function RestaurantCard({
                 ))}
               </div>
             </div>
+          )}
+          {/* Matched Preferences Chips (AI Personalization) */}
+          {matchedPreferences && (
+            Boolean(matchedPreferences.cuisines?.length) ||
+            Boolean(matchedPreferences.services?.length) ||
+            Boolean(matchedPreferences.dietary?.length) ||
+            Boolean(matchedPreferences.budgetFit)
+          ) && (
+            <div className="pt-2 border-t border-stone-100 dark:border-white/5 space-y-1.5">
+              <div className="flex items-center gap-1 text-[11px] font-bold text-cordova-green dark:text-emerald-400">
+                <Sparkles size={12} />
+                <span>Matches Your Taste Preferences:</span>
+              </div>
+              <div className="flex flex-wrap items-center gap-1.5">
+                {matchedPreferences.cuisines?.slice(0, 2).map((c, i) => (
+                  <span
+                    key={`c-${i}`}
+                    className="inline-flex items-center text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-800 dark:text-emerald-300 border border-emerald-500/25"
+                  >
+                    ✓ {c}
+                  </span>
+                ))}
+                {matchedPreferences.services?.slice(0, 1).map((s, i) => (
+                  <span
+                    key={`s-${i}`}
+                    className="inline-flex items-center text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-800 dark:text-amber-300 border border-amber-500/25"
+                  >
+                    ✓ {s.replace(/_/g, ' ')}
+                  </span>
+                ))}
+                {matchedPreferences.dietary?.slice(0, 1).map((d, i) => (
+                  <span
+                    key={`d-${i}`}
+                    className="inline-flex items-center text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-500/15 text-blue-800 dark:text-blue-300 border border-blue-500/25"
+                  >
+                    ✓ {d.replace(/_/g, ' ')}
+                  </span>
+                ))}
+                {matchedPreferences.budgetFit && (
+                  <span className="inline-flex items-center text-[10px] font-bold px-2 py-0.5 rounded-full bg-purple-500/15 text-purple-800 dark:text-purple-300 border border-purple-500/25">
+                    ✓ Budget fit
+                  </span>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Natural Language Suggestion Reason */}
+          {suggestionReason && (
+            <p className="text-[11px] text-stone-500 dark:text-stone-400 italic line-clamp-2">
+              &ldquo;{suggestionReason}&rdquo;
+            </p>
           )}
         </div>
 

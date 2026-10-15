@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/Button';
 import { RestaurantGridSkeleton } from '@/components/ui/Skeleton';
 import { Utensils, Lock, CheckCircle2 } from 'lucide-react';
 import type { Restaurant, BusinessStatus } from '@/lib/types';
+import { LiveReviewSummary } from '@/components/LiveReviewSummary';
 
 const STATUS_COLOR: Record<BusinessStatus, 'success' | 'warning' | 'danger' | 'neutral'> = {
   verified: 'success',
@@ -48,6 +49,11 @@ export default function DashboardPage() {
           </Link>
         </div>
 
+        <div className="mb-6 rounded-xl border border-stone-200 p-4 dark:border-stone-700">
+          <p className="font-semibold text-stone-900 dark:text-white">Already listed on CordovaEats?</p>
+          <p className="mt-1 text-sm text-stone-600 dark:text-stone-300">Find your establishment on <Link href="/search" className="underline">Browse restaurants</Link> and claim it instead of creating a duplicate.</p>
+          <Link href="/dashboard/claims" className="mt-2 inline-block text-sm font-semibold text-cordova-green underline">My business claims and notifications</Link>
+        </div>
         {loading ? (
           <RestaurantGridSkeleton count={3} />
         ) : restaurants.length === 0 ? (
@@ -118,7 +124,7 @@ export default function DashboardPage() {
                     {isVerified && (
                       <div className="flex items-center gap-4 mt-4 pt-3 border-t border-stone-100 dark:border-stone-800/60 text-xs text-stone-500 dark:text-stone-400 font-medium">
                         <span>👁️ {r.view_count || 0} views</span>
-                        <span>⭐ {Number(r.avg_rating || 5).toFixed(1)} ({r.review_count || 0})</span>
+                        <LiveReviewSummary slug={r.slug || r.id} count={r.review_count} rating={r.avg_rating} />
                       </div>
                     )}
                   </div>

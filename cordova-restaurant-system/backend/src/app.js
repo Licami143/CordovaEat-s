@@ -11,16 +11,19 @@ const env = require('./config/env');
 const swaggerSpec = require('./config/swagger');
 const logger = require('./utils/logger');
 const { apiLimiter } = require('./middleware/rateLimiter');
+const { limitUploadRequest } = require('./middleware/upload');
 const { notFoundHandler, errorHandler } = require('./middleware/errorHandler');
 
 const authRoutes = require('./routes/auth.routes');
 const userRoutes = require('./routes/users.routes');
 const restaurantRoutes = require('./routes/restaurants.routes');
 const reviewRoutes = require('./routes/reviews.routes');
+const highlightRoutes = require('./routes/highlights.routes');
 const favoriteRoutes = require('./routes/favorites.routes');
 const promotionRoutes = require('./routes/promotions.routes');
 const cuisineRoutes = require('./routes/cuisines.routes');
 const recommendationRoutes = require('./routes/recommendations.routes');
+const aiProviderSettingsRoutes = require('./routes/aiProviderSettings.routes');
 const adminRoutes = require('./routes/admin.routes');
 const attractionRoutes = require('./routes/attractions.routes');
 const searchRoutes = require('./routes/search.routes');
@@ -41,26 +44,45 @@ app.use(express.json({ limit: '2mb' }));
 app.use(express.urlencoded({ extended: true, limit: '2mb' }));
 app.use(cookieParser(env.cookie.secret));
 app.use(morgan(env.isProduction ? 'combined' : 'dev', { stream: { write: (msg) => logger.info(msg.trim()) } }));
-app.use('/api', apiLimiter);
+app.use('/api', limitUploadRequest, apiLimiter);
 
-// Static file serving for uploaded images/documents
-app.use('/uploads', express.static(path.join(process.cwd(), env.upload.dir)));
-app.use('/api/uploads', express.static(path.join(process.cwd(), env.upload.dir)));
+// Local public images remain available in development. Private permits are
+// served only through the authenticated admin route.
+if (!env.isProduction) {
+  for (const subdir of ['restaurant-images', 'avatars']) {
+    const publicDir = path.join(process.cwd(), env.upload.dir, subdir);
+    app.use(`/uploads/${subdir}`, express.static(publicDir));
+    app.use(`/api/uploads/${subdir}`, express.static(publicDir));
+  }
+}
 
 // ---- API docs ----
 app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
 // ---- Health check ----
 app.get('/health', (req, res) => res.json({ status: 'ok', timestamp: new Date().toISOString() }));
+app.get('/ready', async (req, res) => {
+  try {
+    const { query } = require('./config/db');
+    const { rows } = await query('SELECT filename FROM _migrations WHERE filename = $1', ['016_reconcile_review_statistics.sql']);
+    if (!rows.length) return res.status(503).json({ status: 'not_ready' });
+    res.json({ status: 'ready' });
+  } catch {
+    res.status(503).json({ status: 'not_ready' });
+  }
+});
 
 // ---- Routes ----
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
+app.use('/api/claims', require('./routes/claims.routes'));
 app.use('/api/restaurants', restaurantRoutes);
 app.use('/api/reviews', reviewRoutes);
+app.use('/api/highlights', highlightRoutes);
 app.use('/api/favorites', favoriteRoutes);
 app.use('/api/promotions', promotionRoutes);
 app.use('/api/cuisines', cuisineRoutes);
+app.use('/api/recommendations/provider', aiProviderSettingsRoutes);
 app.use('/api/recommendations', recommendationRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/attractions', attractionRoutes);
